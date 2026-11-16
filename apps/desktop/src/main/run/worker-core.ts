@@ -11,12 +11,15 @@ import {
   toRunError,
 } from '@kiemi/engine';
 import type { RunResult } from '@kiemi/schema';
+import { createRecordSession, type RecordDeps } from '../record/record-core';
 import type { HostToWorker, WorkerToHost } from './protocol';
 
 export interface WorkerDeps {
   launch?: (options: LaunchBrowserOptions) => Promise<Pick<LaunchedBrowser, 'browser'>>;
   run?: (request: RunRequest, options: RunOptions) => Promise<RunResult>;
   registry?: ActionRegistry;
+  /** Recorder factory (tests use a fake one). */
+  startRecorder?: RecordDeps['start'];
 }
 
 /**
@@ -92,10 +95,26 @@ export function createEngineWorker(post: (msg: WorkerToHost) => void, deps: Work
     }
   }
 
+  // One process = one run or one recording.
+  const recording = createRecordSession(post, {
+    registry,
+    ...(deps.launch ? { launch: deps.launch } : {}),
+    ...(deps.run ? { run: deps.run } : {}),
+    ...(deps.startRecorder ? { start: deps.startRecorder } : {}),
+  });
+
   return {
     /** Resolves when the message has been fully handled (a `start` = the whole run). */
     async handle(msg: HostToWorker): Promise<void> {
       switch (msg.type) {
+        case 'recordCommand':
+          recording.command(msg.command);
+          return;
+        case 'record':
+          if (started) return;
+          started = true;
+          await recording.begin(msg);
+          return;
         case 'cancel':
           abort.abort();
           return;

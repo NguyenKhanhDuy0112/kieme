@@ -1,5 +1,38 @@
-import type { DownloadProgress, EngineEvent, LaunchSettingsInput, RunRequest } from '@kiemi/engine';
-import type { RunError, RunResult } from '@kiemi/schema';
+import type {
+  DownloadProgress,
+  EngineEvent,
+  LaunchSettingsInput,
+  RunRequest,
+  SavedLogin,
+} from '@kiemi/engine';
+import type { HighlightResult, StepChange, Suggestion } from '@kiemi/recorder';
+import type { Env, Locator, RunError, RunResult, Secrets, Step } from '@kiemi/schema';
+
+/** Starts a recording (or a Pick-only "inspect" session) [K-01, C-06]. */
+export interface RecordStart {
+  type: 'record';
+  launch: { settings: LaunchSettingsInput; browsersPath: string };
+  /** Page to open first (absolute). Omitted when continuing after `prefix`. */
+  url?: string;
+  /** URLs under it are stored relative. */
+  baseUrl?: string;
+  session: string;
+  env?: Env;
+  secrets: Secrets;
+  /** Steps run first, the browser kept as they leave it — "record from step X" [K-04]. */
+  prefix?: RunRequest;
+  /** In-page strings (`recorder.*`). */
+  strings: Record<string, string>;
+  /** false = Pick / Highlight only. */
+  capture: boolean;
+}
+
+/** What the tester or the app asks of a running recording. */
+export type RecordCommand =
+  | { kind: 'stop' }
+  | { kind: 'pick'; requestId: string }
+  | { kind: 'highlight'; requestId: string; locator: Locator }
+  | { kind: 'suggestion'; id: string; accept: boolean };
 
 /**
  * Messages between the main process and the engine utility process [N-05].
@@ -20,7 +53,9 @@ export type HostToWorker =
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'step' }
-  | { type: 'breakpoints'; stepIds: string[] };
+  | { type: 'breakpoints'; stepIds: string[] }
+  | RecordStart
+  | { type: 'recordCommand'; command: RecordCommand };
 
 export type WorkerToHost =
   | { type: 'ready' }
@@ -37,4 +72,16 @@ export type WorkerToHost =
   /** All requests finished (each one's result also came as a `runEnd` event). */
   | { type: 'done'; results: RunResult[] }
   /** The run could not start or stopped outside a test case (e.g. browser launch). */
-  | { type: 'fatal'; error: RunError };
+  | { type: 'fatal'; error: RunError }
+  /** Recording: browser open and listening. `prefix` = result of the steps run first. */
+  | { type: 'recordReady'; prefix?: RunResult }
+  | { type: 'recordChanges'; changes: StepChange[] }
+  | { type: 'recordSuggestions'; list: Suggestion[] }
+  /** "Dừng" pressed on the in-page toolbar. */
+  | { type: 'recordStopRequest' }
+  /** Saved from the toolbar or by a prefix step — cookies: main stores them, never the UI [F-02]. */
+  | { type: 'loginSaved'; name: string; login: SavedLogin }
+  | { type: 'pickResult'; requestId: string; locator: Locator | null }
+  | { type: 'highlightResult'; requestId: string; result: HighlightResult }
+  /** Recording ended; the browser is closed. */
+  | { type: 'recordDone'; steps: Step[] };

@@ -12,6 +12,7 @@ import { app, BrowserWindow, net, protocol, safeStorage, shell } from 'electron'
 import { createIPCHandler } from 'electron-trpc/main';
 import { rootRouter } from './api/root';
 import { isTrustedRendererUrl } from './ipc-allow';
+import { RecorderManager } from './record/recorder-manager';
 import { ARTIFACT_SCHEME, parseArtifactUrl, resolveInside } from './results/artifact-path';
 import { TraceServer } from './results/trace-server';
 import { RunManager } from './run/run-manager';
@@ -40,6 +41,7 @@ function openData(): { services: Services; defaultProjectId: string } {
 }
 
 let runs: RunManager | undefined;
+let recorder: RecorderManager | undefined;
 const traceServer = new TraceServer();
 
 /** Screenshots / videos of runs, read-only and limited to each run's folder [S-04]. */
@@ -85,6 +87,17 @@ function registerIpc(): void {
     },
   });
   runs = runManager;
+  // Recording / Pick run in their own engine process too [M5].
+  const recorderManager = new RecorderManager({
+    services: data.services,
+    spawnWorker: () => spawnUtilityWorker(join(__dirname, 'engine-worker.js')),
+    browsersPath: join(userData, 'browsers'),
+    openTunnel: (env, secrets) => {
+      if (!env.ssh) throw new Error('No SSH settings');
+      return openSshTunnel(env.ssh, secrets);
+    },
+  });
+  recorder = recorderManager;
   registerArtifactProtocol(data.services);
   const rendererFileUrl = pathToFileURL(rendererHtmlPath).href;
   createIPCHandler({
@@ -99,6 +112,7 @@ function registerIpc(): void {
       services: data.services,
       defaultProjectId: data.defaultProjectId,
       runs: runManager,
+      recorder: recorderManager,
       desktop: {
         openTrace: openTraceWindow,
         showInFolder: (path: string) => shell.showItemInFolder(path),
@@ -166,6 +180,7 @@ if (!gotLock) {
 
   app.on('before-quit', () => {
     void runs?.shutdown();
+    void recorder?.shutdown();
     void traceServer.close();
   });
 

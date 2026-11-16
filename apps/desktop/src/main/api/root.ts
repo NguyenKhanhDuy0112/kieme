@@ -10,6 +10,7 @@ import {
   suitesRouter,
   testCasesRouter,
 } from './routers/data';
+import { recorderRouter, savedLoginsRouter } from './routers/recorder';
 import { runsRouter } from './routers/runs';
 import { systemRouter } from './routers/system';
 import { createCallerFactory, router } from './trpc';
@@ -27,6 +28,8 @@ export const rootRouter = router({
   datasets: datasetsRouter,
   io: ioRouter,
   runs: runsRouter,
+  recorder: recorderRouter,
+  savedLogins: savedLoginsRouter,
 });
 
 export type AppRouter = typeof rootRouter;
