@@ -7,9 +7,10 @@ M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-
 (không có)
 
 ## Tiếp theo
-**M5-01** — `packages/recorder`: bắt thao tác → step, gộp thao tác thừa [K-01, K-02].
+**M5-02** — Sinh locator nhiều lớp + fingerprint khi ghi [C-01, C-02].
 
 ## Vấn đề tồn đọng / Câu hỏi cho người dùng
+- **Recorder** (ADR 0012): `@kiemi/recorder` — `startRecorder(context, { startUrl, baseUrl, session, onChange })` → `{ steps, page, stop() }`; `StepCollector` (gộp thao tác, thuần); script trang ở `src/injected.ts` (`installRecorder`, tự chứa, chỉ ghi sự kiện `isTrusted`). Locator đang là bản cơ bản trong `locatorOf()` của `injected.ts` → M5-02 thay bằng nhiều lớp + fingerprint. Chưa nối vào app (nút Ghi lại vẫn khóa): cần tRPC `recorder.*` + chạy trong engine worker (headed) — làm cùng M5-03 hoặc task nối UI. Test e2e: không dùng `selectOption` để mô phỏng chọn (sự kiện không trusted) — dùng bàn phím.
 - **Chạy test** (ADR 0010, 0011): `apps/desktop/src/main/run/` — `RunManager.start({ target: test|suite|tag, environmentId?, options })` (schema ở `start-input.ts`), `control()` (pause/resume/step/breakpoints), `engine-worker.ts` + `worker-core.ts`, `protocol.ts`. Kết quả: `src/main/results/` (`kiemi-artifact://`, `TraceServer`). tRPC `runs.start / cancel / control / get / history / events / screenshots / openTrace / openFolder`. Renderer: `features/run/` (`run-state.ts` reducer + `fromDetail`, `run-store.ts`, `run-screen.tsx` màn Chạy/Kết quả, `run-dialog.tsx` tùy chọn + `useStartRun`, `report.ts` báo cáo HTML), `features/history/` (lịch sử + `compareRuns`), `features/tests/suite-dialog.tsx`. Test: `createTestRunManager(services)`.
 - Chưa làm (nhỏ, để sau): thanh tiêu đề trên cùng vẫn ghi tên mục đang chọn (vd "Test") khi đang ở màn Chạy; Command palette chưa có lệnh "Chạy"; Lịch sử tự làm mới mỗi 5 giây (chưa đẩy realtime).
 - **Giao diện** (ADR 0009): renderer ở `apps/desktop/src/renderer/src/` — `lib/store.ts` (điều hướng Zustand), `features/tests` (cây test), `features/editor` (bảng bước, form tự sinh, gợi ý biến, tab Dữ liệu/Biến/Phiên, undo/redo, tự lưu), `features/elements`, `features/environments` (biến, bí mật, proxy, SSH), `features/settings`. Chuỗi UI ở `@kiemi/shared` `locales/vi-ui.ts` (+ `en-ui.ts`, khóa `ui.*`). Hàm dịch khóa động: `useTx()`. Lỗi từ main → `errorMessage(err, t)`.
@@ -83,3 +84,4 @@ M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-
 | 2026-11-16 | M4-04 | Xong — màn Kết quả: trạng thái + thời gian từng bước, lỗi tiếng Việt + gợi ý, ảnh chụp (phóng to), video, mở trace viewer, mở thư mục | `kiemi-artifact://`, trace viewer của playwright-core qua server 127.0.0.1 |
 | 2026-11-16 | M4-05 | Xong — Lịch sử: lọc test / bộ test / kết quả, so sánh 2 lần chạy (chỉ hiện chỗ khác) | |
 | 2026-11-16 | M4-06 | Xong — Xuất báo cáo HTML 1 file (CSS nội tuyến, ảnh data URL, không script) | Cả repo 282 test; kịch bản e2e app thật bao trọn M4 pass; ADR 0011 |
+| 2026-11-16 | M5-01 | Xong — `@kiemi/recorder`: ghi bấm/đúp/chuột phải, nhập, chọn, tick, phím, chuyển trang, tab mới, iframe; gộp thao tác thừa | 14 test (unit + e2e ghi → chạy lại bằng engine trên demo-site); ADR 0012 |

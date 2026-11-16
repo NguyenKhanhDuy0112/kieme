@@ -54,7 +54,7 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 - [x] **M4-06** Xuất báo cáo HTML tự chứa [I-05]
 
 ## M5 — Recorder & Pick
-- [ ] **M5-01** `packages/recorder`: bắt thao tác → step, gộp thao tác thừa [K-01, K-02]
+- [x] **M5-01** `packages/recorder`: bắt thao tác → step, gộp thao tác thừa [K-01, K-02]
 - [ ] **M5-02** Sinh locator nhiều lớp + fingerprint khi ghi [C-01, C-02]
 - [ ] **M5-03** Thanh công cụ nổi: Thêm kiểm tra, Lưu giá trị, Dừng [K-03]
 - [ ] **M5-04** Pick + Highlight phần tử [C-06]
