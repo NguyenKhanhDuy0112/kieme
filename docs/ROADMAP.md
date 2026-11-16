@@ -71,12 +71,12 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 - [x] **M6-04** Hiệu năng: mở app ≤ 3s, test 200 step không giật UI [N-05]
 
 ## M7 — Đóng gói & Phát hành
-- [ ] **M7-01** electron-builder: `.exe` (NSIS) + `.dmg` + **Windows portable `.exe`** [N-10]
-- [ ] **M7-02** Ký code Windows + notarize macOS (cần chứng chỉ — hỏi người dùng)
-- [ ] **M7-03** Auto-update (electron-updater, nguồn GitHub Releases): tải ngầm, "Có gì mới", khởi động lại để cập nhật; DB migration khi mở bản mới; portable chỉ thông báo [N-09, N-12]
-- [ ] **M7-03b** GitHub Actions release: tag → build Win (NSIS per-user + portable) & Mac (dmg, universal) → ký code → publish Releases; release notes từ Changesets [N-11, N-13]
-- [ ] **M7-04** Sentry opt-in [N-09]
-- [ ] **M7-05** Hướng dẫn sử dụng (docs người dùng) + checklist phát hành v1.0
+- [x] **M7-01** electron-builder: `.exe` (NSIS) + `.dmg` + **Windows portable `.exe`** [N-10]
+- [ ] **M7-02** Ký code Windows + notarize macOS (cần chứng chỉ — hỏi người dùng) — *cấu hình + workflow đã sẵn (ADR 0015), chỉ chờ chứng chỉ/secret*
+- [x] **M7-03** Auto-update (electron-updater, nguồn GitHub Releases): tải ngầm, "Có gì mới", khởi động lại để cập nhật; DB migration khi mở bản mới; portable chỉ thông báo [N-09, N-12]
+- [x] **M7-03b** GitHub Actions release: tag → build Win (NSIS per-user + portable) & Mac (dmg, universal) → ký code → publish Releases; release notes từ Changesets [N-11, N-13]
+- [x] **M7-04** Sentry opt-in [N-09]
+- [x] **M7-05** Hướng dẫn sử dụng (docs người dùng) + checklist phát hành v1.0
 
 ## Sau v1 (v1.x)
 M-04 → M-07 (AI tạo test, import), A-19, A-20, B-12 → B-14, C-08, D-08, F-05 → F-09, G-02, G-04, H-05 → H-08, I-06 → I-08, J-05.
