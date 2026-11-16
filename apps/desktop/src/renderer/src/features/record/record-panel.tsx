@@ -6,7 +6,7 @@ import { trpc } from '@renderer/lib/trpc';
 import { useTx } from '@renderer/lib/tx';
 import { useMutation } from '@tanstack/react-query';
 import { Check, KeyRound, Lightbulb, Loader2, Square, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { findStep, updateStep } from '../editor/doc-model';
 import { useEditorStore } from '../editor/editor-store';
@@ -17,15 +17,18 @@ export function RecordPanel({ testId }: { testId: string }) {
   const tx = useTx();
   const rec = useRecordStore();
 
-  // Toasts for things that happen in the browser.
+  // Toasts for things that happen in the browser (registered once; `tx` read through a ref).
+  const txRef = useRef(tx);
+  txRef.current = tx;
   useEffect(() => {
     useRecordStore.setState({
       onNotice: (n) => {
-        if (n.kind === 'loginSaved') toast.success(tx('ui.record.loginSaved', { name: n.name }));
-        else toast.success(tx('ui.record.stopped', { count: n.count }));
+        const t = txRef.current;
+        if (n.kind === 'loginSaved') toast.success(t('ui.record.loginSaved', { name: n.name }));
+        else toast.success(t('ui.record.stopped', { count: n.count }));
       },
     });
-  }, [tx]);
+  }, []);
   useEffect(() => {
     if (rec.state === 'error' && rec.error && rec.testId === testId) {
       toast.error(errorMessage(rec.error, tx));

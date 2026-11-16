@@ -58,3 +58,16 @@ describe('languages', () => {
     expect(isSupportedLanguage(undefined)).toBe(false);
   });
 });
+
+describe('M5 UI strings sit at the top of `ui` [K-01, C-06, M-02, M-03, F-02]', () => {
+  it.each([
+    ['vi', vi],
+    ['en', en],
+  ] as const)('%s', (_lang, t) => {
+    expect(t.ui.record.start).toBeTruthy();
+    expect(t.ui.toData.menu).toBeTruthy();
+    expect(t.ui.variants.menu).toBeTruthy();
+    expect(t.ui.logins.title).toBeTruthy();
+    expect(t.recorder.addCheck).toBeTruthy();
+  });
+});
