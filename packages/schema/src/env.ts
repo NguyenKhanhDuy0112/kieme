@@ -39,7 +39,7 @@ export const ProxySchema = z
       ctx.addIssue({ code: 'custom', message: 'Password needs a username', path: ['username'] });
     }
   });
-export type Proxy = z.infer<typeof ProxySchema>;
+export type ProxySettings = z.infer<typeof ProxySchema>;
 
 /** Environment (dev / staging / prod…) with its variables [E-02]. */
 export const EnvSchema = z.object({

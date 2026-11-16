@@ -1,0 +1,257 @@
+/**
+ * Database migrations, applied in order inside a transaction and recorded in
+ * `_kiemi_migrations`. SQL is embedded (not read from disk) so the bundled
+ * Electron main process needs no extra files.
+ *
+ * NEVER edit a migration that has shipped: add a new one. A test checks that
+ * the database after all migrations matches the Drizzle tables in `tables.ts`.
+ */
+export interface Migration {
+  id: number;
+  name: string;
+  sql: string;
+}
+
+export const MIGRATIONS: readonly Migration[] = [
+  {
+    id: 1,
+    name: 'init',
+    sql: `
+CREATE TABLE "workspaces" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "name" TEXT NOT NULL
+);
+CREATE TABLE "projects" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "name" TEXT NOT NULL,
+  "description" TEXT
+);
+CREATE INDEX "projects_workspace_idx" ON "projects" ("workspace_id");
+CREATE TABLE "folders" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "project_id" TEXT NOT NULL,
+  "parent_id" TEXT,
+  "name" TEXT NOT NULL,
+  "sort_order" INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX "folders_project_idx" ON "folders" ("project_id");
+CREATE TABLE "test_cases" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "project_id" TEXT NOT NULL,
+  "folder_id" TEXT,
+  "name" TEXT NOT NULL,
+  "description" TEXT,
+  "tags" TEXT NOT NULL,
+  "content" TEXT NOT NULL,
+  "schema_version" INTEGER NOT NULL
+);
+CREATE INDEX "test_cases_project_idx" ON "test_cases" ("project_id");
+CREATE INDEX "test_cases_folder_idx" ON "test_cases" ("folder_id");
+CREATE TABLE "suites" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "project_id" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "description" TEXT,
+  "variables" TEXT NOT NULL,
+  "environment_id" TEXT
+);
+CREATE INDEX "suites_project_idx" ON "suites" ("project_id");
+CREATE TABLE "suite_items" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "suite_id" TEXT NOT NULL,
+  "test_case_id" TEXT NOT NULL,
+  "dataset_id" TEXT,
+  "sort_order" INTEGER NOT NULL DEFAULT 0,
+  "enabled" INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX "suite_items_suite_idx" ON "suite_items" ("suite_id");
+CREATE TABLE "shared_steps" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "project_id" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "params" TEXT NOT NULL,
+  "steps" TEXT NOT NULL
+);
+CREATE INDEX "shared_steps_project_idx" ON "shared_steps" ("project_id");
+CREATE TABLE "elements" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "project_id" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "locator" TEXT NOT NULL,
+  "page_url" TEXT
+);
+CREATE INDEX "elements_project_idx" ON "elements" ("project_id");
+CREATE TABLE "environments" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "project_id" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "base_url" TEXT,
+  "proxy" TEXT,
+  "sort_order" INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX "environments_project_idx" ON "environments" ("project_id");
+CREATE TABLE "variables" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "environment_id" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "value" TEXT NOT NULL
+);
+CREATE INDEX "variables_environment_idx" ON "variables" ("environment_id");
+CREATE TABLE "secrets" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "environment_id" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "ciphertext" BLOB NOT NULL
+);
+CREATE INDEX "secrets_environment_idx" ON "secrets" ("environment_id");
+CREATE TABLE "datasets" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "project_id" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "columns" TEXT NOT NULL,
+  "rows" TEXT NOT NULL,
+  "source" TEXT NOT NULL
+);
+CREATE INDEX "datasets_project_idx" ON "datasets" ("project_id");
+CREATE TABLE "runs" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "project_id" TEXT NOT NULL,
+  "suite_id" TEXT,
+  "environment_id" TEXT,
+  "status" TEXT NOT NULL,
+  "trigger" TEXT NOT NULL DEFAULT 'manual',
+  "started_at" INTEGER,
+  "finished_at" INTEGER,
+  "duration_ms" INTEGER,
+  "artifact_dir" TEXT
+);
+CREATE INDEX "runs_project_idx" ON "runs" ("project_id");
+CREATE TABLE "run_cases" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "run_id" TEXT NOT NULL,
+  "test_case_id" TEXT NOT NULL,
+  "row_index" INTEGER,
+  "status" TEXT NOT NULL,
+  "started_at" INTEGER,
+  "duration_ms" INTEGER,
+  "error" TEXT
+);
+CREATE INDEX "run_cases_run_idx" ON "run_cases" ("run_id");
+CREATE TABLE "run_steps" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "run_case_id" TEXT NOT NULL,
+  "step_id" TEXT NOT NULL,
+  "parent_step_id" TEXT,
+  "phase" TEXT NOT NULL,
+  "step_no" TEXT NOT NULL,
+  "session" TEXT NOT NULL,
+  "status" TEXT NOT NULL,
+  "soft" INTEGER NOT NULL DEFAULT 0,
+  "started_at" INTEGER,
+  "duration_ms" INTEGER,
+  "error" TEXT
+);
+CREATE INDEX "run_steps_case_idx" ON "run_steps" ("run_case_id");
+CREATE TABLE "artifacts" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "run_id" TEXT NOT NULL,
+  "run_case_id" TEXT,
+  "run_step_id" TEXT,
+  "kind" TEXT NOT NULL,
+  "path" TEXT NOT NULL
+);
+CREATE INDEX "artifacts_run_idx" ON "artifacts" ("run_id");
+CREATE TABLE "settings" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "key" TEXT NOT NULL,
+  "value" TEXT NOT NULL
+);
+CREATE UNIQUE INDEX "settings_workspace_key_idx" ON "settings" ("workspace_id", "key");
+`,
+  },
+];
