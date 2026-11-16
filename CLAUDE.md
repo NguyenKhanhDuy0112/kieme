@@ -29,6 +29,10 @@ Tài liệu nguồn (đọc khi cần):
    - `docs/PROGRESS.md`: thêm dòng nhật ký, cập nhật "Tiếp theo", ghi vấn đề tồn đọng
    - Có quyết định kiến trúc mới → thêm file `docs/adr/NNNN-ten.md`
 6. Commit theo Conventional Commits, kèm ID: `feat(engine): add fill action [A-02]`
+   - **Tác giả commit = chủ dự án**: `Duy Nguyen Khanh <duynguyen.011202@gmail.com>` (đã đặt trong `git config` của repo). Trước khi commit, kiểm tra `git config user.email` đúng email này.
+   - **Không thêm** dòng `Co-Authored-By: Claude …` hay bất kỳ attribution AI nào vào commit/PR.
+   - **Xong mỗi task/tính năng → commit rồi `git push`** lên GitHub (`origin`). Chưa có remote `origin` → nhắc người dùng cung cấp URL repo, không tự tạo repo.
+   - Không `push --force` lên `main`.
 7. Nếu người dùng chỉ nói "làm tiếp" / "continue" → làm task trong mục "Tiếp theo".
 
 ## 2b. Quy trình thay đổi yêu cầu (BẮT BUỘC)
