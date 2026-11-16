@@ -3,6 +3,7 @@ import { DatasetService } from './datasets';
 import { ElementService } from './elements';
 import { EnvironmentService, type SecretCipher } from './environments';
 import { FolderService, ProjectService } from './projects';
+import { RunService } from './runs';
 import { SettingsService } from './settings';
 import { SharedStepService } from './shared-steps';
 import { SuiteService } from './suites';
@@ -12,6 +13,7 @@ export * from './datasets';
 export * from './elements';
 export * from './environments';
 export * from './projects';
+export * from './runs';
 export * from './settings';
 export * from './shared-steps';
 export * from './suites';
@@ -29,6 +31,7 @@ export interface Services {
   readonly environments: EnvironmentService;
   readonly datasets: DatasetService;
   readonly settings: SettingsService;
+  readonly runs: RunService;
 }
 
 /** All data services of one workspace. */
@@ -44,5 +47,6 @@ export function createServices(ctx: RepoContext, cipher: SecretCipher): Services
     environments: new EnvironmentService(ctx, cipher),
     datasets: new DatasetService(ctx),
     settings: new SettingsService(ctx),
+    runs: new RunService(ctx),
   };
 }

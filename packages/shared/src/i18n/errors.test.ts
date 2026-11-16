@@ -104,6 +104,8 @@ describe('describeRunError [I-04, N-06]', () => {
       'UNKNOWN_SHARED_STEP',
       'ACTION_FAILED',
       'ENGINE_ERROR',
+      'ENGINE_CRASHED',
+      'SSH_FAILED',
     ];
     expect([...ERROR_CODES].sort()).toEqual([...engineCodes].sort());
   });

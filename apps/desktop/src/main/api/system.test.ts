@@ -1,12 +1,19 @@
 // @vitest-environment node
 import { createMemoryServices } from '@kiemi/db';
 import { describe, expect, it } from 'vitest';
+import { createTestRunManager } from '../run/testing';
 import { createCaller } from './root';
 
 function caller() {
   const { services, defaultProjectId } = createMemoryServices();
   return {
-    c: createCaller({ appVersion: '1', platform: 'darwin', services, defaultProjectId }),
+    c: createCaller({
+      appVersion: '1',
+      platform: 'darwin',
+      services,
+      defaultProjectId,
+      runs: createTestRunManager(services),
+    }),
     projectId: defaultProjectId,
     services,
   };

@@ -1,15 +1,16 @@
 # PROGRESS
 
 ## Trạng thái hiện tại
-M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-15). M2 — Lưu trữ **xong** (M2-01 → M2-05, `@kiemi/db`). M3 — UI soạn test **xong** (M3-01 → M3-08). Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
+M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-15). M2 — Lưu trữ **xong** (M2-01 → M2-05, `@kiemi/db`). M3 — UI soạn test **xong** (M3-01 → M3-08). M4 — Chạy & Kết quả: M4-01 xong. Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
 
 ## Đang làm dở
 (không có)
 
 ## Tiếp theo
-**M4-01** — Engine chạy trong utility process, nối event về UI [N-05].
+**M4-02** — Màn Chạy test: tiến độ realtime, Dừng/Tạm dừng/Bước tiếp, breakpoint, chạy từ bước X, slow-mo [S-03, H-03, H-04].
 
 ## Vấn đề tồn đọng / Câu hỏi cho người dùng
+- **Chạy test** (ADR 0010): `apps/desktop/src/main/run/` — `RunManager` (dựng RunRequest từ DB, SSH tunnel, ghi `runs`/`run_cases`/`run_steps`/`artifacts`), `engine-worker.ts` (utility process) + `worker-core.ts` (không Electron), `protocol.ts`. tRPC `runs.start / cancel / get / events` (subscription phát lại + live). Renderer: `features/run/` (`run-state.ts` reducer thuần, `run-store.ts` Zustand, `RunControls` nút Chạy/Dừng + dòng tiến độ, `StepStatusIcon` trong bảng bước). Hiện chỉ chạy với môi trường đầu tiên của dự án (chọn môi trường ở M4-03). Test: `createTestRunManager(services)`.
 - **Giao diện** (ADR 0009): renderer ở `apps/desktop/src/renderer/src/` — `lib/store.ts` (điều hướng Zustand), `features/tests` (cây test), `features/editor` (bảng bước, form tự sinh, gợi ý biến, tab Dữ liệu/Biến/Phiên, undo/redo, tự lưu), `features/elements`, `features/environments` (biến, bí mật, proxy, SSH), `features/settings`. Chuỗi UI ở `@kiemi/shared` `locales/vi-ui.ts` (+ `en-ui.ts`, khóa `ui.*`). Hàm dịch khóa động: `useTx()`. Lỗi từ main → `errorMessage(err, t)`.
 - **SSH** (ADR 0009): `apps/desktop/src/main/tunnel/ssh-tunnel.ts` — `openSshTunnel(env.ssh, secrets)` → `socks5://127.0.0.1:<port>`, `withTunnelProxy(env, tunnel)`; M4 phải mở tunnel trước run và đóng sau run.
 - Chạy app để kiểm tra UI: `pnpm --filter @kiemi/desktop build` rồi điều khiển bằng `_electron.launch` của `playwright-core` (`args: ['.', '--user-data-dir=<tạm>']`). Nút Ghi lại / Chạy đang khóa tới M4/M5.
@@ -74,3 +75,4 @@ M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-
 | 2026-11-16 | M3-06 | Xong — tab Dữ liệu (không / bộ đã lưu / bảng nhập tay, nhập Excel/CSV), Biến, Phiên (đổi tên cập nhật các bước) | |
 | 2026-11-16 | M3-07 | Xong — màn Môi trường (địa chỉ gốc, biến, bí mật luôn che, proxy) và Cài đặt (ngôn ngữ, giao diện, trình duyệt, chạy ngầm, timeout, thư mục kết quả) | `settings.*` lưu DB |
 | 2026-11-16 | M3-08 | Xong — SSH tunnel `ssh2` → SOCKS cục bộ, jump host, mật khẩu/khóa riêng từ bí mật, Kiểm tra kết nối, hướng dẫn VPN → SSH; `Env.ssh` + migration 2 | 5 test với SSH server giả (`ssh2.Server`), DNS phía SSH; cả repo 256 test; ADR 0009 |
+| 2026-11-16 | M4-01 | Xong — engine chạy trong Electron utility process; `RunManager` ghi kết quả vào DB, mở/đóng SSH tunnel, phát event qua tRPC subscription; nút Chạy/Dừng, tiến độ, icon trạng thái từng bước, toast kết quả | Chạy app thật bằng `_electron`: thấy tiến trình Utility, UI vẫn bấm được khi chạy, test đạt/không đạt ghi đúng DB + ảnh lỗi; engine crash → `ENGINE_CRASHED`; cả repo 268 test; ADR 0010 |

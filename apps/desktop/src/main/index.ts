@@ -12,6 +12,9 @@ import { app, BrowserWindow, safeStorage, shell } from 'electron';
 import { createIPCHandler } from 'electron-trpc/main';
 import { rootRouter } from './api/root';
 import { isTrustedRendererUrl } from './ipc-allow';
+import { RunManager } from './run/run-manager';
+import { spawnUtilityWorker } from './run/spawn-utility';
+import { openSshTunnel } from './tunnel/ssh-tunnel';
 import { createMainWindowOptions } from './window-options';
 
 const rendererHtmlPath = join(__dirname, '../renderer/index.html');
@@ -34,8 +37,23 @@ function openData(): { services: Services; defaultProjectId: string } {
   };
 }
 
+let runs: RunManager | undefined;
+
 function registerIpc(): void {
   const data = openData();
+  const userData = app.getPath('userData');
+  // Engine runs in its own utility process so the window never freezes [N-05].
+  const runManager = new RunManager({
+    services: data.services,
+    spawnWorker: () => spawnUtilityWorker(join(__dirname, 'engine-worker.js')),
+    artifactsRoot: join(userData, 'runs'),
+    browsersPath: join(userData, 'browsers'),
+    openTunnel: (env, secrets) => {
+      if (!env.ssh) throw new Error('No SSH settings');
+      return openSshTunnel(env.ssh, secrets);
+    },
+  });
+  runs = runManager;
   const rendererFileUrl = pathToFileURL(rendererHtmlPath).href;
   createIPCHandler({
     router: rootRouter,
@@ -48,6 +66,7 @@ function registerIpc(): void {
       platform: process.platform,
       services: data.services,
       defaultProjectId: data.defaultProjectId,
+      runs: runManager,
     }),
   });
 }
@@ -99,6 +118,10 @@ if (!gotLock) {
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
     });
+  });
+
+  app.on('before-quit', () => {
+    void runs?.shutdown();
   });
 
   app.on('window-all-closed', () => {

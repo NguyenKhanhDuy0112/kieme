@@ -152,6 +152,14 @@ export const vi = {
         message: 'Kiemi gặp lỗi ngoài dự kiến.',
         hint: 'Thử chạy lại. Nếu vẫn lỗi, gửi báo cáo lỗi cho chúng tôi.',
       },
+      ENGINE_CRASHED: {
+        message: 'Bộ chạy test bị dừng đột ngột.',
+        hint: 'Ứng dụng vẫn hoạt động bình thường. Bấm Chạy để chạy lại.',
+      },
+      SSH_FAILED: {
+        message: 'Không kết nối được máy chủ SSH của môi trường.',
+        hint: 'Vào Môi trường → SSH, bấm “Kiểm tra kết nối” để xem chi tiết.',
+      },
     },
   },
   settings: {

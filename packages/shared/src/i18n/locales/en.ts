@@ -150,6 +150,14 @@ export const en = {
         message: 'Kiemi hit an unexpected problem.',
         hint: 'Run again. If it still fails, send us an error report.',
       },
+      ENGINE_CRASHED: {
+        message: 'The test runner stopped unexpectedly.',
+        hint: 'The app is still working. Click Run to try again.',
+      },
+      SSH_FAILED: {
+        message: 'Could not connect to the environment’s SSH server.',
+        hint: 'Go to Environments → SSH and click “Test connection” for details.',
+      },
     },
   },
   settings: {

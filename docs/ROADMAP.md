@@ -46,7 +46,7 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 - [x] **M3-08** SSH tunnel tích hợp (thư viện `ssh2` ở main process, SOCKS cục bộ, jump host, Kiểm tra kết nối, credential lưu Secret) + hướng dẫn VPN → SSH [G-07, G-08]
 
 ## M4 — Chạy & Kết quả
-- [ ] **M4-01** Engine chạy trong utility process, nối event về UI [N-05]
+- [x] **M4-01** Engine chạy trong utility process, nối event về UI [N-05]
 - [ ] **M4-02** Màn Chạy test: tiến độ realtime, Dừng/Tạm dừng/Bước tiếp, breakpoint, chạy từ bước X, slow-mo [S-03, H-03, H-04]
 - [ ] **M4-03** Chạy suite / tag, chọn môi trường [H-01, H-02]
 - [ ] **M4-04** Màn Kết quả: step, ảnh, video, trace viewer [S-04]

@@ -33,6 +33,7 @@ import { useTx } from '@renderer/lib/tx';
 import { cn } from '@renderer/lib/utils';
 import { Copy, EyeOff, GripVertical, ListPlus, MoreHorizontal, Power, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { StepStatusIcon } from '../run/step-status';
 import {
   defaultParams,
   duplicateStep,
@@ -145,6 +146,7 @@ function StepRow({
 }) {
   const tx = useTx();
   const doc = useEditorStore((s) => s.doc);
+  const testId = useEditorStore((s) => s.testId);
   const selectedId = useEditorStore((s) => s.selectedId);
   const select = useEditorStore((s) => s.select);
   const apply = useEditorStore((s) => s.apply);
@@ -188,6 +190,7 @@ function StepRow({
       <span className="w-9 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
         {row.no}
       </span>
+      <StepStatusIcon testId={testId} stepId={step.id} />
       <div className="min-w-0 flex-1">
         {doc && (
           <StepSentence

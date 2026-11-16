@@ -10,6 +10,7 @@ import {
   suitesRouter,
   testCasesRouter,
 } from './routers/data';
+import { runsRouter } from './routers/runs';
 import { systemRouter } from './routers/system';
 import { createCallerFactory, router } from './trpc';
 
@@ -25,6 +26,7 @@ export const rootRouter = router({
   environments: environmentsRouter,
   datasets: datasetsRouter,
   io: ioRouter,
+  runs: runsRouter,
 });
 
 export type AppRouter = typeof rootRouter;

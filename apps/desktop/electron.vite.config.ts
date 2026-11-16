@@ -5,6 +5,15 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 
 export default defineConfig({
   main: {
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/main/index.ts'),
+          // Utility process running Playwright [N-05, M4-01].
+          'engine-worker': resolve(__dirname, 'src/main/run/engine-worker.ts'),
+        },
+      },
+    },
     plugins: [
       externalizeDepsPlugin({
         exclude: [

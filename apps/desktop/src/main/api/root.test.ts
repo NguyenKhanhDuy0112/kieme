@@ -1,6 +1,7 @@
 import { createMemoryServices } from '@kiemi/db';
 import type { TRPCError } from '@trpc/server';
 import { describe, expect, it } from 'vitest';
+import { createTestRunManager } from '../run/testing';
 import { createCaller } from './root';
 
 const { services, defaultProjectId } = createMemoryServices();
@@ -9,6 +10,7 @@ const caller = createCaller({
   platform: 'darwin',
   services,
   defaultProjectId,
+  runs: createTestRunManager(services),
 });
 
 describe('app router', () => {

@@ -30,6 +30,10 @@ export const ENGINE_ERROR_CODES = [
   'UNKNOWN_SHARED_STEP',
   'ACTION_FAILED',
   'ENGINE_ERROR',
+  /** The engine process stopped unexpectedly (raised by the host). */
+  'ENGINE_CRASHED',
+  /** The environment's SSH tunnel could not be opened (raised by the host). */
+  'SSH_FAILED',
 ] as const;
 export type EngineErrorCode = (typeof ENGINE_ERROR_CODES)[number];
 

@@ -1,6 +1,7 @@
 import type { Services } from '@kiemi/db';
 import { DbError } from '@kiemi/db';
 import { initTRPC, TRPCError } from '@trpc/server';
+import type { RunManager } from '../run/run-manager';
 
 /** Per-request context supplied by the main process. Must stay free of Electron imports. */
 export interface ApiContext {
@@ -10,6 +11,8 @@ export interface ApiContext {
   services: Services;
   /** Project created on first start (default selection in the UI). */
   defaultProjectId: string;
+  /** Starts runs in the engine utility process [M4-01]. */
+  runs: RunManager;
 }
 
 const DB_TO_TRPC = {

@@ -13,13 +13,13 @@ import {
   CircleCheck,
   ListChecks,
   Loader2,
-  Play,
   Redo2,
   Undo2,
   Video,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { RunControls } from '../run/run-controls';
 import { duplicateStep, findStep, savedVariables } from './doc-model';
 import { useEditorStore } from './editor-store';
 import { DataTab, SessionsTab, VariablesTab } from './editor-tabs';
@@ -264,16 +264,7 @@ export function EditorScreen({ testId }: { testId: string }) {
               </TooltipTrigger>
               <TooltipContent>{tx('ui.nav.comingSoon')}</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button size="sm" disabled>
-                    <Play /> {tx('common.run')}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{tx('ui.nav.comingSoon')}</TooltipContent>
-            </Tooltip>
+            <RunControls testId={testId} beforeRun={doSave} />
           </div>
         </header>
         {conflict && (
