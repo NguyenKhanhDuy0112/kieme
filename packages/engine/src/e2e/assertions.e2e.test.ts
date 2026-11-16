@@ -11,7 +11,7 @@ afterAll(async () => {
 
 const html = (body: string) =>
   `data:text/html;charset=utf-8,${encodeURIComponent(`<!doctype html><title>Trang thử</title>${body}`)}`;
-const soft = { mode: 'soft' as const, timeoutMs: 700 };
+const soft = { mode: 'soft' as const, timeoutMs: 1500 };
 
 /** Runs checks expected to pass (`ok`) and to fail (`ko`), on one page. */
 async function check(
@@ -158,7 +158,7 @@ describe('assertions [B-01 → B-11]', () => {
       step('click', { target: { role: 'button', name: 'Lưu' } }),
       step('assertToast', { text: 'đã lưu', ignoreCase: true }),
       step('assertToast', { text: 'Lỗi' }, soft),
-      step('assertTitle', { value: 'Sai' }, { timeoutMs: 500 }),
+      step('assertTitle', { value: 'Sai' }, { timeoutMs: 1500 }),
       step('assertTitle', { value: 'Trang thử' }),
     ]);
     expect(summary(r)).toEqual([

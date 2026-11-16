@@ -96,7 +96,7 @@ describe('navigation & input [A-01 → A-12]', () => {
         step(
           'click',
           { target: { text: 'Không có', exact: true } },
-          { mode: 'soft', timeoutMs: 600 },
+          { mode: 'soft', timeoutMs: 1500 },
         ),
       ],
       shared,
@@ -151,7 +151,7 @@ describe('tabs, dialogs, iframes, sessions, storage [A-13 → A-18, F-01]', () =
       step('closeTab', {}),
       step('switchTab', { by: 'url', value: 'table' }),
       step('closeTab', { index: 2 }),
-      step('switchTab', { by: 'title', value: 'không có' }, { mode: 'soft', timeoutMs: 500 }),
+      step('switchTab', { by: 'title', value: 'không có' }, { mode: 'soft', timeoutMs: 1500 }),
     ]);
     expect(summary(r)).toEqual([
       '1 passed',
@@ -289,7 +289,7 @@ describe('variables & flow [E-04, D-01 → D-04, D-06]', () => {
       [
         step('if', {
           condition: { variable: 'x', op: 'empty' },
-          steps: [{ id: 'n1', action: 'assertTitle', params: { value: 'sai' }, timeoutMs: 500 }],
+          steps: [{ id: 'n1', action: 'assertTitle', params: { value: 'sai' }, timeoutMs: 1500 }],
         }),
       ],
       { variables: { x: '' } },
@@ -382,7 +382,7 @@ describe('artifacts & secrets [I-01 → I-03, E-08]', () => {
         step(
           'assertValue',
           { target: { label: 'Mật khẩu' }, value: 'sai-{{secret.nvPass}}' },
-          { timeoutMs: 600 },
+          { timeoutMs: 1500 },
         ),
       ],
       {

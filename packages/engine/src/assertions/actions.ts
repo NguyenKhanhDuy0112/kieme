@@ -45,7 +45,9 @@ function assertionFor(check: CheckDef): ActionDefinition {
     async execute(params, ctx) {
       let last: CheckResult | undefined;
       let lastErr: unknown;
+      let slowest = 0;
       for (;;) {
+        const started = Date.now();
         try {
           last = await check.check(params, ctx);
           lastErr = undefined;
@@ -54,7 +56,9 @@ function assertionFor(check: CheckDef): ActionDefinition {
           if (!isNotFound(err)) throw err;
           lastErr = err;
         }
-        if (ctx.remainingMs() < POLL_MS + 100) break;
+        // Stop while there is still time to report the failure (slow machines: checks take longer).
+        slowest = Math.max(slowest, Date.now() - started);
+        if (ctx.remainingMs() < POLL_MS + slowest + 150) break;
         await sleep(POLL_MS, ctx.signal);
       }
       if (lastErr) throw lastErr;
