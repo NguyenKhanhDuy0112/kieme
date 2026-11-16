@@ -86,7 +86,9 @@ describe('200-step test stays smooth (N-05, M6-04)', () => {
     );
     const mountMs = performance.now() - t0;
     expect(renders.n).toBe(200); // 199 top-level steps + 1 inner step
-    expect(mountMs).toBeLessThan(5000);
+    // Coarse ceiling only (happy-dom is far slower than Chromium; shared CI runners vary a lot).
+    // The real guard of N-05 is the render counts below.
+    expect(mountMs).toBeLessThan(process.env.CI ? 15_000 : 5000);
 
     renders.n = 0;
     act(() => useEditorStore.getState().select('s10'));
