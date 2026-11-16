@@ -16,6 +16,7 @@ import { loopAction } from './loop';
 import { navigateAction } from './navigate';
 import { pickDateAction } from './pick-date';
 import { pressAction } from './press';
+import { saveSessionAction, useSessionAction } from './saved-login';
 import { scrollAction } from './scroll';
 import { selectAction } from './select';
 import { switchSessionAction } from './switch-session';
@@ -46,6 +47,8 @@ export const builtinActions: ActionDefinition[] = [
   closeTabAction,
   dialogAction,
   switchSessionAction,
+  saveSessionAction,
+  useSessionAction,
   clearDataAction,
   waitAction,
   extractAction,

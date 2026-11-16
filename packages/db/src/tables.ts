@@ -272,6 +272,20 @@ export const settings = sqliteTable(
   (t) => [uniqueIndex('settings_workspace_key_idx').on(t.workspaceId, t.key)],
 );
 
+/** Saved login sessions (cookies + localStorage), reused by later tests until they expire [F-02]. */
+export const savedLogins = sqliteTable(
+  'saved_logins',
+  {
+    ...base,
+    projectId: text('project_id').notNull(),
+    name: text('name').notNull(),
+    /** Playwright storage state (JSON), encrypted like secrets [N-07]. */
+    ciphertext: blob('ciphertext', { mode: 'buffer' }).notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (t) => [index('saved_logins_project_idx').on(t.projectId)],
+);
+
 export const ALL_TABLES = {
   workspaces,
   projects,
@@ -290,4 +304,5 @@ export const ALL_TABLES = {
   runSteps,
   artifacts,
   settings,
+  savedLogins,
 } as const;

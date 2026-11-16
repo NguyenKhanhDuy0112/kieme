@@ -134,6 +134,14 @@ export const en = {
         message: 'File {{file}} not found.',
         hint: 'Check the file still exists and the path is right.',
       },
+      LOGIN_NOT_SAVED: {
+        message: 'No saved login named “{{name}}”.',
+        hint: 'First run a test with a “Save login” step using this name, or record and press “Save login”.',
+      },
+      LOGIN_EXPIRED: {
+        message: 'The saved login “{{name}}” has expired.',
+        hint: 'Run the test with the “Save login” step again to save a fresh session.',
+      },
       TAB_NOT_FOUND: {
         message: 'Tab “{{value}}” not found.',
         hint: 'The tab may not be open yet. Add a wait before this step.',

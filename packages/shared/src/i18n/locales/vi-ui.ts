@@ -379,6 +379,8 @@ export const viUi = {
     dialog: { label: 'Trả lời hộp thoại', sentence: 'Hộp thoại tiếp theo: {{action}}' },
     switchSession: { label: 'Đổi phiên', sentence: 'Chuyển sang phiên này' },
     clearData: { label: 'Xóa cookie / dữ liệu', sentence: 'Xóa cookie và dữ liệu trang' },
+    saveSession: { label: 'Lưu đăng nhập', sentence: 'Lưu đăng nhập thành {{name}}' },
+    useSession: { label: 'Dùng đăng nhập đã lưu', sentence: 'Dùng đăng nhập đã lưu {{name}}' },
     wait: { label: 'Chờ cố định', sentence: 'Chờ {{seconds}} giây' },
     extract: { label: 'Lưu giá trị vào biến', sentence: 'Lưu {{target}} vào biến {{into}}' },
     call: { label: 'Dùng bước chung', sentence: 'Thực hiện {{shared}}' },
@@ -471,6 +473,7 @@ export const viUi = {
     column: 'Cột',
     name: 'Tên',
     path: 'Đường dẫn trường',
+    ttlHours: 'Dùng lại trong (giờ)',
   },
   enums: {
     load: 'Tải xong',

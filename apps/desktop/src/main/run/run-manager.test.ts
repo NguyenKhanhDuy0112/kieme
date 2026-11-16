@@ -38,7 +38,24 @@ const pause = defineAction({
       });
     }),
 });
-const registry = new ActionRegistry([note, fail, pause]);
+const login = defineAction({
+  type: 'fakeLogin',
+  params: z.object({}),
+  ui: { label: 'actions.fakeLogin', icon: 'key', group: 'test' },
+  execute: (_p, ctx) => {
+    const used = ctx.run.savedLogins.get('old');
+    ctx.run.savedLogins.save('nhanVien', {
+      state: {
+        cookies: [
+          { name: 'sid', value: used ? 'reused' : 'secret-cookie', domain: 'x', path: '/' },
+        ],
+        origins: [],
+      } as never,
+      expiresAt: '2030-01-01T00:00:00.000Z',
+    });
+  },
+});
+const registry = new ActionRegistry([note, fail, pause, login]);
 
 function setup(
   steps: StepInput[],
@@ -380,5 +397,27 @@ describe('RunManager [M4-01, N-05]', () => {
     expect(detail.cases).toMatchObject([
       { testName: 'Thử', steps: [{ stepId: 's1', status: 'failed' }] },
     ]);
+  });
+});
+
+describe('saved logins in runs [F-02]', () => {
+  it('stores a saved login encrypted and never forwards its cookies to the UI', async () => {
+    const { services, runs, caller, testId } = setup([
+      { id: 's1', action: 'fakeLogin', params: {} },
+    ]);
+    const projectId = services.testCases.get(testId).projectId;
+    services.savedLogins.save(
+      projectId,
+      'old',
+      { cookies: [], origins: [] },
+      new Date('2030-01-01'),
+    );
+    const { runId } = await caller.runs.start({ target: { kind: 'test', testCaseId: testId } });
+    const events = await collect(runs.events(runId));
+    expect(finalStatus(events)).toBe('passed');
+    expect(JSON.stringify(events)).not.toContain('reused');
+    const saved = services.savedLogins.forRun(projectId).nhanVien;
+    expect(saved?.state.cookies[0]).toMatchObject({ value: 'reused' });
+    expect(saved?.expiresAt).toBe('2030-01-01T00:00:00.000Z');
   });
 });

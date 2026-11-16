@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { RunRowStatus, RunTarget, Services } from '@kiemi/db';
-import type { EngineEvent, RunRequest, StepPhase } from '@kiemi/engine';
+import type { EngineEvent, RunRequest, SavedLogin, StepPhase } from '@kiemi/engine';
 import type {
   ArtifactRef,
   Dataset,
@@ -75,6 +75,7 @@ interface StepInfo {
 
 interface ActiveRun {
   runId: string;
+  projectId: string;
   history: RunFeedEvent[];
   listeners: Set<() => void>;
   finished: boolean;
@@ -195,6 +196,8 @@ export class RunManager {
       : { env: undefined, secrets: {} };
     const settings = s.settings.getAll();
     const sharedSteps = s.sharedSteps.forRun(projectId);
+    // Stored as Playwright gave it (`storageState()`); the DB only checks the outline.
+    const savedLogins = s.savedLogins.forRun(projectId) as unknown as Record<string, SavedLogin>;
 
     const run = s.runs.create({ projectId, environmentId, suiteId, artifactDir: '', target });
     const artifactDir = join(settings.resultsDir || this.#d.artifactsRoot, run.id);
@@ -202,6 +205,7 @@ export class RunManager {
 
     const active: ActiveRun = {
       runId: run.id,
+      projectId,
       history: [],
       listeners: new Set(),
       finished: false,
@@ -235,6 +239,7 @@ export class RunManager {
         ...(p.dataset ? { dataset: p.dataset } : {}),
         ...(p.rowIndex === undefined ? {} : { rowIndex: p.rowIndex }),
         sharedSteps,
+        savedLogins,
         ...(suiteVariables ? { suiteVariables } : {}),
         options: {
           defaultStepTimeoutMs: settings.defaultTimeoutSec * 1000,
@@ -434,6 +439,11 @@ export class RunManager {
       case 'event': {
         const caseId = msg.event.runId;
         if (!active.caseIds.has(caseId)) return;
+        if (msg.event.type === 'loginSaved') {
+          // Cookies: stored encrypted, never sent to the UI [F-02, N-07].
+          this.#saveLogin(active.projectId, msg.event.name, msg.event.login);
+          return;
+        }
         const event = this.#prefixArtifacts(active, msg.event);
         this.#record(active, event);
         this.#publish(active, { type: 'engine', runId, runCaseId: caseId, event });
@@ -445,6 +455,14 @@ export class RunManager {
       case 'fatal':
         this.#finish(active, active.cancelRequested ? 'cancelled' : 'error', msg.error);
         return;
+    }
+  }
+
+  #saveLogin(projectId: string, name: string, login: SavedLogin): void {
+    try {
+      this.#d.services.savedLogins.save(projectId, name, login.state, new Date(login.expiresAt));
+    } catch {
+      // No OS encryption: the login is simply not kept; later "use login" steps say so.
     }
   }
 

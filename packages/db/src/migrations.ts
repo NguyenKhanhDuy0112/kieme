@@ -264,4 +264,21 @@ CREATE UNIQUE INDEX "settings_workspace_key_idx" ON "settings" ("workspace_id", 
     name: 'run-target',
     sql: 'ALTER TABLE "runs" ADD COLUMN "target" TEXT;',
   },
+  {
+    id: 4,
+    name: 'saved-logins',
+    sql: `CREATE TABLE "saved_logins" (
+  "id" TEXT PRIMARY KEY,
+  "workspace_id" TEXT NOT NULL,
+  "created_at" INTEGER NOT NULL,
+  "updated_at" INTEGER NOT NULL,
+  "deleted_at" INTEGER,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "project_id" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "ciphertext" BLOB NOT NULL,
+  "expires_at" INTEGER NOT NULL
+);
+CREATE INDEX "saved_logins_project_idx" ON "saved_logins" ("project_id");`,
+  },
 ];

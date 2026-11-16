@@ -380,6 +380,8 @@ export const enUi = {
     dialog: { label: 'Answer dialog', sentence: 'Next dialog: {{action}}' },
     switchSession: { label: 'Switch session', sentence: 'Switch to this session' },
     clearData: { label: 'Clear cookies / data', sentence: 'Clear cookies and page data' },
+    saveSession: { label: 'Save login', sentence: 'Save login as {{name}}' },
+    useSession: { label: 'Use saved login', sentence: 'Use saved login {{name}}' },
     wait: { label: 'Fixed wait', sentence: 'Wait {{seconds}} seconds' },
     extract: {
       label: 'Save value to variable',
@@ -475,6 +477,7 @@ export const enUi = {
     column: 'Column',
     name: 'Name',
     path: 'Field path',
+    ttlHours: 'Reuse for (hours)',
   },
   enums: {
     load: 'Fully loaded',

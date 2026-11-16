@@ -24,6 +24,7 @@ import type { EngineEvent, EngineEventListener, LogLevel, StepPhase } from './ev
 import { evaluateCondition } from './flow/condition';
 import { type ResolvedLocator, resolveLocator } from './locator/resolve';
 import type { RunDebugger } from './run/debug';
+import type { SavedLogin } from './run/services';
 import { DialogController, type RunServices } from './run/services';
 import { toLocator } from './run/target';
 import { maskSecrets, VariableStore } from './vars/store';
@@ -53,6 +54,8 @@ export interface RunRequest {
   sharedSteps?: SharedStep[];
   /** Suite-level variables [E-02]. */
   suiteVariables?: Record<string, string>;
+  /** Saved login sessions of the project, by name [F-02]. */
+  savedLogins?: Record<string, SavedLogin>;
   options?: {
     /** Fallback timeout for steps without `timeoutMs`. */
     defaultStepTimeoutMs?: number;
@@ -319,6 +322,7 @@ class Run {
 
   #makeServices(): RunServices {
     const req = this.#req;
+    const logins = new Map(Object.entries(req.savedLogins ?? {}));
     const shared = new Map((req.sharedSteps ?? []).map((s) => [s.id, s]));
     const baseUrl = req.env?.baseUrl;
     return {
@@ -335,6 +339,14 @@ class Run {
         if (/^[a-z][a-z0-9+.-]*:/i.test(value) || !baseUrl) return value;
         return new URL(value, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
       },
+      savedLogins: {
+        get: (name) => logins.get(name),
+        save: (name, login) => {
+          logins.set(name, login);
+          this.#emit({ type: 'loginSaved', runId: req.runId, name, login });
+        },
+      },
+      now: () => this.#now(),
     };
   }
 

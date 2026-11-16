@@ -1,5 +1,7 @@
 import type { ArtifactRef, RunResult, StepResult } from '@kiemi/schema';
 
+import type { SavedLogin } from './run/services';
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 /** Which list a step belongs to. */
@@ -31,6 +33,11 @@ export type EngineEvent =
     }
   | { type: 'artifact'; runId: string; stepId?: string; artifact: ArtifactRef }
   | { type: 'log'; runId: string; stepId?: string; level: LogLevel; message: string; at: string }
-  | { type: 'runEnd'; runId: string; result: RunResult };
+  | { type: 'runEnd'; runId: string; result: RunResult }
+  /**
+   * A login session was saved by a step [F-02]. Holds cookies: the host stores it
+   * (encrypted) and must not forward it to the UI or logs.
+   */
+  | { type: 'loginSaved'; runId: string; name: string; login: SavedLogin };
 
 export type EngineEventListener = (event: EngineEvent) => void;

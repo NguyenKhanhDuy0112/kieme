@@ -101,6 +101,8 @@ describe('describeRunError [I-04, N-06]', () => {
       'API_ERROR',
       'FILE_NOT_FOUND',
       'TAB_NOT_FOUND',
+      'LOGIN_NOT_SAVED',
+      'LOGIN_EXPIRED',
       'UNKNOWN_SHARED_STEP',
       'ACTION_FAILED',
       'ENGINE_ERROR',

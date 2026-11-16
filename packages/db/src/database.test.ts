@@ -27,6 +27,7 @@ describe('database & migrations [M2-01]', () => {
         'run_cases',
         'run_steps',
         'runs',
+        'saved_logins',
         'secrets',
         'settings',
         'shared_steps',

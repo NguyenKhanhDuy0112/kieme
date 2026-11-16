@@ -136,6 +136,14 @@ export const vi = {
         message: 'Không tìm thấy file {{file}}.',
         hint: 'Kiểm tra file còn ở đó và đường dẫn đúng.',
       },
+      LOGIN_NOT_SAVED: {
+        message: 'Chưa có đăng nhập đã lưu tên “{{name}}”.',
+        hint: 'Chạy trước một test có bước “Lưu đăng nhập” với tên này, hoặc ghi lại và bấm “Lưu đăng nhập”.',
+      },
+      LOGIN_EXPIRED: {
+        message: 'Đăng nhập đã lưu “{{name}}” đã hết hạn.',
+        hint: 'Chạy lại test có bước “Lưu đăng nhập” để lưu phiên mới.',
+      },
       TAB_NOT_FOUND: {
         message: 'Không tìm thấy tab “{{value}}”.',
         hint: 'Có thể tab chưa kịp mở. Thêm bước chờ trước bước này.',

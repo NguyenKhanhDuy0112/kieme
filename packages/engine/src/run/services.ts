@@ -1,5 +1,5 @@
 import type { Dataset, Diagnostic, Env, Secrets, SharedStep, TestCase } from '@kiemi/schema';
-import type { Page } from 'playwright-core';
+import type { BrowserContext, Page } from 'playwright-core';
 import type { SessionPages } from '../browser/sessions';
 
 export type DialogResponse = { action: 'accept'; text?: string } | { action: 'dismiss' };
@@ -57,6 +57,21 @@ export class DialogController {
   }
 }
 
+/** Cookies + localStorage of a browser context, as Playwright returns it. */
+export type StorageState = Awaited<ReturnType<BrowserContext['storageState']>>;
+
+/** A login session saved earlier, reusable until `expiresAt` (ISO) [F-02]. */
+export interface SavedLogin {
+  state: StorageState;
+  expiresAt: string;
+}
+
+/** Saved logins of the project: read at run start, saved ones reported back by event [F-02]. */
+export interface SavedLoginStore {
+  get(name: string): SavedLogin | undefined;
+  save(name: string, login: SavedLogin): void;
+}
+
 /** Run-wide services available to actions. */
 export interface RunServices {
   readonly testCase: TestCase;
@@ -71,4 +86,7 @@ export interface RunServices {
   readonly filesDir: string | undefined;
   /** Resolves a URL against the env's baseUrl [A-01]. */
   url(value: string): string;
+  readonly savedLogins: SavedLoginStore;
+  /** Clock of the run (injectable in tests). */
+  now(): Date;
 }
