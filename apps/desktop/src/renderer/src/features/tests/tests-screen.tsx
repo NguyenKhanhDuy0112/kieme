@@ -39,11 +39,15 @@ import {
   Layers,
   MoreHorizontal,
   Pencil,
+  Play,
   Search,
+  Tag,
   Trash2,
 } from 'lucide-react';
 import { Fragment, type ReactNode, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useStartRun } from '../run/run-dialog';
+import { SuiteDialog } from './suite-dialog';
 
 const fold = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase();
@@ -87,6 +91,8 @@ export function TestTree() {
     run: () => Promise<void>;
   } | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [openSuite, setOpenSuite] = useState<string | null>(null);
+  const startRun = useStartRun();
 
   const tests = useQuery({
     ...trpc.testCases.list.queryOptions({ projectId }),
@@ -96,6 +102,11 @@ export function TestTree() {
     ...trpc.folders.list.queryOptions({ projectId }),
     enabled: !!projectId,
   });
+  const allTags = useMemo(
+    () =>
+      [...new Set((tests.data ?? []).flatMap((t) => t.tags))].sort((a, b) => a.localeCompare(b)),
+    [tests.data],
+  );
   const suites = useQuery({
     ...trpc.suites.list.queryOptions({ projectId }),
     enabled: !!projectId,
@@ -360,6 +371,27 @@ export function TestTree() {
           <Button variant="outline" size="sm" onClick={() => newFolder()}>
             <FolderPlus /> {tx('ui.tree.newFolder')}
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Tag /> {tx('ui.suite.runTag')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {allTags.length === 0 ? (
+                <DropdownMenuItem disabled>{tx('ui.suite.noTags')}</DropdownMenuItem>
+              ) : (
+                allTags.map((tag) => (
+                  <DropdownMenuItem
+                    key={tag}
+                    onSelect={() => void startRun({ kind: 'tag', projectId, tag })}
+                  >
+                    <Play /> {tag}
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" onClick={newSuite}>
             <Layers /> {tx('ui.tree.newSuite')}
           </Button>
@@ -402,7 +434,23 @@ export function TestTree() {
                     )}
                   >
                     <Layers className="size-4 text-muted-foreground" aria-hidden />
-                    <span className="flex-1 truncate text-sm">{s.name}</span>
+                    <button
+                      type="button"
+                      className="flex-1 truncate text-left text-sm"
+                      title={tx('ui.suite.edit')}
+                      onClick={() => setOpenSuite(s.id)}
+                    >
+                      {s.name}
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      aria-label={tx('ui.suite.run')}
+                      onClick={() => void startRun({ kind: 'suite', suiteId: s.id })}
+                    >
+                      <Play />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -426,6 +474,9 @@ export function TestTree() {
         </div>
       )}
       <NameDialog state={dialog} onClose={() => setDialog(null)} />
+      {openSuite && (
+        <SuiteDialog projectId={projectId} suiteId={openSuite} onClose={() => setOpenSuite(null)} />
+      )}
       <Dialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>

@@ -23,6 +23,7 @@ import { EngineError, StepFailure, toRunError } from './errors';
 import type { EngineEvent, EngineEventListener, LogLevel, StepPhase } from './events';
 import { evaluateCondition } from './flow/condition';
 import { type ResolvedLocator, resolveLocator } from './locator/resolve';
+import type { RunDebugger } from './run/debug';
 import { DialogController, type RunServices } from './run/services';
 import { toLocator } from './run/target';
 import { maskSecrets, VariableStore } from './vars/store';
@@ -64,6 +65,8 @@ export interface RunRequest {
     artifacts?: ArtifactOptions;
     /** Base folder for relative upload paths [A-11]. */
     filesDir?: string;
+    /** "Chạy từ bước X": earlier top-level steps are skipped [H-03]. */
+    startAtStepId?: string;
   };
 }
 
@@ -74,6 +77,8 @@ export interface RunOptions {
   browser?: Browser;
   /** Abort to cancel the run; cleanup still runs. */
   signal?: AbortSignal;
+  /** Pause / step / breakpoints [H-03]. */
+  debugger?: RunDebugger;
   /** Injectable clock for tests. */
   now?: () => Date;
 }
@@ -102,6 +107,8 @@ class Run {
   readonly #diagnostics: Diagnostic[] = [];
   readonly #secretFields = new Map<string, PwLocator[]>();
   readonly #defaultTimeout: number;
+  /** Top-level steps before this index are skipped (run from step X). */
+  readonly #startIndex: number;
   #pages = new SessionPages(undefined);
   #services!: RunServices;
 
@@ -110,6 +117,13 @@ class Run {
     this.#opts = options;
     this.#now = options.now ?? (() => new Date());
     this.#defaultTimeout = request.options?.defaultStepTimeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
+    const startAt = request.options?.startAtStepId;
+    this.#startIndex = startAt
+      ? Math.max(
+          0,
+          request.testCase.steps.findIndex((s) => s.id === startAt),
+        )
+      : 0;
     const row =
       request.rowIndex === undefined ? undefined : request.dataset?.rows[request.rowIndex];
     this.#vars = new VariableStore(
@@ -367,8 +381,24 @@ class Run {
       };
     }
 
+    if (!parent && phase === 'steps' && index < this.#startIndex) {
+      return { result: this.#skipped(step), stop: false };
+    }
+
     const stepNo = parent ? `${parent.stepNo}.${index + 1}` : `${index + 1}`;
     const topNo = parent ? parent.topNo : index + 1;
+    if (this.#opts.debugger) {
+      await this.#opts.debugger.beforeStep(
+        { stepId: step.id, stepNo, phase, ...(parent ? { parentStepId: parent.step.id } : {}) },
+        signal,
+      );
+      if (signal.aborted) {
+        return {
+          result: this.#skipped(step, { code: 'RUN_CANCELLED', message: 'Run was cancelled' }),
+          stop: true,
+        };
+      }
+    }
     const started = this.#now();
     const startMs = performance.now();
     this.#emit({

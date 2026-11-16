@@ -6,6 +6,6 @@ export * from './io/table';
 export * from './migrations';
 export * from './repo';
 export * from './services';
-export type { DatasetSourceInfo } from './tables';
+export type { DatasetSourceInfo, RunTarget } from './tables';
 export * as tables from './tables';
 export * from './testing';

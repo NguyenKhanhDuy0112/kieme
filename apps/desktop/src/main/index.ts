@@ -8,10 +8,12 @@ import {
   type Services,
 } from '@kiemi/db';
 import { BRAND } from '@kiemi/shared';
-import { app, BrowserWindow, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, net, protocol, safeStorage, shell } from 'electron';
 import { createIPCHandler } from 'electron-trpc/main';
 import { rootRouter } from './api/root';
 import { isTrustedRendererUrl } from './ipc-allow';
+import { ARTIFACT_SCHEME, parseArtifactUrl, resolveInside } from './results/artifact-path';
+import { TraceServer } from './results/trace-server';
 import { RunManager } from './run/run-manager';
 import { spawnUtilityWorker } from './run/spawn-utility';
 import { openSshTunnel } from './tunnel/ssh-tunnel';
@@ -38,6 +40,35 @@ function openData(): { services: Services; defaultProjectId: string } {
 }
 
 let runs: RunManager | undefined;
+const traceServer = new TraceServer();
+
+/** Screenshots / videos of runs, read-only and limited to each run's folder [S-04]. */
+function registerArtifactProtocol(services: Services): void {
+  protocol.handle(ARTIFACT_SCHEME, async (request) => {
+    const parsed = parseArtifactUrl(request.url);
+    const run = parsed ? services.runs.repo.find(parsed.runId) : undefined;
+    const file = parsed && run ? resolveInside(run.artifactDir ?? '', parsed.path) : undefined;
+    if (!file) return new Response('Not found', { status: 404 });
+    return net.fetch(pathToFileURL(file).href, { headers: request.headers });
+  });
+}
+
+/** Playwright's trace viewer in its own window [I-03]. */
+async function openTraceWindow(file: string): Promise<void> {
+  const url = await traceServer.urlFor(file);
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    title: 'Trace',
+    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false },
+  });
+  win.setMenuBarVisibility(false);
+  win.webContents.setWindowOpenHandler(({ url: target }) => {
+    if (target.startsWith('https://')) void shell.openExternal(target);
+    return { action: 'deny' };
+  });
+  await win.loadURL(url);
+}
 
 function registerIpc(): void {
   const data = openData();
@@ -54,6 +85,7 @@ function registerIpc(): void {
     },
   });
   runs = runManager;
+  registerArtifactProtocol(data.services);
   const rendererFileUrl = pathToFileURL(rendererHtmlPath).href;
   createIPCHandler({
     router: rootRouter,
@@ -67,6 +99,10 @@ function registerIpc(): void {
       services: data.services,
       defaultProjectId: data.defaultProjectId,
       runs: runManager,
+      desktop: {
+        openTrace: openTraceWindow,
+        showInFolder: (path: string) => shell.showItemInFolder(path),
+      },
     }),
   });
 }
@@ -100,6 +136,14 @@ function createMainWindow(): BrowserWindow {
 
 app.setAppUserModelId(BRAND.appId);
 
+// Must be registered before `ready` so <img>/<video> can stream from it.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: ARTIFACT_SCHEME,
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+  },
+]);
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -122,6 +166,7 @@ if (!gotLock) {
 
   app.on('before-quit', () => {
     void runs?.shutdown();
+    void traceServer.close();
   });
 
   app.on('window-all-closed', () => {

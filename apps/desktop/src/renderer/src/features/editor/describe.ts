@@ -115,3 +115,30 @@ export const SENTENCE_PARAMS = [
   'text',
   'name',
 ] as const;
+
+/** A step as plain text (reports, select boxes): `Bấm vào nút “Lưu”`. */
+export function stepText(
+  step: { action: string; name?: string | undefined; params: Record<string, unknown> },
+  elements: TestCase['elements'],
+  tx: Tx,
+  shared?: ReadonlyMap<string, string>,
+): string {
+  if (step.name) return step.name;
+  const key = `ui.steps.${step.action}.sentence`;
+  const parts = sentenceParts(
+    (vars) => tx(key, vars, tx('ui.steps.unknown.sentence', { ...vars, action: step.action })),
+    [...SENTENCE_PARAMS],
+  );
+  return parts
+    .map((p) => {
+      if (p.kind === 'text') return p.text;
+      const value =
+        p.param === 'action' && !(p.param in step.params) ? step.action : step.params[p.param];
+      return p.param === 'target'
+        ? describeTarget(value, elements, tx)
+        : describeValue(p.param, value, tx, shared);
+    })
+    .join('')
+    .replace(/\s+/g, ' ')
+    .trim();
+}

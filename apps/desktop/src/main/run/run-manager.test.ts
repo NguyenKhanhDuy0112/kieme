@@ -85,12 +85,17 @@ describe('RunManager [M4-01, N-05]', () => {
       { id: 's1', action: 'note', params: { value: 'a' } },
       { id: 's2', action: 'note', params: { value: 'b' } },
     ]);
-    const { runId } = await caller.runs.start({ testCaseId: testId });
+    const { runId } = await caller.runs.start({ target: { kind: 'test', testCaseId: testId } });
     const events = await collect(await caller.runs.events({ runId }));
 
     expect(seen).toEqual(['a', 'b']);
-    expect(events[0]).toMatchObject({ type: 'status', status: 'queued' });
-    expect(events[1]).toMatchObject({ type: 'status', status: 'running' });
+    expect(events[0]).toMatchObject({
+      type: 'plan',
+      target: { kind: 'test', testCaseId: testId, name: 'Thử' },
+      cases: [{ testCaseId: testId, testName: 'Thử' }],
+    });
+    expect(events[1]).toMatchObject({ type: 'status', status: 'queued' });
+    expect(events[2]).toMatchObject({ type: 'status', status: 'running' });
     const engine = events.flatMap((e) => (e.type === 'engine' ? [e.event.type] : []));
     expect(engine).toEqual(['runStart', 'stepStart', 'stepEnd', 'stepStart', 'stepEnd', 'runEnd']);
     expect(finalStatus(events)).toBe('passed');
@@ -108,7 +113,7 @@ describe('RunManager [M4-01, N-05]', () => {
 
   it('replays past events to a late subscriber', async () => {
     const { runs, caller, testId } = setup([{ id: 's1', action: 'note', params: { value: 'x' } }]);
-    const { runId } = await caller.runs.start({ testCaseId: testId });
+    const { runId } = await caller.runs.start({ target: { kind: 'test', testCaseId: testId } });
     await collect(runs.events(runId));
     const again = await collect(runs.events(runId));
     expect(finalStatus(again)).toBe('passed');
@@ -120,7 +125,7 @@ describe('RunManager [M4-01, N-05]', () => {
       { id: 's1', action: 'fail' },
       { id: 's2', action: 'note', params: { value: 'never' } },
     ]);
-    const { runId } = await caller.runs.start({ testCaseId: testId });
+    const { runId } = await caller.runs.start({ target: { kind: 'test', testCaseId: testId } });
     expect(finalStatus(await collect(await caller.runs.events({ runId })))).toBe('failed');
     const [c] = services.runs.listCases(runId);
     expect(c).toMatchObject({ status: 'failed' });
@@ -136,7 +141,7 @@ describe('RunManager [M4-01, N-05]', () => {
       [{ id: 's1', action: 'note', params: { value: '{{row.name}}' } }],
       { dataset: { source: 'table', columns: ['name'], rows: [{ name: 'An' }, { name: 'Bình' }] } },
     );
-    const { runId } = await caller.runs.start({ testCaseId: testId });
+    const { runId } = await caller.runs.start({ target: { kind: 'test', testCaseId: testId } });
     expect(finalStatus(await collect(await caller.runs.events({ runId })))).toBe('passed');
     expect(seen).toEqual(['An', 'Bình']);
     expect(services.runs.listCases(runId).map((c) => [c.rowIndex, c.status])).toEqual([
@@ -149,7 +154,7 @@ describe('RunManager [M4-01, N-05]', () => {
     const { caller, testId } = setup([{ id: 's1', action: 'pause', params: { ms: 5000 } }], {
       cleanup: [{ id: 'c1', action: 'note', params: { value: 'cleanup' } }],
     });
-    const { runId } = await caller.runs.start({ testCaseId: testId });
+    const { runId } = await caller.runs.start({ target: { kind: 'test', testCaseId: testId } });
     const feed = collect(await caller.runs.events({ runId }));
     await new Promise((r) => setTimeout(r, 50));
     expect(await caller.runs.cancel({ runId })).toEqual({ cancelled: true });
@@ -172,7 +177,7 @@ describe('RunManager [M4-01, N-05]', () => {
         },
       },
     );
-    const { runId } = await caller.runs.start({ testCaseId: testId });
+    const { runId } = await caller.runs.start({ target: { kind: 'test', testCaseId: testId } });
     const feed = collect(runs.events(runId));
     await new Promise((r) => setTimeout(r, 50));
     worker?.crash(3);
@@ -201,7 +206,7 @@ describe('RunManager [M4-01, N-05]', () => {
       },
     });
     void runs;
-    const { runId } = failing.start({ testCaseId: testId });
+    const { runId } = failing.start({ target: { kind: 'test', testCaseId: testId } });
     const events = await collect(failing.events(runId));
     expect(events.at(-1)).toMatchObject({
       status: 'error',
@@ -246,10 +251,134 @@ describe('RunManager [M4-01, N-05]', () => {
         };
       },
     });
-    const { runId } = runs.start({ testCaseId: testId });
+    const { runId } = runs.start({ target: { kind: 'test', testCaseId: testId } });
     await collect(runs.events(runId));
     await new Promise((r) => setTimeout(r, 0));
     expect(proxy).toEqual({ server: 'socks5://127.0.0.1:1080', bypass: [] });
     expect(log).toEqual(['open', 'close']);
+  });
+
+  it('runs a suite in order with its variables and stops at the first failure when asked', async () => {
+    const { services, runs, testId } = setup([
+      { id: 's1', action: 'note', params: { value: '{{who}}' } },
+    ]);
+    const projectId = services.testCases.get(testId).projectId;
+    const bad = services.testCases.create({ projectId, name: 'Hỏng' });
+    services.testCases.save(bad.id, { ...bad.content, steps: [{ id: 'f1', action: 'fail' }] });
+    const suite = services.suites.create({ projectId, name: 'Bộ 1', variables: { who: 'suite' } });
+    services.suites.setItems(suite.id, [
+      { testCaseId: testId },
+      { testCaseId: bad.id },
+      { testCaseId: testId },
+      { testCaseId: testId, enabled: false },
+    ]);
+
+    const all = runs.start({ target: { kind: 'suite', suiteId: suite.id } });
+    expect(finalStatus(await collect(runs.events(all.runId)))).toBe('failed');
+    expect(seen).toEqual(['suite', 'suite']);
+    expect(services.runs.get(all.runId)).toMatchObject({
+      suiteId: suite.id,
+      target: { kind: 'suite', name: 'Bộ 1' },
+    });
+
+    seen.length = 0;
+    const stop = runs.start({
+      target: { kind: 'suite', suiteId: suite.id },
+      options: { stopOnFailure: true },
+    });
+    expect(finalStatus(await collect(runs.events(stop.runId)))).toBe('failed');
+    expect(seen).toEqual(['suite']);
+    expect(services.runs.listCases(stop.runId).map((c) => c.status)).toEqual([
+      'passed',
+      'failed',
+      'skipped',
+    ]);
+  });
+
+  it('runs every test with a tag', async () => {
+    const { services, runs, testId } = setup([
+      { id: 's1', action: 'note', params: { value: 'a' } },
+    ]);
+    const row = services.testCases.get(testId);
+    services.testCases.save(testId, { ...row.content, tags: ['Smoke'] });
+    const other = services.testCases.create({ projectId: row.projectId, name: 'Khác' });
+    services.testCases.save(other.id, {
+      ...other.content,
+      tags: ['regression'],
+      steps: [{ id: 'x', action: 'note', params: { value: 'other' } }],
+    });
+    const { runId } = runs.start({
+      target: { kind: 'tag', projectId: row.projectId, tag: 'smoke' },
+    });
+    expect(finalStatus(await collect(runs.events(runId)))).toBe('passed');
+    expect(seen).toEqual(['a']);
+    expect(services.runs.get(runId).target).toEqual({ kind: 'tag', tag: 'smoke', name: 'smoke' });
+  });
+
+  it('pauses at a breakpoint, steps and resumes on command', async () => {
+    const { runs, caller, testId } = setup([
+      { id: 's1', action: 'note', params: { value: 'a' } },
+      { id: 's2', action: 'note', params: { value: 'b' } },
+      { id: 's3', action: 'note', params: { value: 'c' } },
+    ]);
+    const { runId } = await caller.runs.start({
+      target: { kind: 'test', testCaseId: testId },
+      options: { breakpoints: ['s2'] },
+    });
+    const events: RunFeedEvent[] = [];
+    const feed = (async () => {
+      for await (const e of runs.events(runId)) events.push(e);
+    })();
+    const waitPaused = async (stepId: string) => {
+      for (let i = 0; i < 100; i++) {
+        const last = events.filter((e) => e.type === 'debug').at(-1);
+        if (last?.type === 'debug' && last.state === 'paused' && last.stepId === stepId) return;
+        await new Promise((r) => setTimeout(r, 5));
+      }
+      throw new Error(`not paused at ${stepId}`);
+    };
+    await waitPaused('s2');
+    expect(seen).toEqual(['a']);
+    await caller.runs.control({ runId, command: { type: 'step' } });
+    await waitPaused('s3');
+    expect(seen).toEqual(['a', 'b']);
+    await caller.runs.control({ runId, command: { type: 'resume' } });
+    await feed;
+    expect(seen).toEqual(['a', 'b', 'c']);
+    expect(finalStatus(events)).toBe('passed');
+    expect(await caller.runs.control({ runId, command: { type: 'pause' } })).toEqual({ ok: false });
+  });
+
+  it('runs from a chosen step', async () => {
+    const { runs, testId } = setup([
+      { id: 's1', action: 'note', params: { value: 'a' } },
+      { id: 's2', action: 'note', params: { value: 'b' } },
+    ]);
+    const { runId } = runs.start({
+      target: { kind: 'test', testCaseId: testId },
+      options: { startAtStepId: 's2' },
+    });
+    await collect(runs.events(runId));
+    expect(seen).toEqual(['b']);
+  });
+
+  it('lists history and run details through the API', async () => {
+    const { caller, testId, services } = setup([{ id: 's1', action: 'fail' }]);
+    const { runId } = await caller.runs.start({ target: { kind: 'test', testCaseId: testId } });
+    await collect(await caller.runs.events({ runId }));
+    const projectId = services.testCases.get(testId).projectId;
+    const history = await caller.runs.history({ projectId });
+    expect(history).toMatchObject([
+      {
+        id: runId,
+        status: 'failed',
+        counts: { total: 1, failed: 1 },
+        environmentName: expect.any(String),
+      },
+    ]);
+    const detail = await caller.runs.get({ runId });
+    expect(detail.cases).toMatchObject([
+      { testName: 'Thử', steps: [{ stepId: 's1', status: 'failed' }] },
+    ]);
   });
 });

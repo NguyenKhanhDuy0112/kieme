@@ -1,12 +1,13 @@
 import { AppSidebar } from '@renderer/components/app-sidebar';
 import { CommandPalette } from '@renderer/components/command-palette';
-import { EmptyState } from '@renderer/components/empty-state';
 import { Button } from '@renderer/components/ui/button';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@renderer/components/ui/sidebar';
 import { Toaster } from '@renderer/components/ui/sonner';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { ElementsScreen } from '@renderer/features/elements/elements-screen';
 import { EnvironmentsScreen } from '@renderer/features/environments/environments-screen';
+import { HistoryScreen } from '@renderer/features/history/history-screen';
+import { RunScreen } from '@renderer/features/run/run-screen';
 import { SettingsScreen } from '@renderer/features/settings/settings-screen';
 import { TestsScreen } from '@renderer/features/tests/tests-screen';
 import { useT } from '@renderer/i18n/use-t';
@@ -14,7 +15,7 @@ import { useAppStore, watchSystemTheme } from '@renderer/lib/store';
 import { trpc } from '@renderer/lib/trpc';
 import { useTx } from '@renderer/lib/tx';
 import { useQuery } from '@tanstack/react-query';
-import { History, PanelRight } from 'lucide-react';
+import { PanelRight } from 'lucide-react';
 import { useEffect } from 'react';
 
 /** App shell (U-01): sidebar · main area · detail panel (inside screens). */
@@ -24,6 +25,7 @@ export function App() {
   const info = useQuery(trpc.app.info.queryOptions());
   const settings = useQuery(trpc.system.settings.queryOptions());
   const view = useAppStore((s) => s.view);
+  const openRunId = useAppStore((s) => s.openRunId);
   const projectId = useAppStore((s) => s.projectId);
   const setProject = useAppStore((s) => s.setProject);
   const toggleDetail = useAppStore((s) => s.toggleDetail);
@@ -51,7 +53,7 @@ export function App() {
             <span data-testid="app-version" className="ml-auto text-xs text-muted-foreground">
               {info.data ? tx('app.version', { version: info.data.version }) : tx('common.loading')}
             </span>
-            {view === 'tests' && (
+            {view === 'tests' && !openRunId && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -62,19 +64,17 @@ export function App() {
               </Button>
             )}
           </div>
-          {projectId ? (
+          {projectId && openRunId ? (
+            <main className="flex min-h-0 flex-1 flex-col">
+              <RunScreen key={openRunId} runId={openRunId} />
+            </main>
+          ) : projectId ? (
             <main className="flex min-h-0 flex-1 flex-col">
               {view === 'tests' && <TestsScreen />}
               {view === 'environments' && <EnvironmentsScreen />}
               {view === 'elements' && <ElementsScreen />}
               {view === 'settings' && <SettingsScreen />}
-              {view === 'history' && (
-                <EmptyState
-                  icon={History}
-                  title={tx('ui.nav.history')}
-                  text={tx('ui.nav.comingSoon')}
-                />
-              )}
+              {view === 'history' && <HistoryScreen />}
             </main>
           ) : null}
         </SidebarInset>

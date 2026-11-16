@@ -31,8 +31,19 @@ import {
 import { groupActions, useActions } from '@renderer/lib/actions';
 import { useTx } from '@renderer/lib/tx';
 import { cn } from '@renderer/lib/utils';
-import { Copy, EyeOff, GripVertical, ListPlus, MoreHorizontal, Power, Trash2 } from 'lucide-react';
+import {
+  Copy,
+  EyeOff,
+  GripVertical,
+  ListPlus,
+  MoreHorizontal,
+  OctagonPause,
+  Power,
+  StepForward,
+  Trash2,
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { useRunStore } from '../run/run-store';
 import { StepStatusIcon } from '../run/step-status';
 import {
   defaultParams,
@@ -139,14 +150,21 @@ function StepRow({
   row,
   sharedNames,
   onChip,
+  onRunFrom,
 }: {
   row: Row;
   sharedNames: ReadonlyMap<string, string>;
   onChip: (id: string, param: string) => void;
+  onRunFrom?: ((stepId: string) => void) | undefined;
 }) {
   const tx = useTx();
   const doc = useEditorStore((s) => s.doc);
   const testId = useEditorStore((s) => s.testId);
+  const hasBreakpoint = useRunStore(
+    (s) => !!testId && (s.breakpoints[testId] ?? []).includes(row.step.id),
+  );
+  const toggleBreakpoint = useRunStore((s) => s.toggleBreakpoint);
+  const latestRunId = useRunStore((s) => (testId ? s.latestByTest[testId] : undefined));
   const selectedId = useEditorStore((s) => s.selectedId);
   const select = useEditorStore((s) => s.select);
   const apply = useEditorStore((s) => s.apply);
@@ -187,9 +205,25 @@ function StepRow({
       >
         <GripVertical className="size-4" />
       </button>
-      <span className="w-9 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+      <button
+        type="button"
+        className={cn(
+          'relative w-9 shrink-0 rounded text-right text-xs tabular-nums text-muted-foreground hover:bg-muted',
+          hasBreakpoint && 'font-semibold text-fail',
+        )}
+        title={tx(hasBreakpoint ? 'ui.run.breakpointRemove' : 'ui.run.breakpointAdd')}
+        aria-pressed={hasBreakpoint}
+        aria-label={`${row.no} · ${tx(hasBreakpoint ? 'ui.run.breakpointRemove' : 'ui.run.breakpointAdd')}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (testId) toggleBreakpoint(testId, step.id, latestRunId);
+        }}
+      >
+        {hasBreakpoint && (
+          <span className="absolute top-1/2 left-0.5 size-2 -translate-y-1/2 rounded-full bg-fail" />
+        )}
         {row.no}
-      </span>
+      </button>
       <StepStatusIcon testId={testId} stepId={step.id} />
       <div className="min-w-0 flex-1">
         {doc && (
@@ -237,6 +271,17 @@ function StepRow({
           <DropdownMenuItem onSelect={() => apply((d) => toggleStep(d, step.id))}>
             <Power /> {step.enabled ? tx('ui.editor.disable') : tx('ui.editor.enable')}
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => testId && toggleBreakpoint(testId, step.id, latestRunId)}
+          >
+            <OctagonPause />{' '}
+            {tx(hasBreakpoint ? 'ui.run.breakpointRemove' : 'ui.run.breakpointAdd')}
+          </DropdownMenuItem>
+          {row.list.kind === 'root' && onRunFrom && (
+            <DropdownMenuItem onSelect={() => onRunFrom(step.id)}>
+              <StepForward /> {tx('ui.run.runFromHere')}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onSelect={() => del(step)}>
             <Trash2 /> {tx('ui.actions.delete')}
@@ -251,9 +296,11 @@ function StepRow({
 export function StepTable({
   sharedNames,
   onChip,
+  onRunFrom,
 }: {
   sharedNames: ReadonlyMap<string, string>;
   onChip: (id: string, param: string) => void;
+  onRunFrom?: (stepId: string) => void;
 }) {
   const doc = useEditorStore((s) => s.doc);
   const apply = useEditorStore((s) => s.apply);
@@ -275,7 +322,13 @@ export function StepTable({
       <SortableContext items={rows.map((r) => r.step.id)} strategy={verticalListSortingStrategy}>
         <ul className="flex flex-col" aria-label="steps">
           {rows.map((row) => (
-            <StepRow key={row.step.id} row={row} sharedNames={sharedNames} onChip={onChip} />
+            <StepRow
+              key={row.step.id}
+              row={row}
+              sharedNames={sharedNames}
+              onChip={onChip}
+              onRunFrom={onRunFrom}
+            />
           ))}
         </ul>
       </SortableContext>

@@ -47,11 +47,11 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 
 ## M4 — Chạy & Kết quả
 - [x] **M4-01** Engine chạy trong utility process, nối event về UI [N-05]
-- [ ] **M4-02** Màn Chạy test: tiến độ realtime, Dừng/Tạm dừng/Bước tiếp, breakpoint, chạy từ bước X, slow-mo [S-03, H-03, H-04]
-- [ ] **M4-03** Chạy suite / tag, chọn môi trường [H-01, H-02]
-- [ ] **M4-04** Màn Kết quả: step, ảnh, video, trace viewer [S-04]
-- [ ] **M4-05** Lịch sử chạy [S-05]
-- [ ] **M4-06** Xuất báo cáo HTML tự chứa [I-05]
+- [x] **M4-02** Màn Chạy test: tiến độ realtime, Dừng/Tạm dừng/Bước tiếp, breakpoint, chạy từ bước X, slow-mo [S-03, H-03, H-04]
+- [x] **M4-03** Chạy suite / tag, chọn môi trường [H-01, H-02]
+- [x] **M4-04** Màn Kết quả: step, ảnh, video, trace viewer [S-04]
+- [x] **M4-05** Lịch sử chạy [S-05]
+- [x] **M4-06** Xuất báo cáo HTML tự chứa [I-05]
 
 ## M5 — Recorder & Pick
 - [ ] **M5-01** `packages/recorder`: bắt thao tác → step, gộp thao tác thừa [K-01, K-02]

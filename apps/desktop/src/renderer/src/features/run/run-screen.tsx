@@ -1,0 +1,546 @@
+import type { Step, TestCase } from '@kiemi/schema';
+import { describeRunError } from '@kiemi/shared';
+import { artifactUrl } from '@main/results/artifact-url';
+import { Badge } from '@renderer/components/ui/badge';
+import { Button } from '@renderer/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@renderer/components/ui/dialog';
+import { errorMessage } from '@renderer/lib/errors';
+import { useAppStore } from '@renderer/lib/store';
+import { trpc, trpcClient } from '@renderer/lib/trpc';
+import { useTx } from '@renderer/lib/tx';
+import { cn } from '@renderer/lib/utils';
+import { useQueries, useQuery } from '@tanstack/react-query';
+import {
+  ArrowLeft,
+  CircleAlert,
+  Download,
+  FileSearch,
+  FolderOpen,
+  Loader2,
+  Pause,
+  Play,
+  RotateCcw,
+  Square,
+  StepForward,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { childLists } from '../editor/doc-model';
+import { StepSentence } from '../editor/step-sentence';
+import { buildHtmlReport } from './report';
+import { useStartRun } from './run-dialog';
+import {
+  fromDetail,
+  isFinished,
+  type LiveCase,
+  type LiveCaseStatus,
+  type LiveRun,
+} from './run-state';
+import { useRunStore } from './run-store';
+import { StatusIcon } from './step-status';
+
+const STATUS_BADGE: Record<LiveCaseStatus, string> = {
+  queued: 'border-muted-foreground/40 text-muted-foreground',
+  running: 'border-primary/50 text-primary',
+  passed: 'border-pass/50 text-pass',
+  failed: 'border-fail/50 text-fail',
+  error: 'border-fail/50 text-fail',
+  cancelled: 'border-muted-foreground/40 text-muted-foreground',
+  skipped: 'border-muted-foreground/40 text-muted-foreground',
+};
+
+export function RunStatusBadge({ status }: { status: LiveCaseStatus }) {
+  const tx = useTx();
+  return (
+    <Badge variant="outline" className={STATUS_BADGE[status]}>
+      {status === 'running' && <Loader2 className="animate-spin" />}
+      {tx(`ui.run.status.${status}`)}
+    </Badge>
+  );
+}
+
+const seconds = (ms: number | undefined) =>
+  ms === undefined ? undefined : (Math.round(ms / 100) / 10).toLocaleString('vi-VN');
+
+function* walk(
+  steps: Step[],
+  prefix: string,
+  depth: number,
+): Generator<{ step: Step; no: string; depth: number; top: boolean }> {
+  for (const [i, step] of steps.entries()) {
+    const no = `${prefix}${i + 1}`;
+    yield { step, no, depth, top: depth === 0 && !prefix.startsWith('C') };
+    for (const c of childLists(step)) yield* walk(c.steps, `${no}.`, depth + 1);
+  }
+}
+
+/** Live run from the store, else what the DB stored. */
+function useRunView(runId: string) {
+  const live = useRunStore((s) => s.runs[runId]);
+  const watch = useRunStore((s) => s.watch);
+  const detail = useQuery(trpc.runs.get.queryOptions({ runId }));
+  const liveDone = live ? isFinished(live.status) : false;
+  // Reload stored details (durations, files) once the run ends.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch only on completion.
+  useEffect(() => {
+    if (liveDone) void detail.refetch();
+  }, [liveDone]);
+  // Opened from history while still running: follow it.
+  useEffect(() => {
+    if (detail.data?.running) watch(runId);
+  }, [detail.data?.running, runId, watch]);
+  const view: LiveRun | undefined =
+    live && live.cases.length > 0 && !(liveDone && detail.data && !detail.data.running)
+      ? live
+      : detail.data
+        ? fromDetail(detail.data)
+        : live;
+  return { view, detail: detail.data, loading: detail.isLoading };
+}
+
+/** "Chạy test" + "Kết quả" in one screen: live progress, then results [S-03, S-04]. */
+export function RunScreen({ runId }: { runId: string }) {
+  const tx = useTx();
+  const openRun = useAppStore((s) => s.openRun);
+  const { view, detail } = useRunView(runId);
+  const stop = useRunStore((s) => s.stop);
+  const control = useRunStore((s) => s.control);
+  const breakpoints = useRunStore((s) => s.breakpoints);
+  const toggleBreakpoint = useRunStore((s) => s.toggleBreakpoint);
+  const startRun = useStartRun();
+  const [selected, setSelected] = useState<string | null>(null);
+  const [shot, setShot] = useState<{ src: string; title: string } | null>(null);
+
+  const testIds = useMemo(
+    () => [...new Set((view?.cases ?? []).map((c) => c.testCaseId))],
+    [view?.cases],
+  );
+  const tests = useQueries({
+    queries: testIds.map((id) => ({ ...trpc.testCases.get.queryOptions({ id }), retry: false })),
+  });
+  const docs = useMemo(() => {
+    const m: Record<string, TestCase | undefined> = {};
+    testIds.forEach((id, i) => {
+      m[id] = tests[i]?.data?.content;
+    });
+    return m;
+  }, [testIds, tests]);
+  const shared = useQuery({
+    ...trpc.sharedSteps.list.queryOptions({ projectId: detail?.projectId ?? '' }),
+    enabled: !!detail?.projectId,
+  });
+  const sharedNames = useMemo(
+    () => new Map((shared.data ?? []).map((s) => [s.id, s.name])),
+    [shared.data],
+  );
+
+  if (!view) {
+    return (
+      <div className="flex flex-1 items-center justify-center text-muted-foreground">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
+  }
+
+  const running = !isFinished(view.status);
+  const current =
+    view.cases.find((c) => c.runCaseId === selected) ??
+    view.cases.find((c) => c.status === 'running') ??
+    view.cases.find((c) => c.status === 'failed' || c.status === 'error') ??
+    view.cases[0];
+  const target = view.target;
+  const title =
+    target?.kind === 'tag' ? tx('ui.run.tag', { tag: target.tag }) : (target?.name ?? '');
+  const passed = view.cases.filter((c) => c.status === 'passed').length;
+  const single = target?.kind === 'test';
+
+  const rerun = async () => {
+    if (!target) return;
+    const t =
+      target.kind === 'test'
+        ? { kind: 'test' as const, testCaseId: target.testCaseId }
+        : target.kind === 'suite'
+          ? { kind: 'suite' as const, suiteId: target.suiteId }
+          : { kind: 'tag' as const, projectId: detail?.projectId ?? '', tag: target.tag };
+    await startRun(t);
+  };
+
+  const exportReport = async () => {
+    try {
+      const screenshots = await trpcClient.runs.screenshots.query({ runId });
+      const html = buildHtmlReport({
+        run: view,
+        title,
+        environmentName: detail?.environmentName ?? null,
+        startedAt: detail?.startedAt ? new Date(detail.startedAt) : null,
+        tests: docs,
+        screenshots,
+        sharedNames,
+        tx,
+      });
+      const d = new Date();
+      const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+      const name = `kiemi-${title.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'report'}-${stamp}.html`;
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      toast.success(tx('ui.run.reportSaved', { file: name }));
+    } catch (err) {
+      toast.error(errorMessage(err, tx));
+    }
+  };
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={tx('ui.run.back')}
+          onClick={() => openRun(null)}
+        >
+          <ArrowLeft />
+        </Button>
+        <h1 className="min-w-0 truncate text-base font-semibold">{title}</h1>
+        <RunStatusBadge status={view.status} />
+        <span className="text-xs text-muted-foreground">
+          {detail?.environmentName
+            ? tx('ui.run.environment', { name: detail.environmentName })
+            : detail
+              ? tx('ui.run.noEnvironment')
+              : ''}
+          {!running &&
+            view.durationMs !== undefined &&
+            ` · ${tx('ui.run.duration', { seconds: seconds(view.durationMs) })}`}
+          {view.cases.length > 1 &&
+            ` · ${tx('ui.run.summary', { passed, total: view.cases.length })}`}
+        </span>
+        <div className="ml-auto flex items-center gap-1">
+          {running ? (
+            <>
+              {view.paused ? (
+                <>
+                  <Button size="sm" onClick={() => void control(runId, 'resume')}>
+                    <Play /> {tx('ui.run.resume')}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => void control(runId, 'step')}>
+                    <StepForward /> {tx('ui.run.step')}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={view.stopping}
+                  onClick={() => void control(runId, 'pause')}
+                >
+                  <Pause /> {tx('ui.run.pause')}
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={view.stopping}
+                onClick={() => void stop(runId)}
+              >
+                <Square /> {view.stopping ? tx('ui.run.stopping') : tx('ui.run.stop')}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => void trpcClient.runs.openFolder.mutate({ runId })}
+              >
+                <FolderOpen /> {tx('ui.run.openFolder')}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => void exportReport()}>
+                <Download /> {tx('ui.run.exportReport')}
+              </Button>
+              <Button size="sm" onClick={() => void rerun()}>
+                <RotateCcw /> {tx('ui.run.rerun')}
+              </Button>
+            </>
+          )}
+        </div>
+      </header>
+
+      {running && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={cn(
+            'flex items-center gap-2 border-b px-4 py-2 text-sm',
+            view.paused ? 'bg-warning/10' : 'bg-primary/5',
+          )}
+        >
+          {view.paused ? (
+            <>
+              <Pause className="size-4 text-warning" />
+              {tx('ui.run.pausedAt', { step: view.paused.stepNo })}
+            </>
+          ) : (
+            <>
+              <Loader2 className="size-4 animate-spin text-primary" />
+              {view.downloadPercent !== undefined
+                ? tx('ui.run.downloading', { percent: Math.round(view.downloadPercent) })
+                : view.stopping
+                  ? tx('ui.run.stopping')
+                  : current?.currentStepNo
+                    ? tx('ui.run.progress', {
+                        step: Math.min(current.stepsDone + 1, Math.max(current.stepCount, 1)),
+                        total: current.stepCount,
+                      })
+                    : tx('ui.run.preparing')}
+            </>
+          )}
+        </div>
+      )}
+
+      {view.error && (
+        <div role="alert" className="flex gap-2 border-b bg-fail/5 px-4 py-2 text-sm">
+          <CircleAlert className="mt-0.5 size-4 shrink-0 text-fail" />
+          <div>
+            <p className="font-medium">{describeRunError(view.error, tx).message}</p>
+            <p className="text-muted-foreground">{describeRunError(view.error, tx).hint}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex min-h-0 flex-1">
+        {view.cases.length > 1 && (
+          <nav aria-label={tx('ui.run.tests')} className="w-64 shrink-0 overflow-auto border-r p-2">
+            <h2 className="mb-1 px-2 text-xs font-semibold text-muted-foreground uppercase">
+              {tx('ui.run.tests')}
+            </h2>
+            <ul className="flex flex-col gap-0.5">
+              {view.cases.map((c) => (
+                <li key={c.runCaseId}>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(c.runCaseId)}
+                    className={cn(
+                      'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent',
+                      current?.runCaseId === c.runCaseId && 'bg-accent',
+                    )}
+                  >
+                    <StatusIcon
+                      status={
+                        c.status === 'queued' || c.status === 'cancelled' || c.status === 'error'
+                          ? c.status === 'error'
+                            ? 'failed'
+                            : c.status === 'cancelled'
+                              ? 'skipped'
+                              : undefined
+                          : c.status
+                      }
+                    />
+                    <span className="min-w-0 flex-1 truncate">{c.testName}</span>
+                    {c.rowIndex !== undefined && (
+                      <span className="text-xs text-muted-foreground">#{c.rowIndex + 1}</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+        <div className="min-w-0 flex-1 overflow-auto">
+          {view.cases.length === 0 ? (
+            <p className="p-6 text-sm text-muted-foreground">
+              {running ? tx('ui.run.preparing') : tx('ui.run.emptyRun')}
+            </p>
+          ) : current ? (
+            <CaseView
+              runId={runId}
+              c={current}
+              doc={docs[current.testCaseId]}
+              sharedNames={sharedNames}
+              paused={view.paused?.runCaseId === current.runCaseId ? view.paused.stepId : undefined}
+              breakpoints={single ? (breakpoints[current.testCaseId] ?? []) : undefined}
+              onToggleBreakpoint={(stepId) => toggleBreakpoint(current.testCaseId, stepId, runId)}
+              onShot={setShot}
+            />
+          ) : null}
+        </div>
+      </div>
+
+      <Dialog open={shot !== null} onOpenChange={(o) => !o && setShot(null)}>
+        <DialogContent className="sm:max-w-5xl">
+          <DialogTitle>{shot?.title}</DialogTitle>
+          {shot && (
+            <img src={shot.src} alt={shot.title} className="max-h-[75vh] w-full object-contain" />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function CaseView({
+  runId,
+  c,
+  doc,
+  sharedNames,
+  paused,
+  breakpoints,
+  onToggleBreakpoint,
+  onShot,
+}: {
+  runId: string;
+  c: LiveCase;
+  doc: TestCase | undefined;
+  sharedNames: ReadonlyMap<string, string>;
+  paused: string | undefined;
+  breakpoints: string[] | undefined;
+  onToggleBreakpoint: (stepId: string) => void;
+  onShot: (s: { src: string; title: string }) => void;
+}) {
+  const tx = useTx();
+  const rows = doc ? [...walk(doc.steps, '', 0), ...walk(doc.cleanup, 'C', 0)] : [];
+  const videos = c.artifacts.filter((a) => a.kind === 'video');
+  const traces = c.artifacts.filter((a) => a.kind === 'trace');
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+        <h2 className="text-sm font-semibold">{c.testName}</h2>
+        {c.rowIndex !== undefined && (
+          <span className="text-xs text-muted-foreground">
+            {tx('ui.run.row', { row: c.rowIndex + 1 })}
+          </span>
+        )}
+        <RunStatusBadge status={c.status} />
+        {c.durationMs !== undefined && (
+          <span className="text-xs text-muted-foreground">
+            {tx('ui.run.duration', { seconds: seconds(c.durationMs) })}
+          </span>
+        )}
+      </div>
+      {c.error && !Object.values(c.steps).some((s) => s.error) && (
+        <p className="mx-4 my-2 rounded-md border-l-4 border-fail bg-fail/5 px-3 py-2 text-sm">
+          {describeRunError(c.error, tx).message}
+        </p>
+      )}
+      <ul className="flex flex-col" aria-label={tx('ui.run.tests')}>
+        {rows.length === 0 && Object.keys(c.steps).length === 0 && (
+          <li className="px-4 py-3 text-sm text-muted-foreground">{tx('ui.run.noSteps')}</li>
+        )}
+        {rows.map(({ step, no, depth, top }) => {
+          const r = c.steps[step.id];
+          const bp = breakpoints?.includes(step.id) ?? false;
+          return (
+            <li
+              key={step.id}
+              data-step={step.id}
+              data-status={r?.status ?? 'none'}
+              className={cn(
+                'flex flex-col border-b py-1.5 pr-4 text-sm',
+                paused === step.id && 'bg-warning/10',
+                r?.status === 'running' && 'bg-primary/5',
+              )}
+              style={{ paddingLeft: `${depth * 24 + 8}px` }}
+            >
+              <div className="flex items-center gap-2">
+                {breakpoints && top ? (
+                  <button
+                    type="button"
+                    title={tx(bp ? 'ui.run.breakpointRemove' : 'ui.run.breakpointAdd')}
+                    aria-pressed={bp}
+                    aria-label={tx(bp ? 'ui.run.breakpointRemove' : 'ui.run.breakpointAdd')}
+                    onClick={() => onToggleBreakpoint(step.id)}
+                    className="flex size-4 items-center justify-center rounded-full hover:bg-muted"
+                  >
+                    <span
+                      className={cn('size-2 rounded-full', bp ? 'bg-fail' : 'bg-transparent')}
+                    />
+                  </button>
+                ) : (
+                  <span className="size-4" />
+                )}
+                <StatusIcon status={r?.status} />
+                <span className="w-9 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                  {no}
+                </span>
+                <div className={cn('min-w-0 flex-1', !step.enabled && 'opacity-55')}>
+                  <StepSentence
+                    step={step}
+                    elements={doc?.elements ?? {}}
+                    sharedNames={sharedNames}
+                  />
+                </div>
+                {r?.durationMs !== undefined && (
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                    {tx('ui.run.duration', { seconds: seconds(r.durationMs) })}
+                  </span>
+                )}
+              </div>
+              {r?.error && r.status === 'failed' && (
+                <div className="mt-1 ml-[76px] rounded-md border-l-4 border-fail bg-fail/5 px-3 py-1.5">
+                  <p className="font-medium">{describeRunError(r.error, tx).message}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {describeRunError(r.error, tx).hint}
+                  </p>
+                </div>
+              )}
+              {r?.artifacts.some((a) => a.kind === 'screenshot') && (
+                <div className="mt-1 ml-[76px] flex flex-wrap gap-2">
+                  {r.artifacts
+                    .filter((a) => a.kind === 'screenshot')
+                    .map((a) => {
+                      const src = artifactUrl(runId, a.path);
+                      const title = tx('ui.run.screenshot', { step: r.stepNo });
+                      return (
+                        <button
+                          type="button"
+                          key={a.path}
+                          onClick={() => onShot({ src, title })}
+                          className="overflow-hidden rounded-md border hover:ring-2 hover:ring-primary/40"
+                        >
+                          <img src={src} alt={title} className="h-28 w-auto" />
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {(videos.length > 0 || traces.length > 0) && (
+        <div className="flex flex-col gap-3 p-4">
+          {videos.map((v) => (
+            <figure key={v.path} className="flex flex-col gap-1">
+              <figcaption className="text-sm font-medium">{tx('ui.run.video')}</figcaption>
+              {/* biome-ignore lint/a11y/useMediaCaption: screen recordings have no speech. */}
+              <video
+                controls
+                src={artifactUrl(runId, v.path)}
+                className="max-h-[60vh] w-full rounded-md border bg-black"
+              />
+            </figure>
+          ))}
+          {traces.map((t) => (
+            <div key={t.path} className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  void trpcClient.runs.openTrace
+                    .mutate({ runId, path: t.path })
+                    .catch(() => undefined)
+                }
+              >
+                <FileSearch /> {tx('ui.run.trace')}
+              </Button>
+              <span className="text-xs text-muted-foreground">{tx('ui.run.traceHint')}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

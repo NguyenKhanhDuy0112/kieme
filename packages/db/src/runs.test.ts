@@ -65,3 +65,38 @@ describe('run records [M4-01]', () => {
     });
   });
 });
+
+describe('run history and detail [S-04, S-05]', () => {
+  it('lists runs newest first with counts and filters', () => {
+    let t = 0;
+    const { services: s, defaultProjectId: p } = createMemoryServices();
+    const a = s.testCases.create({ projectId: p, name: 'A' });
+    const b = s.testCases.create({ projectId: p, name: 'B' });
+    const mk = (testIds: string[], status: 'passed' | 'failed', suiteId?: string) => {
+      const r = s.runs.create({
+        projectId: p,
+        artifactDir: `/r${t++}`,
+        ...(suiteId ? { suiteId } : {}),
+        target: { kind: 'test', testCaseId: testIds[0] as string, name: 'x' },
+      });
+      for (const id of testIds) {
+        const c = s.runs.addCase({ runId: r.id, testCaseId: id });
+        s.runs.finishCase(c.id, { status, durationMs: 1 });
+      }
+      return s.runs.finish(r.id, status);
+    };
+    const r1 = mk([a.id], 'passed');
+    const r2 = mk([a.id, b.id], 'failed', 'suite-1');
+    const h = s.runs.history(p);
+    expect(h.map((r) => r.id)).toEqual([r2.id, r1.id]);
+    expect(h[0]?.counts).toMatchObject({ total: 2, failed: 2 });
+    expect(h[0]?.target).toMatchObject({ kind: 'test', name: 'x' });
+    expect(s.runs.history(p, { testCaseId: b.id }).map((r) => r.id)).toEqual([r2.id]);
+    expect(s.runs.history(p, { status: 'passed' }).map((r) => r.id)).toEqual([r1.id]);
+    expect(s.runs.history(p, { suiteId: 'suite-1' }).map((r) => r.id)).toEqual([r2.id]);
+
+    const d = s.runs.detail(r2.id);
+    expect(d.cases).toHaveLength(2);
+    expect(d.cases[0]).toMatchObject({ steps: [], artifacts: [] });
+  });
+});

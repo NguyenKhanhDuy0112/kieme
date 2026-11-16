@@ -1,6 +1,7 @@
 import {
   type ActionRegistry,
   createDefaultRegistry,
+  DebugController,
   type LaunchBrowserOptions,
   type LaunchedBrowser,
   launchBrowser,
@@ -29,8 +30,33 @@ export function createEngineWorker(post: (msg: WorkerToHost) => void, deps: Work
   const registry = deps.registry ?? createDefaultRegistry();
   const abort = new AbortController();
   let started = false;
+  /** Request (run case) currently running, for debug messages. */
+  let current = '';
+  const debug = new DebugController(
+    {},
+    {
+      onPause: (s) =>
+        post({
+          type: 'debug',
+          state: 'paused',
+          runCaseId: current,
+          stepId: s.stepId,
+          stepNo: s.stepNo,
+        }),
+      onResume: (s) =>
+        post({
+          type: 'debug',
+          state: 'running',
+          runCaseId: current,
+          stepId: s.stepId,
+          stepNo: s.stepNo,
+        }),
+    },
+  );
 
   async function start(msg: Extract<HostToWorker, { type: 'start' }>): Promise<void> {
+    debug.setBreakpoints(msg.debug?.breakpoints ?? []);
+    if (msg.debug?.pauseAtStart) debug.pause();
     let launched: Pick<LaunchedBrowser, 'browser'> | undefined;
     try {
       launched = await launch({
@@ -47,14 +73,16 @@ export function createEngineWorker(post: (msg: WorkerToHost) => void, deps: Work
     try {
       for (const request of msg.requests) {
         if (abort.signal.aborted) break;
-        results.push(
-          await run(request, {
-            registry,
-            browser: launched.browser,
-            signal: abort.signal,
-            onEvent: (event) => post({ type: 'event', event }),
-          }),
-        );
+        current = request.runId;
+        const result = await run(request, {
+          registry,
+          browser: launched.browser,
+          signal: abort.signal,
+          debugger: debug,
+          onEvent: (event) => post({ type: 'event', event }),
+        });
+        results.push(result);
+        if (msg.stopOnFailure && result.status !== 'passed') break;
       }
       post({ type: 'done', results });
     } catch (err) {
@@ -67,9 +95,22 @@ export function createEngineWorker(post: (msg: WorkerToHost) => void, deps: Work
   return {
     /** Resolves when the message has been fully handled (a `start` = the whole run). */
     async handle(msg: HostToWorker): Promise<void> {
-      if (msg.type === 'cancel') {
-        abort.abort();
-        return;
+      switch (msg.type) {
+        case 'cancel':
+          abort.abort();
+          return;
+        case 'pause':
+          debug.pause();
+          return;
+        case 'resume':
+          debug.resume();
+          return;
+        case 'step':
+          debug.step();
+          return;
+        case 'breakpoints':
+          debug.setBreakpoints(msg.stepIds);
+          return;
       }
       if (started) return;
       started = true;

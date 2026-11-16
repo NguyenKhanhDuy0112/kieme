@@ -1,7 +1,7 @@
 import type { ArtifactRef, RunError, RunResult, StepResult } from '@kiemi/schema';
 import { eq } from 'drizzle-orm';
 import { Repo, type RepoContext } from '../repo';
-import { artifacts, runCases, runSteps, runs } from '../tables';
+import { artifacts, type RunTarget, runCases, runSteps, runs } from '../tables';
 
 export type RunRowStatus = (typeof runs.$inferSelect)['status'];
 
@@ -11,6 +11,7 @@ export interface NewRunInput {
   suiteId?: string | null;
   artifactDir: string;
   trigger?: 'manual' | 'schedule' | 'cli';
+  target?: RunTarget | null;
 }
 
 export interface StepRecord {
@@ -64,6 +65,7 @@ export class RunService {
       status: 'queued',
       trigger: input.trigger ?? 'manual',
       artifactDir: input.artifactDir,
+      target: input.target ?? null,
     });
   }
 
@@ -117,8 +119,8 @@ export class RunService {
     });
   }
 
-  /** Marks a case that never finished (engine crash / cancelled before start). */
-  abortCase(id: string, status: 'error' | 'cancelled', error?: RunError) {
+  /** Marks a case that never finished (engine crash, cancelled, skipped after a failure). */
+  abortCase(id: string, status: 'error' | 'cancelled' | 'skipped', error?: RunError) {
     return this.cases.update(id, { status, error: storedError(error) });
   }
 
@@ -160,5 +162,61 @@ export class RunService {
 
   listArtifacts(runId: string) {
     return this.artifacts.list(eq(artifacts.runId, runId));
+  }
+
+  /** Run with every case, its steps and files — for the result screen [S-04]. */
+  detail(runId: string) {
+    const run = this.repo.get(runId);
+    const files = this.listArtifacts(runId);
+    return {
+      ...run,
+      cases: this.listCases(runId).map((c) => ({
+        ...c,
+        steps: this.listSteps(c.id).map((st) => ({
+          ...st,
+          artifacts: files.filter((f) => f.runStepId === st.id),
+        })),
+        artifacts: files.filter((f) => f.runCaseId === c.id && f.runStepId === null),
+      })),
+    };
+  }
+
+  /**
+   * Run history, newest first, with per-run case counts [S-05].
+   * Filters: a test (any case of it), a suite, a status.
+   */
+  history(
+    projectId: string,
+    filter: {
+      testCaseId?: string | undefined;
+      suiteId?: string | undefined;
+      status?: RunRowStatus | undefined;
+      limit?: number | undefined;
+    } = {},
+  ) {
+    // UUIDv7 ids sort by creation time (monotonic within a millisecond).
+    const all = this.list(projectId).sort((x, y) => (x.id < y.id ? 1 : -1));
+    const out = [];
+    for (const run of all) {
+      if (filter.suiteId && run.suiteId !== filter.suiteId) continue;
+      if (filter.status && run.status !== filter.status) continue;
+      const cases = this.listCases(run.id);
+      if (filter.testCaseId && !cases.some((c) => c.testCaseId === filter.testCaseId)) continue;
+      const count = (st: string) => cases.filter((c) => c.status === st).length;
+      out.push({
+        ...run,
+        testCaseIds: [...new Set(cases.map((c) => c.testCaseId))],
+        counts: {
+          total: cases.length,
+          passed: count('passed'),
+          failed: count('failed'),
+          error: count('error'),
+          cancelled: count('cancelled'),
+          skipped: count('skipped'),
+        },
+      });
+      if (filter.limit && out.length >= filter.limit) break;
+    }
+    return out;
   }
 }

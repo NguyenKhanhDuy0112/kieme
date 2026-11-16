@@ -1,8 +1,19 @@
 import { join } from 'node:path';
-import type { RunRowStatus, Services } from '@kiemi/db';
+import type { RunRowStatus, RunTarget, Services } from '@kiemi/db';
 import type { EngineEvent, RunRequest, StepPhase } from '@kiemi/engine';
-import type { Dataset, Env, RunError, RunResult, Secrets, TestCase } from '@kiemi/schema';
+import type {
+  ArtifactRef,
+  Dataset,
+  Env,
+  RunError,
+  RunResult,
+  Secrets,
+  TestCase,
+} from '@kiemi/schema';
 import type { HostToWorker, WorkerToHost } from './protocol';
+import { type StartRunInput, StartRunInputSchema } from './start-input';
+
+export type { StartRunInput } from './start-input';
 
 /** One engine utility process, as seen by the main process. */
 export interface WorkerHandle {
@@ -32,19 +43,28 @@ export interface RunManagerDeps {
 
 export type FinalStatus = Exclude<RunRowStatus, 'queued' | 'running'>;
 
-/** What the renderer receives while a run progresses [N-05]. */
-export type RunFeedEvent =
-  | { type: 'status'; runId: string; status: RunRowStatus; error?: RunError }
-  | { type: 'download'; runId: string; percent: number }
-  | { type: 'engine'; runId: string; runCaseId: string; event: EngineEvent };
-
-export interface StartRunInput {
+/** One test case × dataset row of a run. */
+export interface PlannedCase {
+  runCaseId: string;
   testCaseId: string;
-  /** `undefined` = first environment of the project; `null` = none. */
-  environmentId?: string | null | undefined;
-  /** Only this dataset row; otherwise every row runs. */
+  testName: string;
   rowIndex?: number | undefined;
 }
+
+/** What the renderer receives while a run progresses [N-05, S-03]. */
+export type RunFeedEvent =
+  | { type: 'plan'; runId: string; target: RunTarget; cases: PlannedCase[] }
+  | { type: 'status'; runId: string; status: RunRowStatus; error?: RunError }
+  | { type: 'download'; runId: string; percent: number }
+  | {
+      type: 'debug';
+      runId: string;
+      runCaseId: string;
+      state: 'paused' | 'running';
+      stepId: string;
+      stepNo: string;
+    }
+  | { type: 'engine'; runId: string; runCaseId: string; event: EngineEvent };
 
 interface StepInfo {
   phase: StepPhase;
@@ -63,12 +83,25 @@ interface ActiveRun {
   tunnel?: TunnelLike;
   caseIds: Set<string>;
   openCases: Set<string>;
+  /** Artifact sub-folder of each case, relative to the run folder ('' = the run folder). */
+  caseDirs: Map<string, string>;
   steps: Map<string, StepInfo>;
+}
+
+interface CasePlan {
+  testCase: TestCase;
+  dataset?: Dataset | undefined;
+  rowIndex?: number | undefined;
 }
 
 const KEEP_FINISHED = 20;
 
-function datasetOf(tc: TestCase, services: Services): Dataset | undefined {
+function datasetOf(
+  tc: TestCase,
+  services: Services,
+  overrideId?: string | null,
+): Dataset | undefined {
+  if (overrideId) return services.datasets.forRun(overrideId);
   const src = tc.dataset;
   if (!src) return undefined;
   if (src.source === 'table')
@@ -78,6 +111,14 @@ function datasetOf(tc: TestCase, services: Services): Dataset | undefined {
   return undefined;
 }
 
+/** One case per dataset row (or a single case without data). */
+function expand(tc: TestCase, dataset: Dataset | undefined, rowIndex?: number): CasePlan[] {
+  if (rowIndex !== undefined) return [{ testCase: tc, dataset, rowIndex }];
+  if (dataset?.rows.length)
+    return dataset.rows.map((_, i) => ({ testCase: tc, dataset, rowIndex: i }));
+  return [{ testCase: tc, dataset }];
+}
+
 function overall(results: RunResult[], cancelled: boolean): FinalStatus {
   if (results.some((r) => r.status === 'error')) return 'error';
   if (cancelled || results.some((r) => r.status === 'cancelled')) return 'cancelled';
@@ -85,10 +126,13 @@ function overall(results: RunResult[], cancelled: boolean): FinalStatus {
   return 'passed';
 }
 
+const withDir = (dir: string, a: ArtifactRef): ArtifactRef =>
+  dir ? { ...a, path: `${dir}/${a.path}` } : a;
+
 /**
- * Starts runs in the engine utility process, records progress in the DB and
- * streams it to the renderer [N-05, M4-01]. An engine crash marks the run
- * `error`; the app keeps working.
+ * Starts runs (one test, a suite or a tag) in the engine utility process,
+ * records progress in the DB and streams it to the renderer [N-05, H-01…H-04].
+ * An engine crash marks the run `error`; the app keeps working.
  */
 export class RunManager {
   readonly #d: RunManagerDeps;
@@ -99,32 +143,60 @@ export class RunManager {
   }
 
   /** Validates and records the run, then runs it in the background. Returns the run id. */
-  start(input: StartRunInput): { runId: string } {
+  start(raw: StartRunInput): { runId: string } {
+    const input = StartRunInputSchema.parse(raw);
     const s = this.#d.services;
-    const row = s.testCases.get(input.testCaseId);
-    const testCase = row.content;
+    const opts = input.options;
+
+    // What to run [H-01].
+    let projectId: string;
+    let target: RunTarget;
+    let suiteId: string | null = null;
+    let suiteVariables: Record<string, string> | undefined;
+    let defaultEnv: string | null | undefined;
+    let plans: CasePlan[] = [];
+    const t = input.target;
+    if (t.kind === 'test') {
+      const row = s.testCases.get(t.testCaseId);
+      projectId = row.projectId;
+      target = { kind: 'test', testCaseId: row.id, name: row.name };
+      plans = expand(row.content, datasetOf(row.content, s), t.rowIndex);
+    } else if (t.kind === 'suite') {
+      const suite = s.suites.get(t.suiteId);
+      projectId = suite.projectId;
+      suiteId = suite.id;
+      target = { kind: 'suite', suiteId: suite.id, name: suite.name };
+      suiteVariables = suite.variables;
+      defaultEnv = suite.environmentId;
+      for (const item of suite.items) {
+        if (!item.enabled) continue;
+        const row = s.testCases.repo.find(item.testCaseId);
+        if (!row) continue;
+        plans.push(...expand(row.content, datasetOf(row.content, s, item.datasetId)));
+      }
+    } else {
+      projectId = t.projectId;
+      target = { kind: 'tag', tag: t.tag, name: t.tag };
+      const tag = t.tag.toLowerCase();
+      for (const summary of s.testCases.list(projectId)) {
+        if (!summary.tags.some((x) => x.toLowerCase() === tag)) continue;
+        const row = s.testCases.get(summary.id);
+        plans.push(...expand(row.content, datasetOf(row.content, s)));
+      }
+    }
+
+    // Where to run it [H-02].
     const environmentId =
       input.environmentId === undefined
-        ? (s.environments.list(row.projectId)[0]?.id ?? null)
+        ? (defaultEnv ?? s.environments.list(projectId)[0]?.id ?? null)
         : input.environmentId;
     const { env, secrets } = environmentId
       ? s.environments.forRun(environmentId)
       : { env: undefined, secrets: {} };
-    const dataset = datasetOf(testCase, s);
-    const rows =
-      input.rowIndex !== undefined
-        ? [input.rowIndex]
-        : dataset?.rows.length
-          ? dataset.rows.map((_, i) => i)
-          : [undefined];
     const settings = s.settings.getAll();
-    const sharedSteps = s.sharedSteps.forRun(row.projectId);
+    const sharedSteps = s.sharedSteps.forRun(projectId);
 
-    const run = s.runs.create({
-      projectId: row.projectId,
-      environmentId,
-      artifactDir: '',
-    });
+    const run = s.runs.create({ projectId, environmentId, suiteId, artifactDir: '', target });
     const artifactDir = join(settings.resultsDir || this.#d.artifactsRoot, run.id);
     s.runs.repo.update(run.id, { artifactDir });
 
@@ -136,38 +208,77 @@ export class RunManager {
       cancelRequested: false,
       caseIds: new Set(),
       openCases: new Set(),
+      caseDirs: new Map(),
       steps: new Map(),
     };
     this.#runs.set(run.id, active);
     this.#trim();
 
-    const requests: RunRequest[] = rows.map((rowIndex) => {
-      const c = s.runs.addCase({ runId: run.id, testCaseId: testCase.id, rowIndex });
+    const planned: PlannedCase[] = [];
+    const requests: RunRequest[] = plans.map((p, i) => {
+      const c = s.runs.addCase({ runId: run.id, testCaseId: p.testCase.id, rowIndex: p.rowIndex });
+      const dir = plans.length > 1 ? `case-${i + 1}` : '';
       active.caseIds.add(c.id);
       active.openCases.add(c.id);
+      active.caseDirs.set(c.id, dir);
+      planned.push({
+        runCaseId: c.id,
+        testCaseId: p.testCase.id,
+        testName: p.testCase.name,
+        ...(p.rowIndex === undefined ? {} : { rowIndex: p.rowIndex }),
+      });
       return {
         runId: c.id,
-        testCase,
+        testCase: p.testCase,
         ...(env ? { env } : {}),
         secrets,
-        ...(dataset ? { dataset } : {}),
-        ...(rowIndex === undefined ? {} : { rowIndex }),
+        ...(p.dataset ? { dataset: p.dataset } : {}),
+        ...(p.rowIndex === undefined ? {} : { rowIndex: p.rowIndex }),
         sharedSteps,
+        ...(suiteVariables ? { suiteVariables } : {}),
         options: {
           defaultStepTimeoutMs: settings.defaultTimeoutSec * 1000,
+          ...(opts.startAtStepId && t.kind === 'test' ? { startAtStepId: opts.startAtStepId } : {}),
           artifacts: {
-            dir: rows.length > 1 ? join(artifactDir, `row-${(rowIndex ?? 0) + 1}`) : artifactDir,
-            screenshots: 'onFailure',
+            dir: dir ? join(artifactDir, dir) : artifactDir,
+            screenshots: opts.screenshots ?? 'onFailure',
+            video: opts.video === true,
+            trace: opts.trace === true,
           },
         },
       };
     });
 
+    this.#publish(active, { type: 'plan', runId: run.id, target, cases: planned });
     this.#publish(active, { type: 'status', runId: run.id, status: 'queued' });
-    void this.#execute(active, requests, env, secrets, {
-      browser: settings.browser,
-      headless: settings.headless,
-    });
+    if (requests.length === 0) {
+      this.#finish(active, 'passed');
+      return { runId: run.id };
+    }
+    const debugging = (opts.breakpoints?.length ?? 0) > 0 || opts.pauseAtStart === true;
+    void this.#execute(
+      active,
+      {
+        type: 'start',
+        requests,
+        launch: {
+          settings: {
+            browser: settings.browser,
+            // Debugging needs a visible browser [S-03].
+            headless: debugging ? false : (opts.headless ?? settings.headless),
+            ...(opts.slowMoMs ? { slowMoMs: opts.slowMoMs } : {}),
+          },
+          browsersPath: this.#d.browsersPath,
+        },
+        stopOnFailure: opts.stopOnFailure === true,
+        debug: {
+          breakpoints: opts.breakpoints ?? [],
+          pauseAtStart: opts.pauseAtStart === true,
+        },
+      },
+      env,
+      secrets,
+    );
     return { runId: run.id };
   }
 
@@ -183,6 +294,21 @@ export class RunManager {
         if (!active.finished) w.kill();
       }, this.#d.cancelKillMs ?? 15_000).unref?.();
     }
+    return true;
+  }
+
+  /** Tạm dừng / Tiếp tục / Bước tiếp / breakpoints while running [S-03, H-03]. */
+  control(
+    runId: string,
+    cmd:
+      | { type: 'pause' }
+      | { type: 'resume' }
+      | { type: 'step' }
+      | { type: 'breakpoints'; stepIds: string[] },
+  ): boolean {
+    const active = this.#runs.get(runId);
+    if (!active || active.finished || !active.worker) return false;
+    active.worker.send(cmd);
     return true;
   }
 
@@ -230,16 +356,15 @@ export class RunManager {
 
   async #execute(
     active: ActiveRun,
-    requests: RunRequest[],
+    start: Extract<HostToWorker, { type: 'start' }>,
     env: Env | undefined,
     secrets: Secrets,
-    launch: { browser: 'auto' | 'msedge' | 'chrome' | 'chromium'; headless: boolean },
   ): Promise<void> {
     const s = this.#d.services;
     s.runs.markRunning(active.runId);
     this.#publish(active, { type: 'status', runId: active.runId, status: 'running' });
 
-    let reqs = requests;
+    let msg = start;
     if (env?.ssh?.enabled && this.#d.openTunnel) {
       try {
         const tunnel = await this.#d.openTunnel(env, secrets);
@@ -248,7 +373,7 @@ export class RunManager {
           ...env,
           proxy: { server: tunnel.proxyUrl, bypass: env.proxy?.bypass ?? [] },
         };
-        reqs = requests.map((r) => ({ ...r, env: proxied }));
+        msg = { ...start, requests: start.requests.map((r) => ({ ...r, env: proxied })) };
       } catch (err) {
         this.#finish(active, 'error', {
           code: 'SSH_FAILED',
@@ -273,7 +398,7 @@ export class RunManager {
       return;
     }
     active.worker = worker;
-    worker.onMessage((msg) => this.#onMessage(active, msg));
+    worker.onMessage((m) => this.#onMessage(active, m));
     worker.onExit((code) => {
       if (active.finished) return;
       if (active.cancelRequested) this.#finish(active, 'cancelled');
@@ -284,11 +409,7 @@ export class RunManager {
           details: { exitCode: code },
         });
     });
-    worker.send({
-      type: 'start',
-      requests: reqs,
-      launch: { settings: launch, browsersPath: this.#d.browsersPath },
-    });
+    worker.send(msg);
   }
 
   #onMessage(active: ActiveRun, msg: WorkerToHost): void {
@@ -300,17 +421,24 @@ export class RunManager {
       case 'download':
         this.#publish(active, { type: 'download', runId, percent: msg.progress.percent });
         return;
-      case 'event':
-        this.#record(active, msg.event);
-        if (active.caseIds.has(msg.event.runId)) {
-          this.#publish(active, {
-            type: 'engine',
-            runId,
-            runCaseId: msg.event.runId,
-            event: msg.event,
-          });
-        }
+      case 'debug':
+        this.#publish(active, {
+          type: 'debug',
+          runId,
+          runCaseId: msg.runCaseId,
+          state: msg.state,
+          stepId: msg.stepId,
+          stepNo: msg.stepNo,
+        });
         return;
+      case 'event': {
+        const caseId = msg.event.runId;
+        if (!active.caseIds.has(caseId)) return;
+        const event = this.#prefixArtifacts(active, msg.event);
+        this.#record(active, event);
+        this.#publish(active, { type: 'engine', runId, runCaseId: caseId, event });
+        return;
+      }
       case 'done':
         this.#finish(active, overall(msg.results, active.cancelRequested));
         return;
@@ -320,11 +448,32 @@ export class RunManager {
     }
   }
 
+  /** Makes artifact paths relative to the run folder (cases have sub-folders). */
+  #prefixArtifacts(active: ActiveRun, e: EngineEvent): EngineEvent {
+    const dir = active.caseDirs.get(e.runId) ?? '';
+    if (!dir) return e;
+    switch (e.type) {
+      case 'artifact':
+        return { ...e, artifact: withDir(dir, e.artifact) };
+      case 'stepEnd':
+        return {
+          ...e,
+          result: { ...e.result, artifacts: e.result.artifacts.map((a) => withDir(dir, a)) },
+        };
+      case 'runEnd':
+        return {
+          ...e,
+          result: { ...e.result, artifacts: e.result.artifacts.map((a) => withDir(dir, a)) },
+        };
+      default:
+        return e;
+    }
+  }
+
   /** Persists engine progress (run_cases / run_steps / artifacts). */
   #record(active: ActiveRun, e: EngineEvent): void {
     const s = this.#d.services.runs;
     const caseId = e.runId;
-    if (!active.caseIds.has(caseId)) return;
     try {
       switch (e.type) {
         case 'runStart':
@@ -373,7 +522,9 @@ export class RunManager {
     const s = this.#d.services.runs;
     for (const caseId of active.openCases) {
       try {
-        s.abortCase(caseId, status === 'cancelled' ? 'cancelled' : 'error', error);
+        // Cases left after "stop on first failure" are skipped [H-04].
+        const left = status === 'cancelled' || status === 'error' ? status : 'skipped';
+        s.abortCase(caseId, left, left === 'error' ? error : undefined);
       } catch {
         // ignore
       }

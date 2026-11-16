@@ -25,6 +25,12 @@ const base = {
   version: integer('version').notNull().default(1),
 };
 
+/** What a run was started for [H-01]. */
+export type RunTarget =
+  | { kind: 'test'; testCaseId: string; name: string }
+  | { kind: 'suite'; suiteId: string; name: string }
+  | { kind: 'tag'; tag: string; name: string };
+
 const json = <T>(name: string) => text(name, { mode: 'json' }).$type<T>();
 
 export const workspaces = sqliteTable('workspaces', {
@@ -202,6 +208,8 @@ export const runs = sqliteTable(
     durationMs: integer('duration_ms'),
     /** Folder holding this run's screenshots/videos/traces. */
     artifactDir: text('artifact_dir'),
+    /** What was run (one test, a suite, a tag) — for history [S-05]. */
+    target: json<RunTarget>('target'),
   },
   (t) => [index('runs_project_idx').on(t.projectId)],
 );

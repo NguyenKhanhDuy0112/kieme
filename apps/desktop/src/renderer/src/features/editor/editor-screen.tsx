@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { RunControls } from '../run/run-controls';
+import { EditorRunButton } from '../run/editor-run-button';
 import { duplicateStep, findStep, savedVariables } from './doc-model';
 import { useEditorStore } from './editor-store';
 import { DataTab, SessionsTab, VariablesTab } from './editor-tabs';
@@ -46,6 +46,8 @@ export function EditorScreen({ testId }: { testId: string }) {
   const { doc, dirty, version, past, future, selectedId } = store;
   const [focusParam, setFocusParam] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
+  /** "Chạy từ bước này" opens the run options preset to that step [H-03]. */
+  const [runFrom, setRunFrom] = useState<string | null>(null);
   const del = useDeleteStep();
 
   const test = useQuery(trpc.testCases.get.queryOptions({ id: testId }));
@@ -264,7 +266,13 @@ export function EditorScreen({ testId }: { testId: string }) {
               </TooltipTrigger>
               <TooltipContent>{tx('ui.nav.comingSoon')}</TooltipContent>
             </Tooltip>
-            <RunControls testId={testId} beforeRun={doSave} />
+            <EditorRunButton
+              testId={testId}
+              testCase={doc}
+              beforeRun={doSave}
+              dialogStartAt={runFrom ?? undefined}
+              onDialogClose={() => setRunFrom(null)}
+            />
           </div>
         </header>
         {conflict && (
@@ -307,6 +315,7 @@ export function EditorScreen({ testId }: { testId: string }) {
                 <>
                   <StepTable
                     sharedNames={sharedNames}
+                    onRunFrom={setRunFrom}
                     onChip={(id, param) => {
                       store.select(id);
                       setFocusParam(param);

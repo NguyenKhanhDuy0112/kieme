@@ -259,4 +259,9 @@ CREATE UNIQUE INDEX "settings_workspace_key_idx" ON "settings" ("workspace_id", 
     name: 'environment-ssh',
     sql: 'ALTER TABLE "environments" ADD COLUMN "ssh" TEXT;',
   },
+  {
+    id: 3,
+    name: 'run-target',
+    sql: 'ALTER TABLE "runs" ADD COLUMN "target" TEXT;',
+  },
 ];

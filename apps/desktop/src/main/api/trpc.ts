@@ -13,6 +13,15 @@ export interface ApiContext {
   defaultProjectId: string;
   /** Starts runs in the engine utility process [M4-01]. */
   runs: RunManager;
+  /** OS / window features (absent in tests). */
+  desktop?: DesktopBridge;
+}
+
+export interface DesktopBridge {
+  /** Opens Playwright's trace viewer for a trace file [I-03]. */
+  openTrace(file: string): Promise<void>;
+  /** Shows a file or folder in Finder / Explorer. */
+  showInFolder(path: string): void;
 }
 
 const DB_TO_TRPC = {

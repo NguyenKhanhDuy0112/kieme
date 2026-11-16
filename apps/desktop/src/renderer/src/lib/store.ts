@@ -8,6 +8,8 @@ interface AppState {
   projectId: string | null;
   /** Test open in the editor (inside the Tests view). */
   openTestId: string | null;
+  /** Run / result screen shown over the current view [S-03, S-04]. */
+  openRunId: string | null;
   /** Right detail panel (U-01). */
   detailOpen: boolean;
   paletteOpen: boolean;
@@ -17,6 +19,7 @@ interface AppState {
   setView(view: View): void;
   setProject(id: string): void;
   openTest(id: string | null): void;
+  openRun(id: string | null): void;
   toggleDetail(): void;
   setPaletteOpen(open: boolean): void;
   setThemeChoice(choice: ThemeChoice): void;
@@ -34,13 +37,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   view: 'tests',
   projectId: null,
   openTestId: null,
+  openRunId: null,
   detailOpen: true,
   paletteOpen: false,
   themeChoice: 'system',
   theme: resolve('system'),
-  setView: (view) => set({ view }),
-  setProject: (projectId) => set({ projectId, openTestId: null }),
-  openTest: (openTestId) => set({ openTestId, view: 'tests' }),
+  setView: (view) => set({ view, openRunId: null }),
+  setProject: (projectId) => set({ projectId, openTestId: null, openRunId: null }),
+  openTest: (openTestId) => set({ openTestId, view: 'tests', openRunId: null }),
+  openRun: (openRunId) => set({ openRunId }),
   toggleDetail: () => set({ detailOpen: !get().detailOpen }),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setThemeChoice: (themeChoice) => {
