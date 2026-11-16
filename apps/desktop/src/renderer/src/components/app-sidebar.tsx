@@ -1,3 +1,4 @@
+import { Mascot } from '@renderer/components/mascot/mascot';
 import { NameDialog, type NameDialogState } from '@renderer/components/name-dialog';
 import {
   DropdownMenu,
@@ -63,8 +64,8 @@ export function AppSidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton size="lg" aria-label={tx('ui.nav.switchProject')}>
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
-                    K
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary dark:bg-muted">
+                    <Mascot size={26} />
                   </div>
                   <div className="grid flex-1 text-left leading-tight">
                     <span className="truncate text-xs text-muted-foreground">

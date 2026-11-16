@@ -34,6 +34,10 @@
   --skipped: #8b90a8;
   /* Status colours as text / icons: brand colours are too light on white (U-07, U-13). */
   --pass-text: #13803f;
+  /* Cú Kiemi mascot [U-16] */
+  --mascot-body: #1f2a5c;
+  --mascot-wing: #141c45;
+  --mascot-belly: #e9edfb;
   --fail-text: #c8282e;
   --warning-text: #8f5b00;
   /* Sidebar (U-01) in brand colours. */
@@ -67,6 +71,9 @@
   --input: #2a3052;
   --ring: #8a9bff;
   --pass-text: #3ddc84;
+  --mascot-body: #3a4a9a;
+  --mascot-wing: #2b3878;
+  --mascot-belly: #dfe4ff;
   --fail-text: #ff6369;
   --warning-text: #f5a524;
   --sidebar: #0b0f20;

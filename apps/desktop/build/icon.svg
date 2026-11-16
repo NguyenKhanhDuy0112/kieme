@@ -1,10 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <title>Kiemi</title>
-  <!-- Kiemi: indigo rounded square, white K whose lower leg is a green tick. -->
+  <!-- App icon [U-16]: indigo rounded square with Cú Kiemi (green tick on its belly). -->
   <rect x="64" y="64" width="896" height="896" rx="200" fill="#1F2A5C"/>
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M318 248 V776" stroke="#FFFFFF" stroke-width="124"/>
-    <path d="M330 560 L676 248" stroke="#FFFFFF" stroke-width="124"/>
-    <path d="M470 600 L600 744 L812 470" stroke="#3DDC84" stroke-width="124"/>
+  <g transform="translate(72 41) scale(4.4)">
+    <ellipse cx="82" cy="186" rx="11" ry="6" fill="#F5B83D"/>
+    <ellipse cx="118" cy="186" rx="11" ry="6" fill="#F5B83D"/>
+    <path d="M46 64 L36 22 L82 46 Z M154 64 L164 22 L118 46 Z" fill="#5B6CD6"/>
+    <ellipse cx="100" cy="112" rx="70" ry="74" fill="#5B6CD6"/>
+    <ellipse cx="36" cy="128" rx="15" ry="30" fill="#3F4FB0" transform="rotate(14 36 128)"/>
+    <ellipse cx="164" cy="128" rx="15" ry="30" fill="#3F4FB0" transform="rotate(-14 164 128)"/>
+    <ellipse cx="100" cy="150" rx="42" ry="32" fill="#FFFFFF"/>
+    <path d="M80 150 L95 164 L121 136" stroke="#3DDC84" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="72" cy="86" r="27" fill="#FFFFFF"/>
+    <circle cx="128" cy="86" r="27" fill="#FFFFFF"/>
+    <circle cx="75" cy="90" r="13" fill="#141B3D"/>
+    <circle cx="125" cy="90" r="13" fill="#141B3D"/>
+    <circle cx="79" cy="85" r="4.5" fill="#FFFFFF"/>
+    <circle cx="129" cy="85" r="4.5" fill="#FFFFFF"/>
+    <path d="M100 104 L91 114 Q100 121 109 114 Z" fill="#F5B83D"/>
   </g>
 </svg>
