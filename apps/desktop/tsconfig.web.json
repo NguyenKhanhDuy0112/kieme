@@ -5,7 +5,8 @@
     "jsx": "react-jsx",
     "types": ["vite/client"],
     "paths": {
-      "@renderer/*": ["./src/renderer/src/*"]
+      "@renderer/*": ["./src/renderer/src/*"],
+      "@main/*": ["./src/main/*"]
     }
   },
   "include": ["src/renderer/src/**/*"]

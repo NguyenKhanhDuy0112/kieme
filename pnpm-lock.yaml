@@ -35,12 +35,27 @@ importers:
       '@radix-ui/react-slot':
         specifier: ^1.5.0
         version: 1.5.0(@types/react@19.3.0)(react@19.3.1)
+      '@tanstack/react-query':
+        specifier: 5.107.1
+        version: 5.107.1(@types/react@19.3.0)(react@19.3.1)
+      '@trpc/client':
+        specifier: 11.28.3
+        version: 11.28.3(@trpc/server@11.28.3(typescript@7.0.2))(typescript@7.0.2)
+      '@trpc/server':
+        specifier: 11.28.3
+        version: 11.28.3(typescript@7.0.2)
+      '@trpc/tanstack-react-query':
+        specifier: 11.28.3
+        version: 11.28.3(@tanstack/react-query@5.107.1(@types/react@19.3.0)(react@19.3.1))(@trpc/client@11.28.3(@trpc/server@11.28.3(typescript@7.0.2))(typescript@7.0.2))(@trpc/server@11.28.3(typescript@7.0.2))(react@19.3.1)(typescript@7.0.2)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      electron-trpc:
+        specifier: 1.0.0
+        version: 1.0.0(@trpc/client@11.28.3(@trpc/server@11.28.3(typescript@7.0.2))(typescript@7.0.2))(@trpc/server@11.28.3(typescript@7.0.2))(electron@45.3.2)
       lucide-react:
         specifier: ^1.73.0
         version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
@@ -53,6 +68,9 @@ importers:
       tailwind-merge:
         specifier: ^3.7.0
         version: 3.7.0
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.3.5
@@ -509,6 +527,54 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
+  '@tanstack/query-core@5.107.1':
+    resolution: {integrity: sha512-PSyAik11oQBEVOiVy5hjZWHmoUqOXqK1WYy4v55mcxozEfKaQgpUMsgnXhWjuESzSht8JfzqMS1m6M/9CpNgvg==}
+
+  '@tanstack/react-query@5.107.1':
+    resolution: {integrity: sha512-udCOOLp3ZAheUrIHLCe+ZZge6nr2ZUrGMSWcCuXsjY1Bf2JeeE09oxst97PILiCY6N8xo/7bIo3Hvz13zh06FA==}
+    peerDependencies:
+      '@types/react': ^18 || ^19
+      react: ^18 || ^19
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+
+  '@trpc/client@11.28.3':
+    resolution: {integrity: sha512-NnMXBOCVzPMELdQH/X26MhI4u9g83nxWy3apc7UX1beevUk6rEYqfOboqCb/rVoVPu3CBVaPb8PB7AG51oEKvQ==}
+    peerDependencies:
+      '@trpc/server': 11.28.3
+      typescript: '>=5.7.2'
+
+  '@trpc/server@11.28.3':
+    resolution: {integrity: sha512-os9o1enNvbcSSyn9agxsYPkIE8kWK7IJbkD5/ySCCApsdM58cFZ5IF410G9Q0k3RwKfsM2Q/GbGp1rbgCWLp5Q==}
+    peerDependencies:
+      '@types/aws-lambda': '*'
+      '@types/express': '*'
+      '@types/ws': '*'
+      fastify: '*'
+      next: '*'
+      typescript: '>=5.7.2'
+    peerDependenciesMeta:
+      '@types/aws-lambda':
+        optional: true
+      '@types/express':
+        optional: true
+      '@types/ws':
+        optional: true
+      fastify:
+        optional: true
+      next:
+        optional: true
+
+  '@trpc/tanstack-react-query@11.28.3':
+    resolution: {integrity: sha512-cc/iHPIchVWANTi1i+fyKm2cutOsKFERZFIFGM2C5woqA1Cf1G03OBwGGwj1uYy1Qeshp1M/A4HEYiaG/gj4vw==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.106.0
+      '@trpc/client': 11.28.3
+      '@trpc/server': 11.28.3
+      react: '>=18.2.0'
+      typescript: '>=5.7.2'
+
   '@turbo/darwin-64@2.11.11':
     resolution: {integrity: sha512-HMMeUIEAsmyIbSYn1ySvF/4gGMa0joiTMq4dQDuloIAnOpbtFT3JEiVsYnASdTWDXvplbRbZlqjU1EBeSR9G1A==}
     cpu: [x64]
@@ -768,6 +834,13 @@ packages:
 
   electron-to-chromium@1.5.486:
     resolution: {integrity: sha512-rpybw4Ac4ak/An6G1Me2+61xzwobowDGyuJe71QHHOVpkZv4fPVobsLl7WH6zHSKusAMpaHxGKTpOvpy7+r3dQ==}
+
+  electron-trpc@1.0.0:
+    resolution: {integrity: sha512-CVWrVpCjVHxEpEq58o4hVW3oNJj1CLvWjNCB3um1eNNDKYC6p/x8g3wgibpiL9eEbdFV72VwVvwKvLhKor6nIA==}
+    peerDependencies:
+      '@trpc/client': ^11.10.0
+      '@trpc/server': ^11.10.0
+      electron: '>=35.0.0'
 
   electron-vite@6.0.0:
     resolution: {integrity: sha512-zafg2uizgll7jdx0BNDkkzO/SowsUBsiHqYN3v9Ieq7XPDHreRGZ4G9IRY/+RslgBktpLOjLM4jlP+IVpV0BGw==}
@@ -1147,6 +1220,9 @@ packages:
   yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
 
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
+
 snapshots:
 
   '@babel/code-frame@7.29.7':
@@ -1495,6 +1571,32 @@ snapshots:
       tailwindcss: 4.3.5
       vite: 8.3.8(@types/node@26.6.6)(jiti@2.7.0)
 
+  '@tanstack/query-core@5.107.1': {}
+
+  '@tanstack/react-query@5.107.1(@types/react@19.3.0)(react@19.3.1)':
+    dependencies:
+      '@tanstack/query-core': 5.107.1
+      react: 19.3.1
+    optionalDependencies:
+      '@types/react': 19.3.0
+
+  '@trpc/client@11.28.3(@trpc/server@11.28.3(typescript@7.0.2))(typescript@7.0.2)':
+    dependencies:
+      '@trpc/server': 11.28.3(typescript@7.0.2)
+      typescript: 7.0.2
+
+  '@trpc/server@11.28.3(typescript@7.0.2)':
+    dependencies:
+      typescript: 7.0.2
+
+  '@trpc/tanstack-react-query@11.28.3(@tanstack/react-query@5.107.1(@types/react@19.3.0)(react@19.3.1))(@trpc/client@11.28.3(@trpc/server@11.28.3(typescript@7.0.2))(typescript@7.0.2))(@trpc/server@11.28.3(typescript@7.0.2))(react@19.3.1)(typescript@7.0.2)':
+    dependencies:
+      '@tanstack/react-query': 5.107.1(@types/react@19.3.0)(react@19.3.1)
+      '@trpc/client': 11.28.3(@trpc/server@11.28.3(typescript@7.0.2))(typescript@7.0.2)
+      '@trpc/server': 11.28.3(typescript@7.0.2)
+      react: 19.3.1
+      typescript: 7.0.2
+
   '@turbo/darwin-64@2.11.11':
     optional: true
 
@@ -1654,6 +1756,15 @@ snapshots:
   detect-libc@2.1.2: {}
 
   electron-to-chromium@1.5.486: {}
+
+  electron-trpc@1.0.0(@trpc/client@11.28.3(@trpc/server@11.28.3(typescript@7.0.2))(typescript@7.0.2))(@trpc/server@11.28.3(typescript@7.0.2))(electron@45.3.2):
+    dependencies:
+      '@trpc/client': 11.28.3(@trpc/server@11.28.3(typescript@7.0.2))(typescript@7.0.2)
+      '@trpc/server': 11.28.3(typescript@7.0.2)
+      debug: 4.4.3
+      electron: 45.3.2
+    transitivePeerDependencies:
+      - supports-color
 
   electron-vite@6.0.0(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)):
     dependencies:
@@ -1940,3 +2051,5 @@ snapshots:
   why-is-node-running@3.2.1: {}
 
   yallist@3.1.1: {}
+
+  zod@4.6.7: {}

@@ -1,7 +1,29 @@
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { BRAND } from '@kiemi/shared';
 import { app, BrowserWindow, shell } from 'electron';
+import { createIPCHandler } from 'electron-trpc/main';
+import { rootRouter } from './api/root';
+import { isTrustedRendererUrl } from './ipc-allow';
 import { createMainWindowOptions } from './window-options';
+
+const rendererHtmlPath = join(__dirname, '../renderer/index.html');
+const devServerUrl = app.isPackaged ? undefined : process.env.ELECTRON_RENDERER_URL;
+
+function registerIpc(): void {
+  const rendererFileUrl = pathToFileURL(rendererHtmlPath).href;
+  createIPCHandler({
+    router: rootRouter,
+    // Our own preload exposes electron-trpc (it is bundled there for the sandbox).
+    preload: false,
+    allow: (event) =>
+      isTrustedRendererUrl(event.senderFrame?.url, { rendererFileUrl, devServerUrl }),
+    createContext: async () => ({
+      appVersion: app.getVersion(),
+      platform: process.platform,
+    }),
+  });
+}
 
 function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow(createMainWindowOptions(join(__dirname, '../preload/index.js')));
@@ -18,16 +40,14 @@ function createMainWindow(): BrowserWindow {
 
   // Block in-app navigation away from the bundled UI.
   win.webContents.on('will-navigate', (event, url) => {
-    const devUrl = process.env.ELECTRON_RENDERER_URL;
-    if (devUrl && url.startsWith(devUrl)) return;
+    if (devServerUrl && url.startsWith(devServerUrl)) return;
     event.preventDefault();
   });
 
-  const devUrl = process.env.ELECTRON_RENDERER_URL;
-  if (!app.isPackaged && devUrl) {
-    void win.loadURL(devUrl);
+  if (devServerUrl) {
+    void win.loadURL(devServerUrl);
   } else {
-    void win.loadFile(join(__dirname, '../renderer/index.html'));
+    void win.loadFile(rendererHtmlPath);
   }
   return win;
 }
@@ -47,6 +67,7 @@ if (!gotLock) {
   });
 
   void app.whenReady().then(() => {
+    registerIpc();
     createMainWindow();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
