@@ -73,6 +73,24 @@ export const UiEventSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('pickDone'), cancelled: z.boolean().optional() }),
   /** An element chosen with Pick [C-06]. */
   z.object({ kind: z.literal('picked'), target: RecordedTargetSchema }),
+  /** What appeared on the page after an action: candidate checks [M-01]. */
+  z.object({
+    kind: z.literal('suggest'),
+    items: z
+      .array(
+        z.discriminatedUnion('kind', [
+          z.object({ kind: z.literal('toast'), text: z.string().min(1).max(500) }),
+          z.object({
+            kind: z.enum(['row', 'visible']),
+            text: z.string().min(1).max(500),
+            target: RecordedTargetSchema,
+          }),
+        ]),
+      )
+      .max(5),
+  }),
+  /** ✓ / ✕ on a suggested check in the page [M-01]. */
+  z.object({ kind: z.literal('suggestion'), id: z.string().min(1).max(64), accept: z.boolean() }),
   /** "Lưu đăng nhập" with the session name typed in the page [F-02]. */
   z.object({
     kind: z.literal('saveLogin'),

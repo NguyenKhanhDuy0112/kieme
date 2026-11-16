@@ -21,6 +21,8 @@ interface Entry {
   step: Step;
   /** Element identity (`tab:frame:key`) for merging; absent for page-level steps. */
   element?: string;
+  /** Inserted after this step (accepted suggestion), to keep their order. */
+  after?: string;
 }
 
 /**
@@ -166,6 +168,23 @@ export class StepCollector {
         break;
     }
     return changes;
+  }
+
+  /** Adds a step right after `afterId` (end of the list if it is gone), e.g. an accepted check [M-01]. */
+  insertAfter(afterId: string, action: string, params: Record<string, unknown>): StepChange {
+    let at = this.entries.findIndex((e) => e.step.id === afterId);
+    if (at < 0) return this.add(action, params);
+    while (this.entries[at + 1]?.after === afterId) at++;
+    const step: Step = {
+      id: this.newId(),
+      action,
+      params,
+      session: this.session,
+      enabled: true,
+      mode: 'hard',
+    };
+    this.entries.splice(at + 1, 0, { step, after: afterId });
+    return { type: 'add', index: at + 1, step };
   }
 
   private add(

@@ -9,7 +9,7 @@ import { type Locator, type Step, type StepInput, TestCaseSchema } from '@kiemi/
 import { type Browser, type BrowserContext, chromium } from 'playwright-core';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { StepChange } from './collector';
-import { type Recorder, startRecorder } from './recorder';
+import { type Recorder, type Suggestion, startRecorder } from './recorder';
 
 let browser: Browser;
 let site: DemoSite;
@@ -460,5 +460,72 @@ describe('record from step X, passwords [K-04, K-05]', () => {
     expect(changes.at(-1)).toMatchObject({ type: 'update', password: true });
     await rec.stop();
     await kept.closeAll();
+  });
+});
+
+describe('suggested checks [M-01]', () => {
+  const page1 = `<!doctype html><meta charset="utf-8"><title>Danh sách</title>
+<button id="add" onclick="setTimeout(() => {
+  const m = document.getElementById('msg'); m.textContent = 'Đã lưu thành công'; m.hidden = false;
+  const tr = document.createElement('tr'); tr.innerHTML = '<td>NV003</td><td>Lê Cường</td>';
+  document.querySelector('#t tbody').append(tr);
+}, 200)">Thêm</button>
+<div id="msg" role="status" hidden></div>
+<table id="t"><thead><tr><th>Mã</th><th>Tên</th></tr></thead><tbody><tr><td>NV001</td><td>An</td></tr></tbody></table>
+<a href="/other.html">Sang trang khác</a>`;
+
+  it('proposes checks for a new message, a new row and a new address; ✓ adds them', async () => {
+    const seen: Suggestion[][] = [];
+    await fetch(`${site.url}/api/reset`, { method: 'POST' });
+    context = await browser.newContext();
+    for (const [path, body] of Object.entries({
+      '/list.html': page1,
+      '/other.html': '<h1>Khác</h1>',
+    }))
+      await context.route(`${site.url}${path}`, (r) =>
+        r.fulfill({ contentType: 'text/html; charset=utf-8', body }),
+      );
+    const rec = await startRecorder(context, {
+      startUrl: `${site.url}/list.html`,
+      baseUrl: site.url,
+      onSuggestions: (l) => seen.push(l),
+    });
+    const page = rec.page;
+    if (!page) throw new Error('no page');
+    await page.locator('#add').click();
+    await expect.poll(() => rec.suggestions().length, { timeout: 5000 }).toBe(2);
+    expect(rec.suggestions().map((x) => `${x.kind}: ${x.text}`)).toEqual([
+      'toast: Đã lưu thành công',
+      'row: NV003 Lê Cường',
+    ]);
+    // Shown in the page, with ✓ / ✕.
+    const items = page.locator('kiemi-recorder .sug');
+    await expect.poll(() => items.count()).toBe(2);
+    await items.first().locator('button.ok').click();
+    await expect.poll(() => rec.suggestions().length).toBe(1);
+    const row = rec.suggestions()[0];
+    if (!row) throw new Error('no row suggestion');
+    rec.resolveSuggestion(row.id, true);
+
+    await page.getByRole('link', { name: 'Sang trang khác' }).click();
+    await page.waitForURL('**/other.html');
+    await expect.poll(() => rec.suggestions().map((x) => x.kind)).toEqual(['url']);
+    rec.resolveSuggestion(rec.suggestions()[0]?.id ?? '', false);
+
+    const list = await steps(rec, 5);
+    expect(brief(list)).toEqual([
+      'goto {"url":"/list.html"}',
+      'click {"variant":"single"}',
+      'assertToast {"text":"Đã lưu thành công","op":"contains"}',
+      'assertVisible {}',
+      'click {"variant":"single"}',
+    ]);
+    expect((list[3]?.params.target as Locator | undefined)?.strategies[0]).toEqual({
+      kind: 'role',
+      role: 'cell',
+      name: 'NV003',
+      exact: true,
+    });
+    expect(seen.at(-1)).toEqual([]);
   });
 });

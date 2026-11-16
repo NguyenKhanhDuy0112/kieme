@@ -140,6 +140,9 @@ export function installRecorder(binding: string, config: InjectedConfig): void {
     if (tag === 'IMG' && el.getAttribute('alt')) return 'img';
     if (tag === 'OPTION') return 'option';
     if (tag === 'LI') return 'listitem';
+    if (tag === 'TR') return 'row';
+    if (tag === 'TD') return 'cell';
+    if (tag === 'TH') return 'columnheader';
     if (tag === 'SUMMARY') return undefined;
     return undefined;
   };
@@ -369,6 +372,90 @@ export function installRecorder(binding: string, config: InjectedConfig): void {
     return m;
   };
 
+  const short = (s: string, n = 40) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+  // ---- suggested checks: what changed on the page after an action [M-01] -------
+  const TOAST =
+    '[role="alert"], [role="status"], [aria-live], .toast, .alert, .message, .notification, .snackbar, [class*="toast"], [class*="Toast"], [class*="notif"]';
+  const isShown = (x: Element): boolean => {
+    const r = x.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return false;
+    const cs = getComputedStyle(x);
+    return cs.visibility !== 'hidden' && cs.display !== 'none' && cs.opacity !== '0';
+  };
+  const ours = (n: Node): boolean =>
+    n instanceof Element ? n.tagName === 'KIEMI-RECORDER' || !!n.closest('kiemi-recorder') : false;
+  let watching: { stop: () => void } | undefined;
+  const suggestFrom = (added: Set<Element>, changed: Set<Element>) => {
+    const items: Record<string, unknown>[] = [];
+    const all = [...added, ...changed];
+    for (const x of all) {
+      const t = x.closest(TOAST) ?? x.querySelector(TOAST);
+      if (!t || !isShown(t)) continue;
+      const text = visibleText(t);
+      if (text && text.length <= 200) {
+        items.push({ kind: 'toast', text: text.slice(0, 120) });
+        break;
+      }
+    }
+    for (const x of added) {
+      const row = x.tagName === 'TR' ? (x as HTMLTableRowElement) : null;
+      if (!row || !isShown(row) || row.closest('thead')) continue;
+      const cell = Array.from(row.cells).find((c) => visibleText(c));
+      if (cell) {
+        items.push({ kind: 'row', text: short(visibleText(row), 80), target: target(cell) });
+        break;
+      }
+    }
+    if (!items.length) {
+      for (const x of added) {
+        if (!isShown(x)) continue;
+        const prominent = 'h1, h2, h3, [role=dialog], [role=heading], [role=alertdialog]';
+        const e = x.matches(prominent) ? x : (x.querySelector(prominent) ?? x);
+        const text = visibleText(e);
+        if (text && text.length <= 80 && isShown(e)) {
+          items.push({ kind: 'visible', text, target: target(e) });
+          break;
+        }
+      }
+    }
+    if (items.length) send({ kind: 'suggest', items });
+  };
+  /** Watches the page for ~1 s after an action and reports what appeared. */
+  const watchAfterAction = () => {
+    if (!state.capture) return;
+    watching?.stop();
+    const added = new Set<Element>();
+    const changed = new Set<Element>();
+    const obs = new MutationObserver((records) => {
+      for (const r of records) {
+        if (ours(r.target)) continue;
+        if (r.type === 'characterData') {
+          const p = r.target.parentElement;
+          if (p && !ours(p)) changed.add(p);
+          continue;
+        }
+        for (const n of Array.from(r.addedNodes)) {
+          if (n instanceof Element && !ours(n)) added.add(n);
+          else if (n instanceof Text && n.parentElement && !ours(n.parentElement))
+            changed.add(n.parentElement);
+        }
+      }
+    });
+    obs.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    const timer = window.setTimeout(() => {
+      obs.disconnect();
+      watching = undefined;
+      suggestFrom(added, changed);
+    }, 1200);
+    watching = {
+      stop: () => {
+        window.clearTimeout(timer);
+        obs.disconnect();
+      },
+    };
+  };
+
   // ---- listeners (capture phase: pages calling stopPropagation still record) ----
   const opts = { capture: true };
   /** When Enter was last recorded: the click a form submit / button fires for it is not a new action. */
@@ -385,6 +472,7 @@ export function installRecorder(binding: string, config: InjectedConfig): void {
       const el = clickTarget(raw);
       if (isQuietClick(el)) return;
       send({ kind: 'click', target: target(el), button: 'left', modifiers: modifiersOf(e) });
+      watchAfterAction();
     },
     opts,
   );
@@ -445,8 +533,10 @@ export function installRecorder(binding: string, config: InjectedConfig): void {
       if (isSelect(el)) {
         const option = el.selectedOptions[0];
         if (option) send({ kind: 'select', target: target(el), option: option.label.trim() });
+        watchAfterAction();
       } else if (isCheckable(el)) {
         send({ kind: 'check', target: target(el), checked: el.checked });
+        watchAfterAction();
       }
     },
     opts,
@@ -512,6 +602,7 @@ export function installRecorder(binding: string, config: InjectedConfig): void {
       send(
         el ? { kind: 'press', keys: combo, target: target(el) } : { kind: 'press', keys: combo },
       );
+      if (key === 'Enter') watchAfterAction();
     },
     opts,
   );
@@ -551,8 +642,16 @@ export function installRecorder(binding: string, config: InjectedConfig): void {
     .menu input { border: 1px solid #c3c8dc; border-radius: 8px; padding: 4px 8px; color: #111; background: #fff; }
     .menu label { color: #444; font-size: 12px; }
     .err { color: ${RED}; font-size: 12px; }
-    .ok { color: #1a7f4b; }
-    .ok::before { content: "✓ "; color: ${GREEN}; }
+    .sugs { position: fixed; z-index: 2147483647; left: 50%; bottom: 64px; transform: translateX(-50%);
+      display: flex; flex-direction: column; gap: 4px; min-width: 280px; max-width: 480px; padding: 8px 10px;
+      border-radius: 12px; background: #fff; color: #111; border: 1px solid #d0d4e4; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+    .sugs strong { color: ${INDIGO}; }
+    .sug { display: flex; align-items: center; gap: 6px; }
+    .sug span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sug button { color: ${INDIGO}; border-color: #c3c8dc; padding: 2px 8px; }
+    .sug button.ok { border-color: ${GREEN}; }
+    .sug button.ok::before { content: "✓ "; color: #1a7f4b; }
+    .sug button:hover { background: #eef0f8; }
   `;
 
   /** One shadow-root host per frame, ignored by the recording listeners. */
@@ -623,7 +722,6 @@ export function installRecorder(binding: string, config: InjectedConfig): void {
     if (label) box.append(el('span', { className: 'tag', text: label }));
     return box;
   };
-  const short = (s: string, n = 40) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
   let hovered: Element | undefined;
 
   const stopPick = () => {
@@ -856,6 +954,39 @@ export function installRecorder(binding: string, config: InjectedConfig): void {
     window.setTimeout(() => removeAll('.mark'), 4000);
   };
 
+  // Suggested checks next to the toolbar, each with ✓ / ✕ [M-01].
+  type Sug = { id: string; kind: string; text: string };
+  const KIND_KEY: Record<string, string> = {
+    toast: 'suggestToast',
+    row: 'suggestRow',
+    visible: 'suggestVisible',
+    url: 'suggestUrl',
+  };
+  const showSuggestions = (list: Sug[]) => {
+    removeAll('.sugs');
+    if (!list.length || window.top !== window) return;
+    const box = el('div', { className: 'sugs' });
+    box.setAttribute('role', 'list');
+    box.append(el('strong', { text: T('suggestTitle') }));
+    for (const s of list.slice(-3)) {
+      const row = el('div', { className: 'sug' });
+      row.setAttribute('role', 'listitem');
+      row.append(
+        el('span', { text: T(KIND_KEY[s.kind] ?? 'suggestVisible', { text: short(s.text, 50) }) }),
+      );
+      const ok = el('button', { className: 'ok', text: T('accept') });
+      ok.type = 'button';
+      ok.addEventListener('click', () => send({ kind: 'suggestion', id: s.id, accept: true }));
+      const no = el('button', { className: 'no', text: '✕' });
+      no.type = 'button';
+      no.setAttribute('aria-label', T('dismiss'));
+      no.addEventListener('click', () => send({ kind: 'suggestion', id: s.id, accept: false }));
+      row.append(ok, no);
+      box.append(row);
+    }
+    ui().append(box);
+  };
+
   // API used by the recorder (Node side) through `frame.evaluate`.
   w.__kiemiRecorder = {
     setPick: (purpose: 'pick' | 'assert' | 'extract' | null) =>
@@ -866,6 +997,7 @@ export function installRecorder(binding: string, config: InjectedConfig): void {
     setSteps: (count: number) => {
       if (stepCount) stepCount.textContent = T('steps', { count });
     },
+    showSuggestions,
     askLogin: () => {
       if (window.top === window) loginMenu();
     },

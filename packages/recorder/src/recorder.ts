@@ -22,6 +22,8 @@ export interface RecorderOptions extends CollectorOptions {
   onChange?: (changes: StepChange[], steps: Step[]) => void;
   /** The tester pressed "Dừng" on the in-page toolbar [K-03]. */
   onStopRequest?: () => void;
+  /** The list of suggested checks changed [M-01]. */
+  onSuggestions?: (list: Suggestion[]) => void;
   /** The tester saved the login session from the toolbar [F-02]. */
   onSaveLogin?: (name: string, state: StorageState) => void | Promise<void>;
   /**
@@ -36,6 +38,17 @@ export interface RecorderOptions extends CollectorOptions {
   toolbar?: boolean;
   /** `false` = only Pick / Highlight, no steps (e.g. picking from the editor). Default true. */
   capture?: boolean;
+}
+
+/** A check proposed from what changed after an action; added only when accepted [M-01]. */
+export interface Suggestion {
+  id: string;
+  /** The action it follows; accepted checks are inserted right after it. */
+  afterStepId: string;
+  kind: 'toast' | 'row' | 'visible' | 'url';
+  /** What appeared (message text, row text, URL path…) for the label. */
+  text: string;
+  step: { action: string; params: Record<string, unknown> };
 }
 
 export interface HighlightResult {
@@ -56,6 +69,10 @@ export interface Recorder {
   pick(): Promise<Locator | null>;
   /** Shows where a locator points on the active tab and how many elements match [C-06]. */
   highlight(locator: Locator, label?: string): Promise<HighlightResult>;
+  /** Suggested checks waiting for ✓ [M-01]. */
+  suggestions(): Suggestion[];
+  /** ✓ adds the check after its action; ✕ drops it [M-01]. */
+  resolveSuggestion(id: string, accept: boolean): void;
   /** Stops listening; already-open pages keep working normally. */
   stop(): Promise<Step[]>;
 }
@@ -75,6 +92,7 @@ type PageApi = {
   setPick(purpose: 'pick' | 'assert' | 'extract' | null): void;
   setSteps(count: number): void;
   askLogin(): void;
+  showSuggestions(list: { id: string; kind: string; text: string }[]): void;
   highlight(els: Element[] | null, label?: string): void;
   teardown(): void;
 };
@@ -82,6 +100,8 @@ type PageApi = {
 type W = { __kiemiRecorder?: PageApi };
 
 const DEFAULT_GRACE_MS = 1500;
+/** Suggestions kept at most (older ones drop off). */
+const MAX_SUGGESTIONS = 5;
 
 /**
  * Records what the tester does in `context` and turns it into steps [K-01, K-02]:
@@ -109,6 +129,10 @@ export async function startRecorder(
   let startPage: Page | undefined;
   let lastPage: Page | undefined;
   let pending: ((t: RecordedTarget | null) => void) | undefined;
+  let suggestions: Suggestion[] = [];
+  /** Step of the last action the page watches for changes (click, Enter, choice, tick). */
+  let lastTrigger: string | undefined;
+  let nextSuggestion = 1;
 
   const livePages = () => context.pages().filter((p) => tabs.has(p) && !p.isClosed());
   const eachFrame = async (fn: (f: Frame) => Promise<unknown>, pages = livePages()) => {
@@ -130,6 +154,39 @@ export async function startRecorder(
         p.mainFrame().evaluate((n) => (window as unknown as W).__kiemiRecorder?.setSteps(n), count),
       ),
     ).catch(() => undefined);
+  };
+
+  const publishSuggestions = () => {
+    options.onSuggestions?.([...suggestions]);
+    const brief = suggestions.map(({ id, kind, text }) => ({ id, kind, text }));
+    void Promise.all(
+      livePages().map((p) =>
+        p
+          .mainFrame()
+          .evaluate((l) => (window as unknown as W).__kiemiRecorder?.showSuggestions(l), brief),
+      ),
+    ).catch(() => undefined);
+  };
+  const suggest = (items: Omit<Suggestion, 'id' | 'afterStepId'>[]) => {
+    const after = lastTrigger ?? collector.steps.at(-1)?.id;
+    if (stopped || !config.capture || !after || !items.length) return;
+    for (const item of items) {
+      const key = JSON.stringify(item.step);
+      if (suggestions.some((x) => JSON.stringify(x.step) === key)) continue;
+      suggestions.push({ ...item, id: `sg${nextSuggestion++}`, afterStepId: after });
+    }
+    suggestions = suggestions.slice(-MAX_SUGGESTIONS);
+    publishSuggestions();
+  };
+  const resolveSuggestion = (id: string, accept: boolean) => {
+    const s = suggestions.find((x) => x.id === id);
+    if (!s) return;
+    suggestions = suggestions.filter((x) => x.id !== id);
+    if (accept && !stopped) {
+      const change = collector.insertAfter(s.afterStepId, s.step.action, s.step.params);
+      options.onChange?.([change], collector.steps);
+    }
+    publishSuggestions();
   };
 
   const tabRef = (page: Page): TabRef | undefined => {
@@ -166,8 +223,22 @@ export async function startRecorder(
       emit(noStepsYet ? { kind: 'goto', tab, url } : { kind: 'newTab', tab, url });
       return;
     }
-    // Caused by a recent action, or a redirect right after the previous load.
-    if (since < grace) return;
+    // Caused by a recent action, or a redirect right after the previous load:
+    // not a step, but the new address is worth checking [M-01].
+    if (since < grace) {
+      if (url !== previous && Date.now() - state.lastActionAt < grace) {
+        const path = new URL(url).pathname;
+        if (path && path !== '/')
+          suggest([
+            {
+              kind: 'url',
+              text: path,
+              step: { action: 'assertUrl', params: { op: 'contains', value: path } },
+            },
+          ]);
+      }
+      return;
+    }
     emit(url === previous ? { kind: 'reload', tab } : { kind: 'goto', tab, url });
   };
 
@@ -224,6 +295,26 @@ export async function startRecorder(
         pending?.(e.target);
         pending = undefined;
         return true;
+      case 'suggest':
+        suggest(
+          e.items.map((i) =>
+            i.kind === 'toast'
+              ? {
+                  kind: 'toast' as const,
+                  text: i.text,
+                  step: { action: 'assertToast', params: { text: i.text, op: 'contains' } },
+                }
+              : {
+                  kind: i.kind,
+                  text: i.text,
+                  step: { action: 'assertVisible', params: { target: i.target.locator } },
+                },
+          ),
+        );
+        return true;
+      case 'suggestion':
+        resolveSuggestion(e.id, e.accept);
+        return true;
       case 'saveLogin': {
         const tab = tabRef(page);
         const state = await context.storageState();
@@ -247,6 +338,14 @@ export async function startRecorder(
       const tab = tabRef(source.page);
       if (!tab) return;
       emit({ ...parsed.data, tab, frame: frameId(source.frame) });
+      const k = parsed.data.kind;
+      if (
+        k === 'click' ||
+        k === 'select' ||
+        k === 'check' ||
+        (k === 'press' && parsed.data.keys === 'Enter')
+      )
+        lastTrigger = collector.steps.at(-1)?.id;
     }),
   );
   const source = injectedSource(config, RECORDER_BINDING);
@@ -280,6 +379,8 @@ export async function startRecorder(
       return startPage;
     },
     activePage: active,
+    suggestions: () => [...suggestions],
+    resolveSuggestion,
     async pick() {
       pending?.(null);
       const picked = new Promise<RecordedTarget | null>((resolve) => {

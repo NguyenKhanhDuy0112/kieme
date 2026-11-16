@@ -187,6 +187,13 @@ export const en = {
     loginName: 'Login session name',
     cancel: 'Cancel',
     matches: '{{count}} matching elements',
+    suggestTitle: 'Suggested checks',
+    suggestToast: 'Shows message “{{text}}”',
+    suggestRow: 'Has row “{{text}}”',
+    suggestVisible: 'Shows “{{text}}”',
+    suggestUrl: 'Page address contains “{{text}}”',
+    accept: 'Add',
+    dismiss: 'Dismiss',
     picked: 'Selected',
   },
   settings: {

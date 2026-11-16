@@ -190,6 +190,13 @@ export const vi = {
     loginName: 'Tên phiên đăng nhập',
     cancel: 'Hủy',
     matches: '{{count}} phần tử khớp',
+    suggestTitle: 'Gợi ý kiểm tra',
+    suggestToast: 'Có thông báo “{{text}}”',
+    suggestRow: 'Có dòng “{{text}}”',
+    suggestVisible: 'Hiện “{{text}}”',
+    suggestUrl: 'Địa chỉ trang chứa “{{text}}”',
+    accept: 'Thêm',
+    dismiss: 'Bỏ qua',
     picked: 'Đã chọn',
   },
   settings: {
