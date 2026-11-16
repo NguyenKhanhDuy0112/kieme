@@ -3,6 +3,7 @@ import { DbError } from '@kiemi/db';
 import { initTRPC, TRPCError } from '@trpc/server';
 import type { RecorderManager } from '../record/recorder-manager';
 import type { RunManager } from '../run/run-manager';
+import type { UpdateService } from '../update/update-service';
 
 /** Per-request context supplied by the main process. Must stay free of Electron imports. */
 export interface ApiContext {
@@ -20,6 +21,8 @@ export interface ApiContext {
   desktop?: DesktopBridge;
   /** Address of the bundled sample site, started on demand [L-01]. */
   sampleSiteUrl?: () => Promise<string>;
+  /** Automatic updates (absent in development and tests) [N-12]. */
+  updates?: UpdateService;
 }
 
 export interface DesktopBridge {
@@ -27,6 +30,8 @@ export interface DesktopBridge {
   openTrace(file: string): Promise<void>;
   /** Shows a file or folder in Finder / Explorer. */
   showInFolder(path: string): void;
+  /** Opens an https link in the OS browser. */
+  openExternal(url: string): void;
 }
 
 const DB_TO_TRPC = {

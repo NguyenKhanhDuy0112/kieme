@@ -11,6 +11,7 @@ import { type SampleSite, startSampleSite } from '@kiemi/demo-site/sample';
 import { BRAND } from '@kiemi/shared';
 import { app, BrowserWindow, net, protocol, safeStorage, shell } from 'electron';
 import { createIPCHandler } from 'electron-trpc/main';
+import { autoUpdater } from 'electron-updater';
 import { rootRouter } from './api/root';
 import { isTrustedRendererUrl } from './ipc-allow';
 import { RecorderManager } from './record/recorder-manager';
@@ -20,6 +21,8 @@ import { RunManager } from './run/run-manager';
 import { spawnUtilityWorker } from './run/spawn-utility';
 import { SAMPLE_PORT, SAMPLE_PROJECT, syncSampleEnvironment } from './samples/samples';
 import { openSshTunnel } from './tunnel/ssh-tunnel';
+import { RELEASE_PAGE_URL, RELEASE_SOURCE, updateMode } from './update/release-source';
+import { UpdateService } from './update/update-service';
 import { createMainWindowOptions } from './window-options';
 
 const rendererHtmlPath = join(__dirname, '../renderer/index.html');
@@ -34,7 +37,12 @@ const keychainCipher: SecretCipher = {
 
 /** Opens `userData/kiemi.db`, migrates and seeds the default workspace [M2-01]. */
 function openData(): { services: Services; defaultProjectId: string } {
-  const db = openDatabase({ path: join(app.getPath('userData'), 'kiemi.db') });
+  const userData = app.getPath('userData');
+  // A new app version may migrate the DB: keep a copy of the old one first [N-12].
+  const db = openDatabase({
+    path: join(userData, 'kiemi.db'),
+    backupDir: join(userData, 'backups'),
+  });
   const seed = ensureDefaultWorkspace(db);
   return {
     services: createServices({ db, workspaceId: seed.workspaceId }, keychainCipher),
@@ -57,7 +65,16 @@ function sampleSiteUrl(services: Services): Promise<string> {
   });
 }
 
+/** Updates from GitHub Releases: background download (installed) or notice (portable) [N-12]. */
+function createUpdates(): UpdateService {
+  const mode = updateMode(app.isPackaged, process.env);
+  // The portable exe has no app-update.yml: point it at the releases explicitly.
+  if (mode === 'notify') autoUpdater.setFeedURL({ provider: 'github', ...RELEASE_SOURCE });
+  return new UpdateService({ updater: autoUpdater, mode, releasePageUrl: RELEASE_PAGE_URL });
+}
+
 let runs: RunManager | undefined;
+let updates: UpdateService | undefined;
 let recorder: RecorderManager | undefined;
 const traceServer = new TraceServer();
 
@@ -116,6 +133,9 @@ function registerIpc(): void {
   });
   recorder = recorderManager;
   registerArtifactProtocol(data.services);
+  const updateService = createUpdates();
+  updates = updateService;
+  updateService.start();
   // The sample tests must work right away after a restart: start their site in the background.
   if (data.services.projects.list().some((p) => p.name === SAMPLE_PROJECT)) {
     setTimeout(() => void sampleSiteUrl(data.services).catch(() => undefined), 0);
@@ -135,7 +155,11 @@ function registerIpc(): void {
       runs: runManager,
       recorder: recorderManager,
       sampleSiteUrl: () => sampleSiteUrl(data.services),
+      updates: updateService,
       desktop: {
+        openExternal: (url: string) => {
+          if (url.startsWith('https://')) void shell.openExternal(url);
+        },
         openTrace: openTraceWindow,
         showInFolder: (path: string) => shell.showItemInFolder(path),
       },
@@ -201,6 +225,7 @@ if (!gotLock) {
   });
 
   app.on('before-quit', () => {
+    updates?.stop();
     void runs?.shutdown();
     void recorder?.shutdown();
     void traceServer.close();

@@ -20,6 +20,7 @@ import { BookOpen, GraduationCap, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useOpenSamples, useSaveSettings } from '../onboarding/onboarding';
+import { UpdateSection } from '../update/update-section';
 
 type SettingsPatch = Parameters<typeof trpcClient.system.updateSettings.mutate>[0];
 
@@ -164,6 +165,7 @@ export function SettingsScreen() {
           />
         </div>
       </section>
+      <UpdateSection />
       <GuideSection />
     </div>
   );

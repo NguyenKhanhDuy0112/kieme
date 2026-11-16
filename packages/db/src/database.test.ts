@@ -1,3 +1,6 @@
+import { existsSync, mkdtempSync, readdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import Database from 'better-sqlite3';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import { describe, expect, it } from 'vitest';
@@ -114,5 +117,45 @@ describe('database & migrations [M2-01]', () => {
       { name: 'Mặc định', projectId: first.projectId },
     ]);
     expect(db.select().from(settings).all()).toMatchObject([{ key: 'language', value: 'vi' }]);
+  });
+});
+
+describe('opening the database after an app update [N-12]', () => {
+  const tmp = () => mkdtempSync(join(tmpdir(), 'kiemi-db-'));
+
+  it('backs up an existing database before new migrations, and keeps its data', () => {
+    const dir = tmp();
+    const path = join(dir, 'kiemi.db');
+    const old = openDatabase({ path, migrations: MIGRATIONS.slice(0, -1) });
+    const seed = ensureDefaultWorkspace(old);
+    old.$client.close();
+
+    const backups = join(dir, 'backups');
+    const db = openDatabase({ path, backupDir: backups });
+    const files = readdirSync(backups);
+    expect(files).toHaveLength(1);
+    expect(files[0]).toMatch(/^kiemi-before-\d+-\d+\.db$/);
+    // New app version still sees the old data.
+    expect(
+      db
+        .select()
+        .from(projects)
+        .all()
+        .map((p) => p.id),
+    ).toContain(seed.projectId);
+    // The backup is a working database at the old schema version.
+    const copy = new Database(join(backups, files[0] ?? ''), { readonly: true });
+    const ids = (copy.prepare('SELECT id FROM _kiemi_migrations').all() as { id: number }[]).length;
+    expect(ids).toBe(MIGRATIONS.length - 1);
+    copy.close();
+    db.$client.close();
+  });
+
+  it('does not back up a new database or one that is up to date', () => {
+    const dir = tmp();
+    const backups = join(dir, 'backups');
+    openDatabase({ path: join(dir, 'kiemi.db'), backupDir: backups }).$client.close();
+    openDatabase({ path: join(dir, 'kiemi.db'), backupDir: backups }).$client.close();
+    expect(existsSync(backups)).toBe(false);
   });
 });

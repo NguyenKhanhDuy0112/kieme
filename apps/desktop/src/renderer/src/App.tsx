@@ -7,6 +7,7 @@ import { Toaster } from '@renderer/components/ui/sonner';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { WelcomeDialog } from '@renderer/features/onboarding/welcome-dialog';
 import { TestsScreen } from '@renderer/features/tests/tests-screen';
+import { UpdateNotice } from '@renderer/features/update/update-notice';
 import { useT } from '@renderer/i18n/use-t';
 import { useAppStore, watchSystemTheme } from '@renderer/lib/store';
 import { trpc } from '@renderer/lib/trpc';
@@ -80,7 +81,9 @@ export function App() {
           <div className="flex items-center gap-1 border-b px-2 py-1">
             <SidebarTrigger />
             <span className="text-sm font-medium">{tx(`ui.nav.${view}`)}</span>
-            <span data-testid="app-version" className="ml-auto text-xs text-muted-foreground">
+            <span className="ml-auto" />
+            <UpdateNotice />
+            <span data-testid="app-version" className="text-xs text-muted-foreground">
               {info.data ? tx('app.version', { version: info.data.version }) : tx('common.loading')}
             </span>
             {view === 'tests' && !openRunId && (

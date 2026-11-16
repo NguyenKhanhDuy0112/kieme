@@ -18,6 +18,7 @@
     "better-sqlite3": "13.1.1",
     "drizzle-orm": "0.45.4",
     "electron-trpc": "1.0.0",
+    "electron-updater": "6.8.12",
     "exceljs": "4.4.0",
     "fflate": "0.8.3",
     "playwright-core": "1.64.1",
