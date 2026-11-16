@@ -384,6 +384,63 @@ export function SessionsTab() {
           <Plus /> {tx('ui.sessions.add')}
         </Button>
       </form>
+      <SavedLogins />
     </div>
+  );
+}
+
+/** Saved login sessions of the project, with expiry [F-02]. */
+function SavedLogins() {
+  const tx = useTx();
+  const qc = useQueryClient();
+  const projectId = useAppStore((s) => s.projectId);
+  const list = useQuery({
+    ...trpc.savedLogins.list.queryOptions({ projectId: projectId ?? '' }),
+    enabled: !!projectId,
+  });
+  const remove = useMutation(trpc.savedLogins.remove.mutationOptions());
+  const now = Date.now();
+  return (
+    <section className="mt-4 flex flex-col gap-2 border-t pt-4">
+      <h2 className="text-sm font-semibold">{tx('ui.logins.title')}</h2>
+      <p className="text-sm text-muted-foreground">{tx('ui.logins.text')}</p>
+      {!list.data?.length ? (
+        <p className="text-sm text-muted-foreground">{tx('ui.logins.empty')}</p>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {list.data.map((l) => {
+            const expired = new Date(l.expiresAt).getTime() <= now;
+            return (
+              <li key={l.id} className="flex items-center gap-2 text-sm">
+                <span className="w-48 truncate font-medium">{l.name}</span>
+                <span className={expired ? 'text-fail' : 'text-muted-foreground'}>
+                  {expired
+                    ? tx('ui.logins.expired')
+                    : tx('ui.logins.expires', { when: new Date(l.expiresAt).toLocaleString() })}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`${tx('ui.logins.remove')} ${l.name}`}
+                  onClick={async () => {
+                    try {
+                      await remove.mutateAsync({ id: l.id });
+                      if (projectId)
+                        await qc.invalidateQueries({
+                          queryKey: trpc.savedLogins.list.queryKey({ projectId }),
+                        });
+                    } catch (err) {
+                      toast.error(errorMessage(err, tx));
+                    }
+                  }}
+                >
+                  <Trash2 />
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }

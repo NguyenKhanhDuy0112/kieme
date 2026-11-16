@@ -16,6 +16,10 @@ interface EditorState {
   load(testId: string, doc: TestCase, version: number): void;
   /** Applies an edit; it can be undone (J-06). */
   apply(change: (doc: TestCase) => TestCase): void;
+  /** Saves the current doc in the undo history (one undo reverts what follows, e.g. a recording). */
+  checkpoint(): void;
+  /** Changes the doc without a history entry (live recording) [K-01]. */
+  patch(change: (doc: TestCase) => TestCase): void;
   undo(): void;
   redo(): void;
   select(id: string | null): void;
@@ -38,6 +42,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const next = change(doc);
     if (next === doc) return;
     set({ doc: next, past: [...past, doc].slice(-MAX_HISTORY), future: [], dirty: true });
+  },
+  checkpoint: () => {
+    const { doc, past } = get();
+    if (doc) set({ past: [...past, doc].slice(-MAX_HISTORY), future: [] });
+  },
+  patch: (change) => {
+    const { doc } = get();
+    if (!doc) return;
+    const next = change(doc);
+    if (next !== doc) set({ doc: next, dirty: true });
   },
   undo: () => {
     const { doc, past, future } = get();

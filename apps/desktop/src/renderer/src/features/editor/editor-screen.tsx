@@ -7,18 +7,12 @@ import { useAppStore } from '@renderer/lib/store';
 import { trpc, trpcClient } from '@renderer/lib/trpc';
 import { useTx } from '@renderer/lib/tx';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  ArrowLeft,
-  Circle,
-  CircleCheck,
-  ListChecks,
-  Loader2,
-  Redo2,
-  Undo2,
-  Video,
-} from 'lucide-react';
+import { ArrowLeft, Circle, CircleCheck, ListChecks, Loader2, Redo2, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { EditorMoreMenu } from '../record/more-menu';
+import { RecordButton } from '../record/record-button';
+import { RecordPanel } from '../record/record-panel';
 import { EditorRunButton } from '../run/editor-run-button';
 import { duplicateStep, findStep, savedVariables } from './doc-model';
 import { useEditorStore } from './editor-store';
@@ -256,16 +250,8 @@ export function EditorScreen({ testId }: { testId: string }) {
               </TooltipTrigger>
               <TooltipContent>{tx('ui.editor.redo')}</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button variant="outline" size="sm" disabled>
-                    <Video /> {tx('common.record')}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{tx('ui.nav.comingSoon')}</TooltipContent>
-            </Tooltip>
+            <EditorMoreMenu testId={testId} doc={doc} beforeCreate={doSave} />
+            <RecordButton testId={testId} doc={doc} selectedId={selectedId} beforeRecord={doSave} />
             <EditorRunButton
               testId={testId}
               testCase={doc}
@@ -275,6 +261,7 @@ export function EditorScreen({ testId }: { testId: string }) {
             />
           </div>
         </header>
+        <RecordPanel testId={testId} />
         {conflict && (
           <div
             role="alert"

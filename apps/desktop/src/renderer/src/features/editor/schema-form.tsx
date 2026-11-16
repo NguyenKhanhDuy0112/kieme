@@ -12,8 +12,11 @@ import {
 import { Switch } from '@renderer/components/ui/switch';
 import { Textarea } from '@renderer/components/ui/textarea';
 import { useTx } from '@renderer/lib/tx';
-import { Plus, Trash2 } from 'lucide-react';
+import { Crosshair, Loader2, Plus, ScanEye, Trash2 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
+import { toast } from 'sonner';
+import { toLocator } from '../record/apply-changes';
+import { useEditorStore } from './editor-store';
 import { VariableInput } from './variable-input';
 
 export type JsonSchema = {
@@ -532,6 +535,79 @@ function TargetField({
           {tx('ui.elements.strategies', { count: (o.strategies as unknown[]).length })}
         </p>
       )}
+      <PickButtons value={value} onChange={onChange} elements={elements} />
+    </div>
+  );
+}
+
+/** Pick an element on the page / show where the target points [C-06]. */
+function PickButtons({
+  value,
+  onChange,
+  elements,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  elements: TestCase['elements'];
+}) {
+  const tx = useTx();
+  const testId = useEditorStore((s) => s.testId);
+  const [busy, setBusy] = useState<'pick' | 'show' | null>(null);
+  const locator = toLocator(value, elements);
+  if (!testId) return null;
+  const pick = async () => {
+    setBusy('pick');
+    const hint = toast.info(tx('ui.record.pickHint'));
+    try {
+      // Loaded on use: keeps the form free of the IPC client (tests, storybook-like use).
+      const { useRecordStore } = await import('../record/record-store');
+      const picked = await useRecordStore.getState().pick(testId);
+      if (picked) {
+        onChange(picked);
+        toast.success(tx('ui.record.picked'));
+      }
+    } catch {
+      toast.error(tx('ui.record.notFound'));
+    } finally {
+      toast.dismiss(hint);
+      setBusy(null);
+    }
+  };
+  const show = async () => {
+    if (!locator) return;
+    setBusy('show');
+    try {
+      const { useRecordStore } = await import('../record/record-store');
+      const r = await useRecordStore.getState().highlight(testId, locator);
+      if (r.count === 1) toast.success(tx('ui.record.found'));
+      else if (r.count > 1) toast.warning(tx('ui.record.ambiguous', { count: r.count }));
+      else toast.error(tx('ui.record.notFound'));
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="flex gap-1.5">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={!!busy}
+        onClick={() => void pick()}
+      >
+        {busy === 'pick' ? <Loader2 className="animate-spin" /> : <Crosshair />}
+        {tx('ui.record.pick')}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        disabled={!!busy || !locator}
+        onClick={() => void show()}
+      >
+        {busy === 'show' ? <Loader2 className="animate-spin" /> : <ScanEye />}
+        {tx('ui.record.highlight')}
+      </Button>
     </div>
   );
 }
