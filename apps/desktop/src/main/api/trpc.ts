@@ -18,6 +18,8 @@ export interface ApiContext {
   recorder?: RecorderManager;
   /** OS / window features (absent in tests). */
   desktop?: DesktopBridge;
+  /** Address of the bundled sample site, started on demand [L-01]. */
+  sampleSiteUrl?: () => Promise<string>;
 }
 
 export interface DesktopBridge {

@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Circle, CircleCheck, ListChecks, Loader2, Redo2, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { EditorTour } from '../onboarding/tour';
 import { EditorMoreMenu } from '../record/more-menu';
 import { RecordButton } from '../record/record-button';
 import { RecordPanel } from '../record/record-panel';
@@ -251,14 +252,23 @@ export function EditorScreen({ testId }: { testId: string }) {
               <TooltipContent>{tx('ui.editor.redo')}</TooltipContent>
             </Tooltip>
             <EditorMoreMenu testId={testId} doc={doc} beforeCreate={doSave} />
-            <RecordButton testId={testId} doc={doc} selectedId={selectedId} beforeRecord={doSave} />
-            <EditorRunButton
-              testId={testId}
-              testCase={doc}
-              beforeRun={doSave}
-              dialogStartAt={runFrom ?? undefined}
-              onDialogClose={() => setRunFrom(null)}
-            />
+            <span data-tour="record" className="inline-flex">
+              <RecordButton
+                testId={testId}
+                doc={doc}
+                selectedId={selectedId}
+                beforeRecord={doSave}
+              />
+            </span>
+            <span data-tour="run" className="inline-flex">
+              <EditorRunButton
+                testId={testId}
+                testCase={doc}
+                beforeRun={doSave}
+                dialogStartAt={runFrom ?? undefined}
+                onDialogClose={() => setRunFrom(null)}
+              />
+            </span>
           </div>
         </header>
         <RecordPanel testId={testId} />
@@ -290,7 +300,11 @@ export function EditorScreen({ testId }: { testId: string }) {
               <TabsTrigger value="variables">{tx('ui.editor.tabs.variables')}</TabsTrigger>
               <TabsTrigger value="sessions">{tx('ui.editor.tabs.sessions')}</TabsTrigger>
             </TabsList>
-            <TabsContent value="steps" className="flex min-h-0 flex-1 flex-col overflow-auto">
+            <TabsContent
+              value="steps"
+              data-tour="steps"
+              className="flex min-h-0 flex-1 flex-col overflow-auto"
+            >
               {doc.steps.length === 0 && doc.cleanup.length === 0 ? (
                 <EmptyState
                   icon={ListChecks}
@@ -335,6 +349,7 @@ export function EditorScreen({ testId }: { testId: string }) {
         </div>
       </div>
       <span hidden data-version={version} />
+      <EditorTour />
     </VariableSourcesContext.Provider>
   );
 }

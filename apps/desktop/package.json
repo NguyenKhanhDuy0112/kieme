@@ -18,6 +18,7 @@
     "@faker-js/faker": "^10.6.0",
     "@fontsource/be-vietnam-pro": "^5.3.0",
     "@kiemi/db": "workspace:*",
+    "@kiemi/demo-site": "workspace:*",
     "@kiemi/engine": "workspace:*",
     "@kiemi/recorder": "workspace:*",
     "@kiemi/schema": "workspace:*",

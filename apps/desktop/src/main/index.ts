@@ -7,6 +7,7 @@ import {
   type SecretCipher,
   type Services,
 } from '@kiemi/db';
+import { type SampleSite, startSampleSite } from '@kiemi/demo-site/sample';
 import { BRAND } from '@kiemi/shared';
 import { app, BrowserWindow, net, protocol, safeStorage, shell } from 'electron';
 import { createIPCHandler } from 'electron-trpc/main';
@@ -17,6 +18,7 @@ import { ARTIFACT_SCHEME, parseArtifactUrl, resolveInside } from './results/arti
 import { TraceServer } from './results/trace-server';
 import { RunManager } from './run/run-manager';
 import { spawnUtilityWorker } from './run/spawn-utility';
+import { SAMPLE_PORT, SAMPLE_PROJECT, syncSampleEnvironment } from './samples/samples';
 import { openSshTunnel } from './tunnel/ssh-tunnel';
 import { createMainWindowOptions } from './window-options';
 
@@ -38,6 +40,21 @@ function openData(): { services: Services; defaultProjectId: string } {
     services: createServices({ db, workspaceId: seed.workspaceId }, keychainCipher),
     defaultProjectId: seed.projectId,
   };
+}
+
+/** Built demo site shipped with the app, target of the sample tests [L-01]. */
+const sampleSiteDir = app.isPackaged
+  ? join(process.resourcesPath, 'sample-site')
+  : join(app.getAppPath(), '../demo-site/dist');
+let sampleSite: Promise<SampleSite> | undefined;
+
+/** Starts the sample site once and points the sample environment at it. */
+function sampleSiteUrl(services: Services): Promise<string> {
+  sampleSite ??= startSampleSite({ dir: sampleSiteDir, port: SAMPLE_PORT });
+  return sampleSite.then((site) => {
+    syncSampleEnvironment(services, site.url);
+    return site.url;
+  });
 }
 
 let runs: RunManager | undefined;
@@ -99,6 +116,10 @@ function registerIpc(): void {
   });
   recorder = recorderManager;
   registerArtifactProtocol(data.services);
+  // The sample tests must work right away after a restart: start their site in the background.
+  if (data.services.projects.list().some((p) => p.name === SAMPLE_PROJECT)) {
+    setTimeout(() => void sampleSiteUrl(data.services).catch(() => undefined), 0);
+  }
   const rendererFileUrl = pathToFileURL(rendererHtmlPath).href;
   createIPCHandler({
     router: rootRouter,
@@ -113,6 +134,7 @@ function registerIpc(): void {
       defaultProjectId: data.defaultProjectId,
       runs: runManager,
       recorder: recorderManager,
+      sampleSiteUrl: () => sampleSiteUrl(data.services),
       desktop: {
         openTrace: openTraceWindow,
         showInFolder: (path: string) => shell.showItemInFolder(path),
@@ -182,6 +204,7 @@ if (!gotLock) {
     void runs?.shutdown();
     void recorder?.shutdown();
     void traceServer.close();
+    void sampleSite?.then((site) => site.close());
   });
 
   app.on('window-all-closed', () => {

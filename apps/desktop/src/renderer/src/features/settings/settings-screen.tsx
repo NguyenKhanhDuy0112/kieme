@@ -1,4 +1,5 @@
 import { SUPPORTED_LANGUAGES } from '@kiemi/shared';
+import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import {
@@ -15,7 +16,10 @@ import { type ThemeChoice, useAppStore } from '@renderer/lib/store';
 import { trpc, trpcClient } from '@renderer/lib/trpc';
 import { useTx } from '@renderer/lib/tx';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { BookOpen, GraduationCap, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
+import { useOpenSamples, useSaveSettings } from '../onboarding/onboarding';
 
 type SettingsPatch = Parameters<typeof trpcClient.system.updateSettings.mutate>[0];
 
@@ -146,6 +150,49 @@ export function SettingsScreen() {
           />
         </div>
       </section>
+      <GuideSection />
     </div>
+  );
+}
+
+/** "Hướng dẫn": replay the welcome + tour, open the sample project (L-01, L-02). */
+function GuideSection() {
+  const tx = useTx();
+  const saveSettings = useSaveSettings();
+  const openSamples = useOpenSamples();
+  const [busy, setBusy] = useState(false);
+  return (
+    <section className="flex flex-col gap-4 rounded-lg border p-4">
+      <h2 className="text-sm font-semibold">{tx('ui.onboarding.settingsTitle')}</h2>
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">{tx('ui.onboarding.replayHint')}</p>
+        <Button
+          variant="outline"
+          onClick={() => void saveSettings({ onboardingDone: false, tourDone: false })}
+        >
+          <GraduationCap /> {tx('ui.onboarding.replay')}
+        </Button>
+      </div>
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">{tx('ui.onboarding.openSamplesHint')}</p>
+        <Button
+          variant="outline"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await openSamples();
+            } catch (err) {
+              toast.error(errorMessage(err, tx));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? <Loader2 className="animate-spin" /> : <BookOpen />}{' '}
+          {tx('ui.onboarding.openSamples')}
+        </Button>
+      </div>
+    </section>
   );
 }

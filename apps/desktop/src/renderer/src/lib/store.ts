@@ -13,6 +13,8 @@ interface AppState {
   /** Right detail panel (U-01). */
   detailOpen: boolean;
   paletteOpen: boolean;
+  /** Recording to start as soon as this test is open in the editor (onboarding, S-08). */
+  pendingRecord: { testId: string; url: string } | null;
   themeChoice: ThemeChoice;
   /** Resolved theme actually shown. */
   theme: 'light' | 'dark';
@@ -22,6 +24,7 @@ interface AppState {
   openRun(id: string | null): void;
   toggleDetail(): void;
   setPaletteOpen(open: boolean): void;
+  setPendingRecord(p: { testId: string; url: string } | null): void;
   setThemeChoice(choice: ThemeChoice): void;
 }
 
@@ -40,6 +43,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   openRunId: null,
   detailOpen: true,
   paletteOpen: false,
+  pendingRecord: null,
   themeChoice: 'system',
   theme: resolve('system'),
   setView: (view) => set({ view, openRunId: null }),
@@ -48,6 +52,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   openRun: (openRunId) => set({ openRunId }),
   toggleDetail: () => set({ detailOpen: !get().detailOpen }),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
+  setPendingRecord: (pendingRecord) => set({ pendingRecord }),
   setThemeChoice: (themeChoice) => {
     const theme = resolve(themeChoice);
     applyTheme(theme);

@@ -13,6 +13,12 @@ export const AppSettingsSchema = z.object({
   defaultTimeoutSec: z.number().int().min(1).max(600).default(10),
   /** Where run results go; empty = app data folder. */
   resultsDir: z.string().default(''),
+  /** First-run welcome (S-08) answered or skipped. */
+  onboardingDone: z.boolean().default(false),
+  /** 3-step tour in the editor seen (L-02, U-14). */
+  tourDone: z.boolean().default(false),
+  /** Advanced mode: show and edit raw selectors [C-07]. */
+  advancedMode: z.boolean().default(false),
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 export type AppSettingsKey = keyof AppSettings;

@@ -7,6 +7,7 @@ import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { ElementsScreen } from '@renderer/features/elements/elements-screen';
 import { EnvironmentsScreen } from '@renderer/features/environments/environments-screen';
 import { HistoryScreen } from '@renderer/features/history/history-screen';
+import { WelcomeDialog } from '@renderer/features/onboarding/welcome-dialog';
 import { RunScreen } from '@renderer/features/run/run-screen';
 import { SettingsScreen } from '@renderer/features/settings/settings-screen';
 import { TestsScreen } from '@renderer/features/tests/tests-screen';
@@ -79,6 +80,7 @@ export function App() {
           ) : null}
         </SidebarInset>
         <CommandPalette />
+        <WelcomeDialog />
         <Toaster position="bottom-right" />
       </SidebarProvider>
     </TooltipProvider>

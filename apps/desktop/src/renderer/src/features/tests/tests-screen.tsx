@@ -29,6 +29,7 @@ import { useTx } from '@renderer/lib/tx';
 import { cn } from '@renderer/lib/utils';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  BookOpen,
   ChevronDown,
   ChevronRight,
   Copy,
@@ -46,6 +47,7 @@ import {
 } from 'lucide-react';
 import { Fragment, type ReactNode, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useOpenSamples } from '../onboarding/onboarding';
 import { useStartRun } from '../run/run-dialog';
 import { SuiteDialog } from './suite-dialog';
 
@@ -93,6 +95,7 @@ export function TestTree() {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [openSuite, setOpenSuite] = useState<string | null>(null);
   const startRun = useStartRun();
+  const openSamples = useOpenSamples();
 
   const tests = useQuery({
     ...trpc.testCases.list.queryOptions({ projectId }),
@@ -406,9 +409,14 @@ export function TestTree() {
           title={tx('ui.tree.emptyTitle')}
           text={tx('ui.tree.emptyText')}
           action={
-            <Button onClick={() => newTest()}>
-              <FilePlus2 /> {tx('ui.tree.emptyAction')}
-            </Button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button onClick={() => newTest()}>
+                <FilePlus2 /> {tx('ui.tree.emptyAction')}
+              </Button>
+              <Button variant="outline" onClick={() => void run(openSamples)}>
+                <BookOpen /> {tx('ui.onboarding.sampleAction')}
+              </Button>
+            </div>
           }
         />
       ) : (

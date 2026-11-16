@@ -244,3 +244,8 @@ iframe {
   border-radius: 8px;
   background: #fff;
 }
+
+/* Last rule with the same specificity: `hidden` wins over display rules above (e.g. the closed calendar must not cover the dropdown). */
+[hidden] {
+  display: none;
+}

@@ -23,6 +23,7 @@ export default defineConfig({
           '@kiemi/schema',
           '@kiemi/engine',
           '@kiemi/recorder',
+          '@kiemi/demo-site',
           // ESM-only packages cannot be require()d by the CommonJS main bundle.
           'uuid',
           '@faker-js/faker',

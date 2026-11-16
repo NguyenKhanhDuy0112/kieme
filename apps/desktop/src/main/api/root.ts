@@ -12,12 +12,14 @@ import {
 } from './routers/data';
 import { recorderRouter, savedLoginsRouter } from './routers/recorder';
 import { runsRouter } from './routers/runs';
+import { samplesRouter } from './routers/samples';
 import { systemRouter } from './routers/system';
 import { createCallerFactory, router } from './trpc';
 
 export const rootRouter = router({
   app: appRouter,
   system: systemRouter,
+  samples: samplesRouter,
   projects: projectsRouter,
   folders: foldersRouter,
   testCases: testCasesRouter,

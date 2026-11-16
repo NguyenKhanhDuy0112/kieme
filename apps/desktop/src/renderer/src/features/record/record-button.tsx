@@ -24,7 +24,7 @@ import { trpc } from '@renderer/lib/trpc';
 import { useTx } from '@renderer/lib/tx';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Square, Video } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useRecordStore } from './record-store';
 
@@ -64,6 +64,22 @@ export function RecordButton({
   });
   const busy = rec.testId === testId && rec.mode === 'record' && rec.recordingId !== null;
   const selectedIndex = selectedId ? doc.steps.findIndex((s) => s.id === selectedId) : -1;
+  const pending = useAppStore((s) => s.pendingRecord);
+
+  // Onboarding: "type a URL → Ghi lại" starts recording as soon as the test is open (S-08).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: start once per pending request.
+  useEffect(() => {
+    if (!pending || pending.testId !== testId) return;
+    useAppStore.getState().setPendingRecord(null);
+    void (async () => {
+      try {
+        await beforeRecord();
+        await rec.start({ testId, mode: 'record', url: pending.url });
+      } catch (err) {
+        toast.error(errorMessage(err, tx));
+      }
+    })();
+  }, [pending, testId]);
 
   if (busy) {
     return (
