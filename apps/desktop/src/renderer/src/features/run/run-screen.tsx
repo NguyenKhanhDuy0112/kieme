@@ -42,9 +42,9 @@ import { StatusIcon } from './step-status';
 const STATUS_BADGE: Record<LiveCaseStatus, string> = {
   queued: 'border-muted-foreground/40 text-muted-foreground',
   running: 'border-primary/50 text-primary',
-  passed: 'border-pass/50 text-pass',
-  failed: 'border-fail/50 text-fail',
-  error: 'border-fail/50 text-fail',
+  passed: 'border-pass/50 text-pass-text',
+  failed: 'border-fail/50 text-fail-text',
+  error: 'border-fail/50 text-fail-text',
   cancelled: 'border-muted-foreground/40 text-muted-foreground',
   skipped: 'border-muted-foreground/40 text-muted-foreground',
 };
@@ -280,7 +280,7 @@ export function RunScreen({ runId }: { runId: string }) {
         >
           {view.paused ? (
             <>
-              <Pause className="size-4 text-warning" />
+              <Pause className="size-4 text-warning-text" />
               {tx('ui.run.pausedAt', { step: view.paused.stepNo })}
             </>
           ) : (
@@ -303,7 +303,7 @@ export function RunScreen({ runId }: { runId: string }) {
 
       {view.error && (
         <div role="alert" className="flex gap-2 border-b bg-fail/5 px-4 py-2 text-sm">
-          <CircleAlert className="mt-0.5 size-4 shrink-0 text-fail" />
+          <CircleAlert className="mt-0.5 size-4 shrink-0 text-fail-text" />
           <div>
             <p className="font-medium">{describeRunError(view.error, tx).message}</p>
             <p className="text-muted-foreground">{describeRunError(view.error, tx).hint}</p>

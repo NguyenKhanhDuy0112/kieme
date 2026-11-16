@@ -116,9 +116,7 @@ export function AppSidebar() {
               >
                 <Search />
                 <span>{tx('ui.actions.search')}</span>
-                <kbd className="ml-auto rounded border px-1 text-[10px] text-muted-foreground">
-                  ⌘K
-                </kbd>
+                <kbd className="ml-auto rounded border px-1 text-xs text-muted-foreground">⌘K</kbd>
               </SidebarMenuButton>
             </SidebarMenuItem>
             {NAV.map(({ view: v, icon: Icon }) => (

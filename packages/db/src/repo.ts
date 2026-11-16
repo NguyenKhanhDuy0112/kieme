@@ -5,13 +5,16 @@ import type { KiemiDb } from './database';
 import type { ALL_TABLES } from './tables';
 
 /** Stable error codes; the UI turns them into plain-language messages. */
-export type DbErrorCode =
-  | 'NOT_FOUND'
-  | 'VERSION_CONFLICT'
-  | 'VALIDATION'
-  | 'NAME_TAKEN'
-  | 'SECRETS_UNAVAILABLE'
-  | 'IMPORT_FAILED';
+export const DB_ERROR_CODES = [
+  'NOT_FOUND',
+  'VERSION_CONFLICT',
+  'VALIDATION',
+  'NAME_TAKEN',
+  'SECRETS_UNAVAILABLE',
+  'IMPORT_FAILED',
+] as const;
+/** Data-layer error codes; the UI shows `ui.dbErrors.<code>` for each. */
+export type DbErrorCode = (typeof DB_ERROR_CODES)[number];
 
 export class DbError extends Error {
   readonly code: DbErrorCode;

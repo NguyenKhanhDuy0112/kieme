@@ -29,12 +29,12 @@ const fmtDate = (d: Date) =>
   `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
 const CSS = `
-:root{--ink:#1F2A5C;--pass:#1f9d55;--fail:#E5484D;--muted:#6b7280;--line:#e5e7eb;--bg:#fff}
+:root{--ink:#1F2A5C;--pass:#13803f;--fail:#c8282e;--muted:#5b6280;--line:#e5e7eb;--bg:#fff}
 *{box-sizing:border-box}body{margin:0;font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#111827;background:#f6f7fb}
 main{max-width:980px;margin:0 auto;padding:32px 20px}
 header{background:var(--ink);color:#fff;border-radius:12px;padding:20px 24px;margin-bottom:20px}
 header h1{margin:0 0 4px;font-size:22px}header p{margin:0;opacity:.85}
-.badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;border:1px solid}
+.badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:600;border:1px solid}
 .passed{color:var(--pass);border-color:var(--pass)}.failed,.error{color:var(--fail);border-color:var(--fail)}
 .skipped,.cancelled,.queued,.running{color:var(--muted);border-color:var(--muted)}
 header .badge{background:#fff}
@@ -43,12 +43,12 @@ section h2{margin:0;padding:12px 16px;font-size:16px;border-bottom:1px solid var
 section h2 small{font-weight:400;color:var(--muted);margin-left:auto}
 ol{list-style:none;margin:0;padding:0}li{padding:8px 16px;border-top:1px solid var(--line)}li:first-child{border-top:0}
 .row{display:flex;gap:10px;align-items:baseline}.no{width:40px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
-.text{flex:1}.dur{color:var(--muted);font-size:12px}
+.text{flex:1}.dur{color:var(--muted);font-size:13px}
 .err{margin:6px 0 0 50px;padding:8px 10px;border-left:3px solid var(--fail);background:#fef2f2;border-radius:4px}
 .err b{display:block}.err span{color:var(--muted)}
 img{display:block;max-width:100%;margin:8px 0 0 50px;border:1px solid var(--line);border-radius:8px}
 .summary{display:flex;gap:16px;margin-top:10px;font-size:13px}
-footer{color:var(--muted);font-size:12px;text-align:center;margin-top:24px}
+footer{color:var(--muted);font-size:13px;text-align:center;margin-top:24px}
 @media print{body{background:#fff}section{break-inside:avoid}}
 `;
 

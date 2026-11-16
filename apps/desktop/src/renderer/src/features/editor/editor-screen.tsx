@@ -206,7 +206,7 @@ export function EditorScreen({ testId }: { testId: string }) {
     </span>
   ) : (
     <span className="flex items-center gap-1 text-xs text-muted-foreground">
-      <CircleCheck className="size-3 text-pass" /> {tx('ui.actions.saved')}
+      <CircleCheck className="size-3 text-pass-text" /> {tx('ui.actions.saved')}
     </span>
   );
 

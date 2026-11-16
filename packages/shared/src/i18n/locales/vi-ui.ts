@@ -400,6 +400,12 @@ export const viUi = {
     },
     lastOne: 'Phải còn ít nhất 1 cách tìm',
   },
+  examples: {
+    tags: 'smoke, nghỉ phép',
+    session: 'quanly',
+    baseUrl: 'https://uat.congty.vn',
+    sshHost: 'bastion.congty.vn',
+  },
   settingsScreen: {
     appearance: 'Giao diện',
     themeLabel: 'Sáng / Tối',

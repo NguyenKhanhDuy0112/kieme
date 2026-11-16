@@ -372,7 +372,7 @@ export function SessionsTab() {
         <div className="flex flex-col gap-1">
           <Input
             className="w-48"
-            placeholder="quanly"
+            placeholder={tx('ui.examples.session')}
             aria-label={tx('ui.sessions.add')}
             value={draft}
             aria-invalid={bad || undefined}
@@ -413,7 +413,7 @@ function SavedLogins() {
             return (
               <li key={l.id} className="flex items-center gap-2 text-sm">
                 <span className="w-48 truncate font-medium">{l.name}</span>
-                <span className={expired ? 'text-fail' : 'text-muted-foreground'}>
+                <span className={expired ? 'text-fail-text' : 'text-muted-foreground'}>
                   {expired
                     ? tx('ui.logins.expired')
                     : tx('ui.logins.expires', { when: new Date(l.expiresAt).toLocaleString() })}

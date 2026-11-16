@@ -209,7 +209,7 @@ function StepRow({
         type="button"
         className={cn(
           'relative w-9 shrink-0 rounded text-right text-xs tabular-nums text-muted-foreground hover:bg-muted',
-          hasBreakpoint && 'font-semibold text-fail',
+          hasBreakpoint && 'font-semibold text-fail-text',
         )}
         title={tx(hasBreakpoint ? 'ui.run.breakpointRemove' : 'ui.run.breakpointAdd')}
         aria-pressed={hasBreakpoint}
@@ -302,6 +302,7 @@ export function StepTable({
   onChip: (id: string, param: string) => void;
   onRunFrom?: (stepId: string) => void;
 }) {
+  const tx = useTx();
   const doc = useEditorStore((s) => s.doc);
   const apply = useEditorStore((s) => s.apply);
   const sensors = useSensors(
@@ -320,7 +321,7 @@ export function StepTable({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       <SortableContext items={rows.map((r) => r.step.id)} strategy={verticalListSortingStrategy}>
-        <ul className="flex flex-col" aria-label="steps">
+        <ul className="flex flex-col" aria-label={tx('ui.editor.tabs.steps')}>
           {rows.map((row) => (
             <StepRow
               key={row.step.id}

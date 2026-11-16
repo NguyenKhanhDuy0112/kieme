@@ -74,7 +74,7 @@ export function NameDialog({
                 id="name-dialog-tags"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                placeholder="smoke, nghỉ phép"
+                placeholder={tx('ui.examples.tags')}
               />
             </div>
           )}

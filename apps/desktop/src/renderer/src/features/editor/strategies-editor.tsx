@@ -144,7 +144,7 @@ export function StrategiesEditor({
                 </Button>
               </div>
               {problem && (
-                <p id={problemId} className="pl-5 text-xs text-warning">
+                <p id={problemId} className="pl-5 text-xs text-warning-text">
                   {tx(`ui.advanced.problems.${problem}`)}
                 </p>
               )}

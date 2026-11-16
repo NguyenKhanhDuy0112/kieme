@@ -68,7 +68,7 @@ export function RecordPanel({ testId }: { testId: string }) {
         </Button>
       </div>
       {rec.prefixFailed && (
-        <p role="alert" className="text-warning">
+        <p role="alert" className="text-warning-text">
           {tx('ui.record.prefixFailed')}
         </p>
       )}
@@ -78,7 +78,7 @@ export function RecordPanel({ testId }: { testId: string }) {
       {rec.suggestions.length > 0 && (
         <div className="flex flex-col gap-1">
           <span className="flex items-center gap-1 font-medium">
-            <Lightbulb className="size-4 text-warning" /> {tx('ui.record.suggestTitle')}
+            <Lightbulb className="size-4 text-warning-text" /> {tx('ui.record.suggestTitle')}
           </span>
           <ul className="flex flex-col gap-1">
             {rec.suggestions.map((s) => (
@@ -91,7 +91,7 @@ export function RecordPanel({ testId }: { testId: string }) {
                   variant="outline"
                   onClick={() => void rec.resolveSuggestion(s.id, true)}
                 >
-                  <Check className="text-pass" /> {tx('ui.record.accept')}
+                  <Check className="text-pass-text" /> {tx('ui.record.accept')}
                 </Button>
                 <Button
                   size="icon"

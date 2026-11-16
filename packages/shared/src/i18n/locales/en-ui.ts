@@ -401,6 +401,12 @@ export const enUi = {
     },
     lastOne: 'Keep at least 1 way to find',
   },
+  examples: {
+    tags: 'smoke, leave',
+    session: 'manager',
+    baseUrl: 'https://uat.example.com',
+    sshHost: 'bastion.example.com',
+  },
   settingsScreen: {
     appearance: 'Appearance',
     themeLabel: 'Light / Dark',

@@ -203,7 +203,7 @@ function EnvironmentEditor({ id, onDeleted }: { id: string; onDeleted: () => voi
       >
         <Input
           aria-label={tx('ui.environments.baseUrl')}
-          placeholder="https://uat.congty.vn"
+          placeholder={tx('ui.examples.baseUrl')}
           defaultValue={e.baseUrl ?? ''}
           onBlur={(ev) =>
             ev.target.value !== (e.baseUrl ?? '') &&
@@ -484,7 +484,7 @@ function SshHopForm({
         <Input
           id={`${idPrefix}-host`}
           value={h.host}
-          placeholder="bastion.congty.vn"
+          placeholder={tx('ui.examples.sshHost')}
           onChange={(e) => setH({ ...h, host: e.target.value })}
         />
       </div>
