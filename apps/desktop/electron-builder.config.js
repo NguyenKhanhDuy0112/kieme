@@ -7,7 +7,7 @@
 
 /** GitHub repository whose Releases host installers and update metadata [N-11, N-12]. */
 const releaseOwner = process.env.KIEMI_RELEASE_OWNER || 'NguyenKhanhDuy0112';
-const releaseRepo = process.env.KIEMI_RELEASE_REPO || 'kieme';
+const releaseRepo = process.env.KIEMI_RELEASE_REPO || 'kiemi';
 
 /** @type {import('electron-builder').Configuration} */
 module.exports = {

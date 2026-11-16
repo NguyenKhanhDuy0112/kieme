@@ -61,7 +61,7 @@ describe('electron-builder config [N-10, N-11, N-13]', () => {
   });
 
   it('publishes to GitHub Releases, repo overridable by env', () => {
-    expect(config.publish[0]).toMatchObject({ provider: 'github', repo: 'kieme' });
+    expect(config.publish[0]).toMatchObject({ provider: 'github', repo: 'kiemi' });
     process.env.KIEMI_RELEASE_REPO = 'kiemi-releases';
     try {
       expect(load().publish[0]?.repo).toBe('kiemi-releases');

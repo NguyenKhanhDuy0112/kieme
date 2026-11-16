@@ -1,7 +1,7 @@
 import type { UpdateMode } from './update-service';
 
 /** GitHub repository with the releases. Must match `electron-builder.config.js` (ADR 0015). */
-export const RELEASE_SOURCE = { owner: 'NguyenKhanhDuy0112', repo: 'kieme' } as const;
+export const RELEASE_SOURCE = { owner: 'NguyenKhanhDuy0112', repo: 'kiemi' } as const;
 
 export const RELEASE_PAGE_URL = `https://github.com/${RELEASE_SOURCE.owner}/${RELEASE_SOURCE.repo}/releases/latest`;
 

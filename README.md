@@ -9,8 +9,8 @@
 Kiểm thử giao diện web **không cần viết code** — ghi lại thao tác hoặc soạn từng bước, bấm **Chạy**, xem kết quả.
 Chạy offline, không cần tài khoản, không cần cài thêm gì.
 
-[![Phiên bản mới nhất](https://img.shields.io/github/v/release/NguyenKhanhDuy0112/kieme?label=phi%C3%AAn%20b%E1%BA%A3n&color=1F2A5C)](https://github.com/NguyenKhanhDuy0112/kieme/releases/latest)
-[![CI](https://github.com/NguyenKhanhDuy0112/kieme/actions/workflows/ci.yml/badge.svg)](https://github.com/NguyenKhanhDuy0112/kieme/actions/workflows/ci.yml)
+[![Phiên bản mới nhất](https://img.shields.io/github/v/release/NguyenKhanhDuy0112/kiemi?label=phi%C3%AAn%20b%E1%BA%A3n&color=1F2A5C)](https://github.com/NguyenKhanhDuy0112/kiemi/releases/latest)
+[![CI](https://github.com/NguyenKhanhDuy0112/kiemi/actions/workflows/ci.yml/badge.svg)](https://github.com/NguyenKhanhDuy0112/kiemi/actions/workflows/ci.yml)
 
 </div>
 
@@ -20,11 +20,11 @@ Chọn đúng máy của bạn — nút luôn tải **bản mới nhất**.
 
 <div align="center">
 
-[![Tải cho Windows](https://img.shields.io/badge/T%E1%BA%A3i%20cho%20Windows-.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/NguyenKhanhDuy0112/kieme/releases/latest/download/Kiemi-Setup.exe)
+[![Tải cho Windows](https://img.shields.io/badge/T%E1%BA%A3i%20cho%20Windows-.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/NguyenKhanhDuy0112/kiemi/releases/latest/download/Kiemi-Setup.exe)
 &nbsp;
-[![Tải cho macOS](https://img.shields.io/badge/T%E1%BA%A3i%20cho%20macOS-.dmg-1F2A5C?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/NguyenKhanhDuy0112/kieme/releases/latest/download/Kiemi-mac.dmg)
+[![Tải cho macOS](https://img.shields.io/badge/T%E1%BA%A3i%20cho%20macOS-.dmg-1F2A5C?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/NguyenKhanhDuy0112/kiemi/releases/latest/download/Kiemi-mac.dmg)
 
-[Windows portable (không cần cài)](https://github.com/NguyenKhanhDuy0112/kieme/releases/latest/download/Kiemi-Portable.exe) · [Mọi phiên bản](https://github.com/NguyenKhanhDuy0112/kieme/releases)
+[Windows portable (không cần cài)](https://github.com/NguyenKhanhDuy0112/kiemi/releases/latest/download/Kiemi-Portable.exe) · [Mọi phiên bản](https://github.com/NguyenKhanhDuy0112/kiemi/releases)
 
 </div>
 
@@ -82,4 +82,4 @@ pnpm --filter @kiemi/desktop exec electron-builder --config electron-builder.con
 
 Tài liệu: [SPEC](docs/SPEC.md) · [ROADMAP](docs/ROADMAP.md) · [Kiến trúc](docs/ARCHITECTURE.md) · [ADR](docs/adr/) · [Checklist phát hành](docs/RELEASE-CHECKLIST.md).
 
-**Phát hành**: `pnpm changeset` → `pnpm release:version` → commit → `git tag vX.Y.Z && git push origin vX.Y.Z`. GitHub Actions build Windows + macOS và đăng lên [Releases](https://github.com/NguyenKhanhDuy0112/kieme/releases); nút tải ở trên tự trỏ tới bản mới.
+**Phát hành**: `pnpm changeset` → `pnpm release:version` → commit → `git tag vX.Y.Z && git push origin vX.Y.Z`. GitHub Actions build Windows + macOS và đăng lên [Releases](https://github.com/NguyenKhanhDuy0112/kiemi/releases); nút tải ở trên tự trỏ tới bản mới.
