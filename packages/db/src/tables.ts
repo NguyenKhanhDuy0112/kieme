@@ -1,4 +1,11 @@
-import type { Locator, ProxySettings, SharedStep, Step, TestCase } from '@kiemi/schema';
+import type {
+  Locator,
+  ProxySettings,
+  SharedStep,
+  SshSettings,
+  Step,
+  TestCase,
+} from '@kiemi/schema';
 import { blob, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /**
@@ -128,6 +135,8 @@ export const environments = sqliteTable(
     name: text('name').notNull(),
     baseUrl: text('base_url'),
     proxy: json<ProxySettings>('proxy'),
+    /** SSH tunnel settings [G-07] (migration 2). */
+    ssh: json<SshSettings>('ssh'),
     sortOrder: integer('sort_order').notNull().default(0),
   },
   (t) => [index('environments_project_idx').on(t.projectId)],

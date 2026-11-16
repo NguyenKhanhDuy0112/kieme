@@ -3,6 +3,7 @@ import {
   ProxySchema,
   parseTestCase,
   SharedStepSchema,
+  SshSettingsSchema,
   type TestCase,
 } from '@kiemi/schema';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
@@ -43,6 +44,7 @@ const ManifestSchema = z.object({
         name: z.string().min(1),
         baseUrl: z.string().nullish(),
         proxy: ProxySchema.nullish(),
+        ssh: SshSettingsSchema.nullish(),
         variables: z.record(z.string(), z.string()).default({}),
         /** Secret names only: values are never exported. */
         secretNames: z.array(z.string()).default([]),
@@ -250,6 +252,7 @@ export function exportBundle(
       name: e.name,
       baseUrl: e.baseUrl,
       proxy: e.proxy,
+      ssh: e.ssh,
       variables: services.environments.variables(e.id),
       secretNames: services.environments.listSecrets(e.id).map((s) => s.name),
     })),
@@ -419,6 +422,7 @@ export function importBundle(
         name: e.name,
         baseUrl: e.baseUrl ?? null,
         proxy: e.proxy ?? null,
+        ssh: e.ssh ?? null,
       });
       ids.set(e.id, row.id);
       services.environments.setVariables(row.id, e.variables);

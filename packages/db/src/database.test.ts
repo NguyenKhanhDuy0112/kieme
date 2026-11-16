@@ -78,7 +78,7 @@ describe('database & migrations [M2-01]', () => {
     expect(migrate(client)).toEqual(MIGRATIONS.map((m) => m.id));
     expect(migrate(client)).toEqual([]);
     const rows = client.prepare('SELECT id, name FROM _kiemi_migrations').all();
-    expect(rows).toEqual([{ id: 1, name: 'init' }]);
+    expect(rows).toEqual(MIGRATIONS.map((m) => ({ id: m.id, name: m.name })));
   });
 
   it('rolls back a failing migration', () => {
@@ -87,13 +87,15 @@ describe('database & migrations [M2-01]', () => {
     expect(() =>
       migrate(client, [
         ...MIGRATIONS,
-        { id: 2, name: 'bad', sql: 'CREATE TABLE x (a); SELECT nope FROM missing;' },
+        { id: 999, name: 'bad', sql: 'CREATE TABLE x (a); SELECT nope FROM missing;' },
       ]),
     ).toThrow();
     expect(client.prepare("SELECT count(*) n FROM sqlite_master WHERE name = 'x'").get()).toEqual({
       n: 0,
     });
-    expect(client.prepare('SELECT count(*) n FROM _kiemi_migrations').get()).toEqual({ n: 1 });
+    expect(client.prepare('SELECT count(*) n FROM _kiemi_migrations').get()).toEqual({
+      n: MIGRATIONS.length,
+    });
   });
 
   it('seeds the default workspace, project, environment and language once', () => {

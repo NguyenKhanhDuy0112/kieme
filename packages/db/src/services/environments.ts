@@ -1,4 +1,11 @@
-import { type Env, EnvSchema, ProxySchema, type Secrets, VariableNameSchema } from '@kiemi/schema';
+import {
+  type Env,
+  EnvSchema,
+  ProxySchema,
+  type Secrets,
+  SshSettingsSchema,
+  VariableNameSchema,
+} from '@kiemi/schema';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { DbError, type Patch, Repo, type RepoContext, validation } from '../repo';
@@ -19,6 +26,8 @@ export const EnvironmentInputSchema = z.object({
   name: z.string().trim().min(1).max(100),
   baseUrl: z.url().nullish(),
   proxy: ProxySchema.nullish(),
+  /** SSH tunnel [G-07]. */
+  ssh: SshSettingsSchema.nullish(),
 });
 
 /** What the UI may see about a secret: never the value. */
@@ -62,6 +71,7 @@ export class EnvironmentService {
       name: p.data.name,
       baseUrl: p.data.baseUrl ?? null,
       proxy: p.data.proxy ?? null,
+      ssh: p.data.ssh ?? null,
       sortOrder: this.list(p.data.projectId).length,
     });
   }
@@ -74,8 +84,9 @@ export class EnvironmentService {
     const p = EnvironmentInputSchema.omit({ projectId: true }).partial().safeParse(input);
     if (!p.success) throw validation('environment', p.error.issues);
     const env = this.repo.get(id);
-    if (p.data.name !== undefined && p.data.name !== env.name)
+    if (p.data.name !== undefined && p.data.name !== env.name) {
       this.#uniqueName(env.projectId, p.data.name);
+    }
     return this.repo.update(id, p.data, expectedVersion);
   }
 
@@ -164,6 +175,7 @@ export class EnvironmentService {
       variables: this.variables(environmentId),
       secretNames: Object.keys(plain),
       ...(row.proxy ? { proxy: row.proxy } : {}),
+      ...(row.ssh ? { ssh: row.ssh } : {}),
     });
     return { env, secrets: plain };
   }

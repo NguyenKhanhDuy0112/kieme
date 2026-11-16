@@ -254,4 +254,9 @@ CREATE TABLE "settings" (
 CREATE UNIQUE INDEX "settings_workspace_key_idx" ON "settings" ("workspace_id", "key");
 `,
   },
+  {
+    id: 2,
+    name: 'environment-ssh',
+    sql: 'ALTER TABLE "environments" ADD COLUMN "ssh" TEXT;',
+  },
 ];

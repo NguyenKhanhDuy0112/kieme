@@ -41,6 +41,49 @@ export const ProxySchema = z
   });
 export type ProxySettings = z.infer<typeof ProxySchema>;
 
+/**
+ * One SSH hop. Credentials are secret NAMES (values live encrypted in the
+ * environment's secrets) [G-07, E-08].
+ */
+export const SshHopSchema = z
+  .object({
+    host: z.string().trim().min(1),
+    port: z.number().int().min(1).max(65535).default(22),
+    username: z.string().trim().min(1),
+    auth: z.enum(['password', 'key']).default('password'),
+    passwordSecret: VariableNameSchema.optional(),
+    privateKeySecret: VariableNameSchema.optional(),
+    passphraseSecret: VariableNameSchema.optional(),
+  })
+  .superRefine((h, ctx) => {
+    if (h.auth === 'password' && !h.passwordSecret) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Choose the secret holding the password',
+        path: ['passwordSecret'],
+      });
+    }
+    if (h.auth === 'key' && !h.privateKeySecret) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Choose the secret holding the private key',
+        path: ['privateKeySecret'],
+      });
+    }
+  });
+export type SshHop = z.infer<typeof SshHopSchema>;
+
+/**
+ * SSH tunnel of an environment [G-07]: the app opens a local SOCKS proxy
+ * through `target` (optionally via a `jump` host) for the run, then closes it.
+ */
+export const SshSettingsSchema = z.object({
+  enabled: z.boolean().default(true),
+  target: SshHopSchema,
+  jump: SshHopSchema.optional(),
+});
+export type SshSettings = z.infer<typeof SshSettingsSchema>;
+
 /** Environment (dev / staging / prod…) with its variables [E-02]. */
 export const EnvSchema = z.object({
   id: z.string().min(1),
@@ -51,6 +94,8 @@ export const EnvSchema = z.object({
   secretNames: z.array(VariableNameSchema).default([]),
   /** Proxy used by every session of runs in this env [G-06]. */
   proxy: ProxySchema.optional(),
+  /** SSH tunnel opened by the desktop app for runs in this env [G-07]. */
+  ssh: SshSettingsSchema.optional(),
 });
 export type Env = z.infer<typeof EnvSchema>;
 
