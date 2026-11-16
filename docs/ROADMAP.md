@@ -16,17 +16,17 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 - [x] **M1-03** Locator resolver nhiều lớp + ngữ cảnh + thứ N + ID động [C-01, C-03, C-04, C-05]
 - [x] **M1-04** Trình duyệt: phát hiện Edge/Chrome, fallback tải Chromium; headed/headless; viewport/mobile [N-03, G-01, G-03, G-05]
 - [x] **M1-04b** Proxy theo môi trường (HTTP/SOCKS5, DNS qua proxy) [G-06]
-- [ ] **M1-05** Nhiều phiên (browser context theo `session`) [F-01, A-16]
-- [ ] **M1-06** Biến: `{{…}}`, phạm vi, generator, ngày, biểu thức [E-01, E-02, E-05, E-06, E-07]
-- [ ] **M1-07** Actions điều hướng & nhập liệu [A-01 → A-12]
-- [ ] **M1-08** Actions tab, dialog, iframe, cookie, chờ [A-13 → A-18]
-- [ ] **M1-09** Assertions [B-01 → B-11]
-- [ ] **M1-10** Lưu giá trị vào biến [E-04]
-- [ ] **M1-11** Luồng: step dùng chung, waitUntil, if/else, lặp, cleanup, tắt step [D-01 → D-06]
-- [ ] **M1-12** API call + bắt lỗi console/network [F-03, F-04]
-- [ ] **M1-13** Artifacts: ảnh chụp (khoanh đỏ), video, trace; che secret [I-01 → I-03, E-08]
-- [ ] **M1-14** Thông báo lỗi tiếng Việt + gợi ý sửa [I-04, N-06]
-- [ ] **M1-15** E2E: test mẫu "A tạo → B kiểm tra" chạy pass trên demo-site
+- [x] **M1-05** Nhiều phiên (browser context theo `session`) [F-01, A-16]
+- [x] **M1-06** Biến: `{{…}}`, phạm vi, generator, ngày, biểu thức [E-01, E-02, E-05, E-06, E-07]
+- [x] **M1-07** Actions điều hướng & nhập liệu [A-01 → A-12]
+- [x] **M1-08** Actions tab, dialog, iframe, cookie, chờ [A-13 → A-18]
+- [x] **M1-09** Assertions [B-01 → B-11]
+- [x] **M1-10** Lưu giá trị vào biến [E-04]
+- [x] **M1-11** Luồng: step dùng chung, waitUntil, if/else, lặp, cleanup, tắt step [D-01 → D-06]
+- [x] **M1-12** API call + bắt lỗi console/network [F-03, F-04]
+- [x] **M1-13** Artifacts: ảnh chụp (khoanh đỏ), video, trace; che secret [I-01 → I-03, E-08]
+- [x] **M1-14** Thông báo lỗi tiếng Việt + gợi ý sửa [I-04, N-06]
+- [x] **M1-15** E2E: test mẫu "A tạo → B kiểm tra" chạy pass trên demo-site
 
 ## M2 — Lưu trữ
 - [ ] **M2-01** SQLite + Drizzle: schema theo Phụ lục 2, migration, seed workspace mặc định
