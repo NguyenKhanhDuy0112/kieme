@@ -1,8 +1,15 @@
+import { createMemoryServices } from '@kiemi/db';
 import type { TRPCError } from '@trpc/server';
 import { describe, expect, it } from 'vitest';
 import { createCaller } from './root';
 
-const caller = createCaller({ appVersion: '1.2.3', platform: 'darwin' });
+const { services, defaultProjectId } = createMemoryServices();
+const caller = createCaller({
+  appVersion: '1.2.3',
+  platform: 'darwin',
+  services,
+  defaultProjectId,
+});
 
 describe('app router', () => {
   it('returns app info from context', async () => {
@@ -10,6 +17,7 @@ describe('app router', () => {
       name: 'Kiemi',
       version: '1.2.3',
       platform: 'darwin',
+      defaultProjectId,
     });
   });
 

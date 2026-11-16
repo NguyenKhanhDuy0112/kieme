@@ -7,6 +7,7 @@ export const appRouter = router({
     name: 'Kiemi',
     version: ctx.appVersion,
     platform: ctx.platform,
+    defaultProjectId: ctx.defaultProjectId,
   })),
 
   /** Sample procedure with Zod-validated input; proves the IPC round trip. */

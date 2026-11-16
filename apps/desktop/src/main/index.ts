@@ -1,7 +1,14 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import {
+  createServices,
+  ensureDefaultWorkspace,
+  openDatabase,
+  type SecretCipher,
+  type Services,
+} from '@kiemi/db';
 import { BRAND } from '@kiemi/shared';
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, safeStorage, shell } from 'electron';
 import { createIPCHandler } from 'electron-trpc/main';
 import { rootRouter } from './api/root';
 import { isTrustedRendererUrl } from './ipc-allow';
@@ -10,7 +17,25 @@ import { createMainWindowOptions } from './window-options';
 const rendererHtmlPath = join(__dirname, '../renderer/index.html');
 const devServerUrl = app.isPackaged ? undefined : process.env.ELECTRON_RENDERER_URL;
 
+/** Secrets are encrypted by the OS keychain (Keychain / DPAPI) [N-07]. */
+const keychainCipher: SecretCipher = {
+  isAvailable: () => safeStorage.isEncryptionAvailable(),
+  encrypt: (plain) => safeStorage.encryptString(plain),
+  decrypt: (cipher) => safeStorage.decryptString(cipher),
+};
+
+/** Opens `userData/kiemi.db`, migrates and seeds the default workspace [M2-01]. */
+function openData(): { services: Services; defaultProjectId: string } {
+  const db = openDatabase({ path: join(app.getPath('userData'), 'kiemi.db') });
+  const seed = ensureDefaultWorkspace(db);
+  return {
+    services: createServices({ db, workspaceId: seed.workspaceId }, keychainCipher),
+    defaultProjectId: seed.projectId,
+  };
+}
+
 function registerIpc(): void {
+  const data = openData();
   const rendererFileUrl = pathToFileURL(rendererHtmlPath).href;
   createIPCHandler({
     router: rootRouter,
@@ -21,6 +46,8 @@ function registerIpc(): void {
     createContext: async () => ({
       appVersion: app.getVersion(),
       platform: process.platform,
+      services: data.services,
+      defaultProjectId: data.defaultProjectId,
     }),
   });
 }

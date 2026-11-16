@@ -5,7 +5,8 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin({ exclude: ['@kiemi/shared'] })],
+    // Workspace packages are TypeScript sources: bundle them; their npm deps stay external.
+    plugins: [externalizeDepsPlugin({ exclude: ['@kiemi/shared', '@kiemi/db', '@kiemi/schema'] })],
   },
   preload: {
     // Sandboxed preload scripts must be CommonJS and cannot require node_modules,
