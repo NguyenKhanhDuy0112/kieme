@@ -36,14 +36,14 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 - [x] **M2-05** Xuất / Nhập project, test (`.kiemi.json` / `.zip`) [J-03]
 
 ## M3 — UI soạn test
-- [ ] **M3-01** Layout app, điều hướng, trang chủ danh sách [S-01]
-- [ ] **M3-02** Bảng step: thêm/sửa/xóa/kéo thả/tắt/nhân bản, undo/redo [S-02, J-04, J-06]
-- [ ] **M3-03** Panel thuộc tính step tự sinh form từ `params` + `ui` của action
-- [ ] **M3-04** Ô nhập có gợi ý biến `{{` [E-01]
-- [ ] **M3-05** Kho phần tử + tìm nơi dùng [J-01, J-02]
-- [ ] **M3-06** Tab Dữ liệu, Biến, Phiên trong màn soạn test [E-03, F-01]
-- [ ] **M3-07** Màn Môi trường & Cài đặt [S-06, S-07]
-- [ ] **M3-08** SSH tunnel tích hợp (thư viện `ssh2` ở main process, SOCKS cục bộ, jump host, Kiểm tra kết nối, credential lưu Secret) + hướng dẫn VPN → SSH [G-07, G-08]
+- [x] **M3-01** Layout app, điều hướng, trang chủ danh sách [S-01]
+- [x] **M3-02** Bảng step: thêm/sửa/xóa/kéo thả/tắt/nhân bản, undo/redo [S-02, J-04, J-06]
+- [x] **M3-03** Panel thuộc tính step tự sinh form từ `params` + `ui` của action
+- [x] **M3-04** Ô nhập có gợi ý biến `{{` [E-01]
+- [x] **M3-05** Kho phần tử + tìm nơi dùng [J-01, J-02]
+- [x] **M3-06** Tab Dữ liệu, Biến, Phiên trong màn soạn test [E-03, F-01]
+- [x] **M3-07** Màn Môi trường & Cài đặt [S-06, S-07]
+- [x] **M3-08** SSH tunnel tích hợp (thư viện `ssh2` ở main process, SOCKS cục bộ, jump host, Kiểm tra kết nối, credential lưu Secret) + hướng dẫn VPN → SSH [G-07, G-08]
 
 ## M4 — Chạy & Kết quả
 - [ ] **M4-01** Engine chạy trong utility process, nối event về UI [N-05]

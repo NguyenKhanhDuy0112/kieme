@@ -1,17 +1,19 @@
 # PROGRESS
 
 ## Trạng thái hiện tại
-M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-15). M2 — Lưu trữ **xong** (M2-01 → M2-05, `@kiemi/db`). Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
+M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-15). M2 — Lưu trữ **xong** (M2-01 → M2-05, `@kiemi/db`). M3 — UI soạn test **xong** (M3-01 → M3-08). Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
 
 ## Đang làm dở
 (không có)
 
 ## Tiếp theo
-**M3-01** — Layout app, điều hướng, trang chủ danh sách [S-01].
+**M4-01** — Engine chạy trong utility process, nối event về UI [N-05].
 
 ## Vấn đề tồn đọng / Câu hỏi cho người dùng
+- **Giao diện** (ADR 0009): renderer ở `apps/desktop/src/renderer/src/` — `lib/store.ts` (điều hướng Zustand), `features/tests` (cây test), `features/editor` (bảng bước, form tự sinh, gợi ý biến, tab Dữ liệu/Biến/Phiên, undo/redo, tự lưu), `features/elements`, `features/environments` (biến, bí mật, proxy, SSH), `features/settings`. Chuỗi UI ở `@kiemi/shared` `locales/vi-ui.ts` (+ `en-ui.ts`, khóa `ui.*`). Hàm dịch khóa động: `useTx()`. Lỗi từ main → `errorMessage(err, t)`.
+- **SSH** (ADR 0009): `apps/desktop/src/main/tunnel/ssh-tunnel.ts` — `openSshTunnel(env.ssh, secrets)` → `socks5://127.0.0.1:<port>`, `withTunnelProxy(env, tunnel)`; M4 phải mở tunnel trước run và đóng sau run.
+- Chạy app để kiểm tra UI: `pnpm --filter @kiemi/desktop build` rồi điều khiển bằng `_electron.launch` của `playwright-core` (`args: ['.', '--user-data-dir=<tạm>']`). Nút Ghi lại / Chạy đang khóa tới M4/M5.
 - **Dữ liệu** (ADR 0008): `@kiemi/db` — `openDatabase({ path })` (migrate), `ensureDefaultWorkspace`, `createServices(ctx, cipher)` → `projects, folders, testCases, suites, sharedSteps, elements, environments, datasets`; `exportTestCase / importTestCase / exportBundle / importBundle`. tRPC: `projects.*`, `folders.*`, `testCases.*`, `suites.*`, `sharedSteps.*`, `elements.*`, `environments.*` (secret chỉ trả tên), `datasets.*` (`importFile` base64), `io.*`. Lỗi có `error.data.kiemiCode`. Test: `createMemoryServices()`. Thêm bảng/cột = migration mới trong `migrations.ts` (test đối chiếu Drizzle).
-- Chuỗi tiếng Việt cho mã lỗi `DbError` chưa có — thêm khi làm UI M3 (cùng chỗ với `errors.codes`).
 - **Engine runtime** (ADR 0007): `createDefaultRegistry()` có mọi action v1 + `assertX`. `runTestCase(request, { registry, browser, onEvent, signal })`; `RunRequest` nhận `env`, `secrets`, `dataset`+`rowIndex`, `sharedSteps`, `suiteVariables`, `options { defaultStepTimeoutMs, viewport, failOnConsoleError, failOnHttpError, artifacts {dir, screenshots, video, trace}, filesDir }`. Lỗi → `describeRunError(error, t)` ở `@kiemi/shared`. Kịch bản mẫu M1-15: `packages/engine/src/e2e/fixtures/leave-request.kiemi.json`.
 - Chưa làm (để sau, không chặn M2): bước "Chọn ngày" chỉ gõ trực tiếp (chưa bấm trên lịch); dropdown tự làm tìm option theo `role=option`/`li`/`data-value`.
 - **Trình duyệt** (ADR 0006): `launchBrowser({ settings, browsersPath, onDownloadProgress })` → Edge/Chrome có sẵn hoặc tải Chromium vào `browsersPath`. Runner nhận `browser` đã launch; action lấy `await ctx.page()` / `ctx.context()` (mỗi session 1 context, tạo khi cần, đóng sau cleanup). Màn hình: `options.viewport = { device?, viewport? }`. Proxy lấy từ `request.env.proxy` (+ secret mật khẩu). Test có proxy HTTP/SOCKS5 giả ở `src/testing/proxies.ts`.
@@ -63,3 +65,12 @@ M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-
 | 2026-11-16 | M2-03 | Xong — Môi trường, biến, secret mã hóa bằng `safeStorage`; renderer chỉ thấy tên secret | |
 | 2026-11-16 | M2-04 | Xong — Dataset: bảng nhập tay, nhập CSV (`,`/`;`/tab, BOM), Excel (ngày, công thức, rich text) | |
 | 2026-11-16 | M2-05 | Xong — Xuất/nhập `.kiemi.json` và `.zip` (project/suite), id mới, ánh xạ tham chiếu, không xuất secret | 33 test mới (db 29 + router 4); cả repo 234 test; ADR 0008 |
+| 2026-11-16 | — | Sửa CI M2 fail: assertion có timeout ngắn trên máy CI chậm báo STEP_TIMEOUT thay vì ASSERTION_FAILED | Vòng lặp assertion tính thời gian mỗi lần kiểm tra; e2e dùng timeout ≥ 1,5 s |
+| 2026-11-16 | M3-01 | Xong — layout 3 vùng (sidebar shadcn), chọn/tạo dự án, cây thư mục → test / bộ test, tìm theo tên/tag, tạo/đổi tên/nhân bản/chuyển thư mục, xóa có hoàn tác, Ctrl/⌘K, sáng/tối | Chạy app thật bằng Playwright `_electron`, chụp màn hình |
+| 2026-11-16 | M3-02 | Xong — bảng bước đọc như câu tiếng Việt có chip, kéo thả, tắt/bật, nhân bản, xóa có hoàn tác, undo/redo, tự lưu, phím tắt | |
+| 2026-11-16 | M3-03 | Xong — panel chi tiết tự sinh form từ JSON Schema của action (`system.actions`), mục Nâng cao | |
+| 2026-11-16 | M3-04 | Xong — gõ `{{` gợi ý biến môi trường/test/dữ liệu/bí mật/đã lưu/generator | |
+| 2026-11-16 | M3-05 | Xong — kho phần tử: phần tử của test + nơi dùng, phần tử dự án, thêm vào test, chặn xóa khi đang dùng | |
+| 2026-11-16 | M3-06 | Xong — tab Dữ liệu (không / bộ đã lưu / bảng nhập tay, nhập Excel/CSV), Biến, Phiên (đổi tên cập nhật các bước) | |
+| 2026-11-16 | M3-07 | Xong — màn Môi trường (địa chỉ gốc, biến, bí mật luôn che, proxy) và Cài đặt (ngôn ngữ, giao diện, trình duyệt, chạy ngầm, timeout, thư mục kết quả) | `settings.*` lưu DB |
+| 2026-11-16 | M3-08 | Xong — SSH tunnel `ssh2` → SOCKS cục bộ, jump host, mật khẩu/khóa riêng từ bí mật, Kiểm tra kết nối, hướng dẫn VPN → SSH; `Env.ssh` + migration 2 | 5 test với SSH server giả (`ssh2.Server`), DNS phía SSH; cả repo 256 test; ADR 0009 |
