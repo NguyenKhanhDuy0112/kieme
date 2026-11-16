@@ -10,3 +10,4 @@ allowBuilds:
   better-sqlite3: true
   ssh2: false
   cpu-features: false
+  electron-winstaller: false
