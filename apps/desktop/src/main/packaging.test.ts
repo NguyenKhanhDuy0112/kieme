@@ -24,6 +24,7 @@ const load = (): BuilderConfig => {
   return require(path) as BuilderConfig;
 };
 const pkg = require('../../package.json') as {
+  productName: string;
   version: string;
   dependencies: Record<string, string>;
 };
@@ -34,6 +35,8 @@ describe('electron-builder config [N-10, N-11, N-13]', () => {
   it('uses the brand app id', () => {
     expect(config.appId).toBe('app.kiemi.desktop');
     expect(config.productName).toBe('Kiemi');
+    // Electron names the data folder after package.json: %APPDATA%\Kiemi, ~/Library/Application Support/Kiemi.
+    expect(pkg.productName).toBe('Kiemi');
   });
 
   it('builds a per-user NSIS installer and a portable exe for Windows', () => {

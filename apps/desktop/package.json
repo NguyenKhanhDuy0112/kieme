@@ -1,5 +1,6 @@
 {
   "name": "@kiemi/desktop",
+  "productName": "Kiemi",
   "version": "0.1.0",
   "private": true,
   "description": "Kiemi — Bấm một lần, kiểm mãi mãi.",
