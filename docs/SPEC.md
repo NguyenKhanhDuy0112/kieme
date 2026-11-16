@@ -57,6 +57,8 @@ Mỗi yêu cầu có ID để ROADMAP, commit và test tham chiếu.
 | U-13 | **Khả năng tiếp cận**: tương phản WCAG AA, điều khiển được bằng bàn phím, focus ring rõ, cỡ chữ tối thiểu 13px | v1 |
 | U-14 | **Hướng dẫn tại chỗ**: tooltip giải thích ngắn cho từng hành động; tour 3 bước ở lần đầu | v1 |
 | U-16 | **Linh vật "Cú Kiemi"**: cú tròn màu chàm, mắt to, bụng/mỏ là dấu tick xanh lá. Xuất hiện ở: icon app, hộp thoại chào mừng, màn hình trống, kết quả chạy (biểu cảm **vui** khi Đạt, **lo lắng** khi Không đạt, **chăm chú** khi đang chạy, **bình thường**). **Không** đặt trong bảng bước / form. Tiêu chí: icon nhận diện được ở 16px; 4 biểu cảm; đẹp ở cả sáng/tối; minh họa không thay chữ (luôn có câu giải thích, `aria-hidden`); vẽ SVG nội tuyến, không làm chậm khởi động (N-05) | v1.x |
+| U-17 | **Chuyển động mượt**: chuyển màn (mờ + trượt nhẹ), thêm/xóa bước, mở/đóng panel, bước đang chạy có viền "thở", icon Đạt/Không đạt nảy nhẹ, thanh tiến độ mượt, nút lún khi bấm, skeleton lấp lánh; linh vật chớp mắt / nhún (Đạt) / lắc đầu (Không đạt) / nghiêng đầu (đang chạy). Tiêu chí: 150–300ms (linh vật ≤ 600ms), chỉ `transform`/`opacity` (60 khung hình/giây, kể cả test 200 bước — N-05); tôn trọng "Giảm chuyển động" của hệ điều hành + công tắc **Giảm chuyển động** trong Cài đặt; không chuyển động nào bắt người dùng chờ. Chỉ CSS + `tw-animate-css` + View Transitions API, không thêm thư viện | v1.x |
+| U-18 | **Màn hình khởi động (splash)** mỗi lần mở app: nền chàm, Cú Kiemi mở mắt + vẫy cánh, dấu tick tự vẽ, slogan, thanh tiến độ mảnh; mờ dần vào màn hình chính. **Lần mở đầu tiên**: cú bay vào chào rồi nối sang hộp thoại chào mừng. Tiêu chí: hiện < 300ms (HTML/CSS thuần, nạp trước React); tắt ngay khi app sẵn sàng (tối thiểu ~0,5s để không nháy), không làm chậm khởi động (N-05); bản tĩnh khi Giảm chuyển động; đẹp ở sáng/tối | v1.x |
 | U-15 | **Kiểm tra cảm nhận**: người chưa từng dùng phải tạo + chạy được test đầu tiên mà không cần hỏi ai (đo bằng N-01) | v1 |
 
 ---
@@ -234,6 +236,7 @@ Load testing · Pentest · App mobile native · App desktop · Vượt captcha �
 |---|---|---|---|
 | 2026-11-16 | — | Phiên bản SPEC đầu tiên | |
 | 2026-11-16 | N-11, N-12, N-13 | Thêm phát hành tự động, tự cập nhật, không cần cài thêm | Người dùng chỉ tải 1 lần rồi dùng |
+| 2026-11-16 | U-17, U-18 | Thêm chuyển động mượt toàn app (có Giảm chuyển động) và màn hình khởi động có linh vật | Giao diện bắt mắt hơn — người dùng chốt |
 | 2026-11-16 | U-16, U-12, U-06 | Thêm linh vật Cú Kiemi (icon, chào mừng, màn trống, kết quả chạy); bo góc 10/16px, nền trạng thái pastel | Giao diện thân thiện, "cute" hơn — người dùng chốt phương án A |
 | 2026-11-16 | N-11, N-12, N-14 | v1 phát hành **chưa ký code**; mac chưa ký chỉ thông báo bản mới; ký code tách thành N-14 (v1.x) | Chưa có chứng chỉ; người dùng chốt phát hành không ký |
 

@@ -7,7 +7,7 @@ M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-
 (không có)
 
 ## Tiếp theo
-**M8** — Giao diện thân thiện (linh vật Cú Kiemi), bắt đầu từ **M8-01** thiết kế linh vật + icon [U-16]. Đọc lại mục U của SPEC trước khi làm. Song song (khi muốn phát hành v1.0): checklist `docs/RELEASE-CHECKLIST.md` mục C, D.
+**M8** — Giao diện thân thiện (linh vật Cú Kiemi + chuyển động + splash), bắt đầu từ **M8-01** thiết kế linh vật + icon [U-16]; thứ tự M8-01 → M8-02 → M8-04 → M8-05 → M8-03 (phát hành v0.2.0 cuối cùng). Milestone khá lớn (~L): dừng ở điểm ổn định nếu cần. Đọc lại mục U của SPEC trước khi làm. Song song (khi muốn phát hành v1.0): checklist `docs/RELEASE-CHECKLIST.md` mục C, D.
 
 ## Vấn đề tồn đọng / Câu hỏi cho người dùng
 - **(Đã chốt: v1 phát hành chưa ký — N-14)** Thông tin khi có chứng chỉ: Bạn có (hoặc sẽ mua) chứng chỉ ký code không? Cần: (1) Windows — chứng chỉ OV/EV dạng `.pfx` → secret `WIN_CSC_LINK` (base64) + `WIN_CSC_KEY_PASSWORD`; nếu là EV trên USB/HSM thì phải dùng dịch vụ ký đám mây (vd Azure Trusted Signing) → sửa workflow; (2) macOS — tài khoản Apple Developer (99 USD/năm): Developer ID Application `.p12` → `MAC_CSC_LINK` + `MAC_CSC_KEY_PASSWORD`, và API key App Store Connect → `APPLE_API_KEY_BASE64`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`; (3) tùy chọn Sentry DSN → `SENTRY_DSN`. Chưa có thì vẫn phát hành được bản **không ký** (SmartScreen/Gatekeeper cảnh báo; macOS không tự cập nhật được).
@@ -128,3 +128,4 @@ M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-
 | 2026-11-16 | — | CI xanh lại cả Windows + macOS (đỏ từ M5): đường dẫn Windows, timeout/retry cho runner chậm, khóa SSH test | |
 | 2026-11-16 | — | **Phát hành v0.1.0** (run 43903073128): Windows NSIS + portable, macOS universal dmg/zip, latest.yml | Sửa: gộp mac universal (`x64ArchFiles`, bỏ Sentry bundler plugins); README nút tải theo OS; đổi tên repo `kiemi` |
 | 2026-11-16 | — | Chốt yêu cầu mới U-16 (linh vật Cú Kiemi), sửa U-12, U-06; thêm M8 | Người dùng chọn phương án A |
+| 2026-11-16 | — | Chốt U-17 (chuyển động), U-18 (splash mỗi lần mở, lần đầu dài hơn); M8 thêm M8-04, M8-05 | |
