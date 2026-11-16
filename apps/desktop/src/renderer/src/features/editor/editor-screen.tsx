@@ -44,6 +44,11 @@ export function EditorScreen({ testId }: { testId: string }) {
   const [conflict, setConflict] = useState(false);
   /** "Chạy từ bước này" opens the run options preset to that step [H-03]. */
   const [runFrom, setRunFrom] = useState<string | null>(null);
+  // Stable so the memoised step rows are not re-rendered on every edit (N-05).
+  const onChip = useCallback((id: string, param: string) => {
+    useEditorStore.getState().select(id);
+    setFocusParam(param);
+  }, []);
   const del = useDeleteStep();
 
   const test = useQuery(trpc.testCases.get.queryOptions({ id: testId }));
@@ -317,14 +322,7 @@ export function EditorScreen({ testId }: { testId: string }) {
                   />
                 ) : (
                   <>
-                    <StepTable
-                      sharedNames={sharedNames}
-                      onRunFrom={setRunFrom}
-                      onChip={(id, param) => {
-                        store.select(id);
-                        setFocusParam(param);
-                      }}
-                    />
+                    <StepTable sharedNames={sharedNames} onRunFrom={setRunFrom} onChip={onChip} />
                     <div className="p-3">
                       <AddStepMenu variant="outline" />
                     </div>

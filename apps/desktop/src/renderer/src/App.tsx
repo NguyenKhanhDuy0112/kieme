@@ -2,14 +2,10 @@ import { AppSidebar } from '@renderer/components/app-sidebar';
 import { CommandPalette } from '@renderer/components/command-palette';
 import { Button } from '@renderer/components/ui/button';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@renderer/components/ui/sidebar';
+import { Skeleton } from '@renderer/components/ui/skeleton';
 import { Toaster } from '@renderer/components/ui/sonner';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
-import { ElementsScreen } from '@renderer/features/elements/elements-screen';
-import { EnvironmentsScreen } from '@renderer/features/environments/environments-screen';
-import { HistoryScreen } from '@renderer/features/history/history-screen';
 import { WelcomeDialog } from '@renderer/features/onboarding/welcome-dialog';
-import { RunScreen } from '@renderer/features/run/run-screen';
-import { SettingsScreen } from '@renderer/features/settings/settings-screen';
 import { TestsScreen } from '@renderer/features/tests/tests-screen';
 import { useT } from '@renderer/i18n/use-t';
 import { useAppStore, watchSystemTheme } from '@renderer/lib/store';
@@ -17,7 +13,40 @@ import { trpc } from '@renderer/lib/trpc';
 import { useTx } from '@renderer/lib/tx';
 import { useQuery } from '@tanstack/react-query';
 import { PanelRight } from 'lucide-react';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
+
+/** Secondary screens load on first use: less code to parse at start-up (N-05). */
+const ElementsScreen = lazy(() =>
+  import('@renderer/features/elements/elements-screen').then((m) => ({
+    default: m.ElementsScreen,
+  })),
+);
+const EnvironmentsScreen = lazy(() =>
+  import('@renderer/features/environments/environments-screen').then((m) => ({
+    default: m.EnvironmentsScreen,
+  })),
+);
+const HistoryScreen = lazy(() =>
+  import('@renderer/features/history/history-screen').then((m) => ({ default: m.HistoryScreen })),
+);
+const RunScreen = lazy(() =>
+  import('@renderer/features/run/run-screen').then((m) => ({ default: m.RunScreen })),
+);
+const SettingsScreen = lazy(() =>
+  import('@renderer/features/settings/settings-screen').then((m) => ({
+    default: m.SettingsScreen,
+  })),
+);
+/** Shown for the split second a screen's code loads (U-09). */
+function ScreenSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col gap-3 p-4" aria-busy="true">
+      <Skeleton className="h-6 w-48" />
+      <Skeleton className="h-4 w-full max-w-xl" />
+      <Skeleton className="h-4 w-full max-w-lg" />
+    </div>
+  );
+}
 
 /** App shell (U-01): sidebar · main area · detail panel (inside screens). */
 export function App() {
@@ -65,19 +94,21 @@ export function App() {
               </Button>
             )}
           </div>
-          {projectId && openRunId ? (
-            <main className="flex min-h-0 flex-1 flex-col">
-              <RunScreen key={openRunId} runId={openRunId} />
-            </main>
-          ) : projectId ? (
-            <main className="flex min-h-0 flex-1 flex-col">
-              {view === 'tests' && <TestsScreen />}
-              {view === 'environments' && <EnvironmentsScreen />}
-              {view === 'elements' && <ElementsScreen />}
-              {view === 'settings' && <SettingsScreen />}
-              {view === 'history' && <HistoryScreen />}
-            </main>
-          ) : null}
+          <Suspense fallback={<ScreenSkeleton />}>
+            {projectId && openRunId ? (
+              <main className="flex min-h-0 flex-1 flex-col">
+                <RunScreen key={openRunId} runId={openRunId} />
+              </main>
+            ) : projectId ? (
+              <main className="flex min-h-0 flex-1 flex-col">
+                {view === 'tests' && <TestsScreen />}
+                {view === 'environments' && <EnvironmentsScreen />}
+                {view === 'elements' && <ElementsScreen />}
+                {view === 'settings' && <SettingsScreen />}
+                {view === 'history' && <HistoryScreen />}
+              </main>
+            ) : null}
+          </Suspense>
         </SidebarInset>
         <CommandPalette />
         <WelcomeDialog />

@@ -39,6 +39,8 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
+    // Smaller bundle = faster first paint (N-05: app opens in ≤ 3 s).
+    build: { minify: true },
     resolve: {
       alias: {
         '@renderer': resolve(__dirname, 'src/renderer/src'),

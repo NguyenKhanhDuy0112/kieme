@@ -42,6 +42,7 @@ import {
   StepForward,
   Trash2,
 } from 'lucide-react';
+import { memo, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useRunStore } from '../run/run-store';
 import { StepStatusIcon } from '../run/step-status';
@@ -146,26 +147,39 @@ export function useDeleteStep() {
   };
 }
 
-function StepRow({
-  row,
-  sharedNames,
-  onChip,
-  onRunFrom,
-}: {
+interface StepRowProps {
   row: Row;
   sharedNames: ReadonlyMap<string, string>;
   onChip: (id: string, param: string) => void;
   onRunFrom?: ((stepId: string) => void) | undefined;
-}) {
+}
+
+/** Rows only re-render when their own step (or position) changes (N-05: 200 steps stay smooth). */
+export function sameRowProps(a: StepRowProps, b: StepRowProps): boolean {
+  return (
+    a.row.step === b.row.step &&
+    a.row.depth === b.row.depth &&
+    a.row.no === b.row.no &&
+    a.row.index === b.row.index &&
+    sameList(a.row.list, b.row.list) &&
+    a.sharedNames === b.sharedNames &&
+    a.onChip === b.onChip &&
+    a.onRunFrom === b.onRunFrom
+  );
+}
+
+const StepRow = memo(function StepRow({ row, sharedNames, onChip, onRunFrom }: StepRowProps) {
   const tx = useTx();
-  const doc = useEditorStore((s) => s.doc);
+  // Narrow subscriptions: editing one step must not re-render the other rows (N-05).
+  const elements = useEditorStore((s) => s.doc?.elements);
+  const multiSession = useEditorStore((s) => (s.doc?.sessions.length ?? 1) > 1);
   const testId = useEditorStore((s) => s.testId);
   const hasBreakpoint = useRunStore(
     (s) => !!testId && (s.breakpoints[testId] ?? []).includes(row.step.id),
   );
   const toggleBreakpoint = useRunStore((s) => s.toggleBreakpoint);
   const latestRunId = useRunStore((s) => (testId ? s.latestByTest[testId] : undefined));
-  const selectedId = useEditorStore((s) => s.selectedId);
+  const selected = useEditorStore((s) => s.selectedId === row.step.id);
   const select = useEditorStore((s) => s.select);
   const apply = useEditorStore((s) => s.apply);
   const del = useDeleteStep();
@@ -173,8 +187,6 @@ function StepRow({
     id: row.step.id,
   });
   const { step } = row;
-  const selected = selectedId === step.id;
-  const multiSession = (doc?.sessions.length ?? 1) > 1;
   return (
     <li
       ref={setNodeRef}
@@ -226,10 +238,10 @@ function StepRow({
       </button>
       <StepStatusIcon testId={testId} stepId={step.id} />
       <div className="min-w-0 flex-1">
-        {doc && (
+        {elements && (
           <StepSentence
             step={step}
-            elements={doc.elements}
+            elements={elements}
             sharedNames={sharedNames}
             onChipClick={(p) => onChip(step.id, p)}
           />
@@ -290,10 +302,14 @@ function StepRow({
       </DropdownMenu>
     </li>
   );
-}
+}, sameRowProps);
+
+// Constant options: new objects would change the drag context and re-render every row.
+const POINTER_OPTIONS = { activationConstraint: { distance: 4 } };
+const KEYBOARD_OPTIONS = { coordinateGetter: sortableKeyboardCoordinates };
 
 /** The step table (S-02): sentences, drag & drop, enable/disable, duplicate, delete. */
-export function StepTable({
+export const StepTable = memo(function StepTable({
   sharedNames,
   onChip,
   onRunFrom,
@@ -306,11 +322,15 @@ export function StepTable({
   const doc = useEditorStore((s) => s.doc);
   const apply = useEditorStore((s) => s.apply);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(PointerSensor, POINTER_OPTIONS),
+    useSensor(KeyboardSensor, KEYBOARD_OPTIONS),
   );
+  const rows = useMemo(() => (doc ? flatten(doc) : []), [doc]);
+  // Same ids → same array, so the sortable context does not re-render every row.
+  const idKey = rows.map((r) => r.step.id).join('\n');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `idKey` stands for the ids in order.
+  const items = useMemo(() => rows.map((r) => r.step.id), [idKey]);
   if (!doc) return null;
-  const rows = flatten(doc);
   const onDragEnd = (e: DragEndEvent) => {
     if (!e.over || e.active.id === e.over.id) return;
     const from = rows.find((r) => r.step.id === e.active.id);
@@ -320,7 +340,7 @@ export function StepTable({
   };
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-      <SortableContext items={rows.map((r) => r.step.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={items} strategy={verticalListSortingStrategy}>
         <ul className="flex flex-col" aria-label={tx('ui.editor.tabs.steps')}>
           {rows.map((row) => (
             <StepRow
@@ -335,4 +355,4 @@ export function StepTable({
       </SortableContext>
     </DndContext>
   );
-}
+});

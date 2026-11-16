@@ -159,20 +159,48 @@ function allIds(doc: TestCase): string[] {
   return [...allSteps([...doc.steps, ...doc.cleanup])].map((s) => s.id);
 }
 
+/**
+ * Replaces one step via `fn`, copying only the lists on the way to it: every other step
+ * keeps its identity, so unchanged rows are not re-rendered (N-05). Undefined if not found.
+ */
+function mapStepIn(list: Step[], id: string, fn: (s: Step) => Step): Step[] | undefined {
+  for (const [i, s] of list.entries()) {
+    if (s.id === id) {
+      const next = [...list];
+      next[i] = fn(s);
+      return next;
+    }
+    for (const child of childLists(s)) {
+      const inner = mapStepIn(child.steps, id, fn);
+      if (inner) {
+        const next = [...list];
+        next[i] = { ...s, params: { ...s.params, [child.key]: inner } };
+        return next;
+      }
+    }
+  }
+  return undefined;
+}
+
 /** Changes fields of a step; a field set to `undefined` is removed. */
 export function updateStep(
   doc: TestCase,
   id: string,
   patch: { [K in keyof Step]?: Step[K] | undefined },
 ): TestCase {
-  const next = clone(doc);
-  const s = findStep(next, id) as Record<string, unknown> | undefined;
-  if (!s) return doc;
-  for (const [k, v] of Object.entries(patch)) {
-    if (v === undefined) delete s[k];
-    else s[k] = structuredClone(v);
-  }
-  return next;
+  const fn = (step: Step): Step => {
+    const s = { ...step } as Record<string, unknown>;
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === undefined) delete s[k];
+      else s[k] = structuredClone(v);
+    }
+    return s as Step;
+  };
+  const steps = mapStepIn(doc.steps, id, fn);
+  if (steps) return { ...doc, steps };
+  const cleanup = mapStepIn(doc.cleanup, id, fn);
+  if (cleanup) return { ...doc, cleanup };
+  return doc;
 }
 
 export function toggleStep(doc: TestCase, id: string): TestCase {
