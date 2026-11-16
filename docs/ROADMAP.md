@@ -3,7 +3,7 @@
 Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi xong (theo Definition of Done trong `CLAUDE.md`).
 
 ## M0 — Nền móng
-- [ ] **M0-01** Khởi tạo monorepo: pnpm workspaces, Turborepo, TypeScript strict, Biome, Vitest; script `lint`, `typecheck`, `test`, `dev`
+- [x] **M0-01** Khởi tạo monorepo: pnpm workspaces, Turborepo, TypeScript strict, Biome, Vitest; script `lint`, `typecheck`, `test`, `dev`
 - [ ] **M0-02** Tạo `apps/desktop` bằng electron-vite (React 19 + Tailwind + shadcn/ui); bật contextIsolation/sandbox; cửa sổ "Hello Kiemi" chạy được
 - [ ] **M0-03** Nối electron-trpc giữa renderer ↔ main, 1 procedure mẫu có Zod
 - [ ] **M0-04** i18next (vi/en), cấu trúc file dịch, hook `useT`
