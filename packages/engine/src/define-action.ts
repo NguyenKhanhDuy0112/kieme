@@ -1,9 +1,10 @@
 import type { Step } from '@kiemi/schema';
+import type { BrowserContext, Page } from 'playwright-core';
 import type { z } from 'zod';
 import { EngineError } from './errors';
 import type { LogLevel } from './events';
 
-/** What an action receives while it runs. Browser handles are added in M1-04. */
+/** What an action receives while it runs. */
 export interface ActionContext {
   readonly step: Step;
   /** Session (browser context) this step runs in [F-01]. */
@@ -13,6 +14,10 @@ export interface ActionContext {
   /** Aborted when the step times out or the run is cancelled. */
   readonly signal: AbortSignal;
   log(message: string, level?: LogLevel): void;
+  /** Active page of this step's session (context created on first use). */
+  page(): Promise<Page>;
+  /** Browser context of this step's session (own cookies/storage). */
+  context(): Promise<BrowserContext>;
 }
 
 export interface ActionUi {

@@ -1,17 +1,18 @@
 # PROGRESS
 
 ## Trạng thái hiện tại
-M0 — Nền móng **xong**. M1 đang làm (M1-01 xong: `@kiemi/schema`; M1-02 xong: `@kiemi/engine` runner; M1-03 xong: locator resolver). Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
+M0 — Nền móng **xong**. M1 đang làm (M1-01 xong: `@kiemi/schema`; M1-02 xong: `@kiemi/engine` runner; M1-03 xong: locator resolver; M1-04 xong: trình duyệt). Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
 
 ## Đang làm dở
 (không có)
 
 ## Tiếp theo
-**M1-04** — Trình duyệt: phát hiện Edge/Chrome, fallback tải Chromium; headed/headless; viewport/mobile [N-03, G-01, G-03, G-05].
+**M1-04b** — Proxy theo môi trường (HTTP/SOCKS5, DNS qua proxy) [G-06].
 
 ## Vấn đề tồn đọng / Câu hỏi cho người dùng
+- **Trình duyệt** (ADR 0006): `launchBrowser({ settings, browsersPath, onDownloadProgress })` → Edge/Chrome có sẵn hoặc tải Chromium vào `browsersPath`. Runner nhận `browser` đã launch; action lấy `await ctx.page()` / `ctx.context()` (mỗi session 1 context, tạo khi cần, đóng sau cleanup). Màn hình: `options.viewport = { device?, viewport? }`.
 - **Locator** (ADR 0005): `resolveLocator(root, locator, { timeoutMs, signal, state })` → Playwright locator đã ghim 1 phần tử. `Locator` có thêm `scope` (`within`/`row`/`near`) và `nth` (`first`/`last`/số từ 1) — vẫn schema v1 (thêm trường tùy chọn, chưa phát hành). Mã lỗi `ELEMENT_NOT_FOUND`/`ELEMENT_AMBIGUOUS`. Test engine cần Chrome/Edge (`launchTestBrowser`); e2e dùng `startDemoServer()` từ `@kiemi/demo-site/server` (chỉ trang server-render như `/webforms.aspx`, chưa có trang Vite).
-- **Engine** (`@kiemi/engine`, ADR 0004): `runTestCase(request, { registry, onEvent, signal })`. Đã có `playwright-core` 1.64.1 (M1-03); M1-04 mở rộng `ActionContext` (page theo session). Lỗi engine có `code` + `details`; UI phải dịch theo mã (chưa có chuỗi i18n cho lỗi). Timeout mặc định 10 giây.
+- **Engine** (`@kiemi/engine`, ADR 0004): `runTestCase(request, { registry, onEvent, signal })`. Đã có `playwright-core` 1.64.1; `ActionContext` có `page()`/`context()` (M1-04). Lỗi engine có `code` + `details`; UI phải dịch theo mã (chưa có chuỗi i18n cho lỗi). Timeout mặc định 10 giây.
 - **Schema DSL** (`@kiemi/schema`, ADR 0003): `parseTestCase(json)` = migrate + validate. `Step.params` để mở — action tự validate (M1-02). Đổi schema → làm theo mục "Hệ quả" ADR 0003; JSON Schema cập nhật bằng `pnpm --filter @kiemi/schema test -u`.
 - **Phiên bản công cụ** (chốt ở M0-01): Node ≥ 22.12 (`.nvmrc` = 24), pnpm 11.1.3, TypeScript 7.0.2 (bản viết lại bằng Go), Biome 2.6.4, Vitest 5.1, Turbo 2.11. Nếu sau này thư viện nào cần TypeScript compiler API (TS 7 không còn API JS như TS 5) thì cân nhắc thêm `typescript@5`/`6` riêng cho thư viện đó.
 - pnpm 11 có `minimumReleaseAge` (chặn gói vừa phát hành quá mới) → khi thêm dependency, chọn bản đã phát hành đủ lâu thay vì thêm `minimumReleaseAgeExclude`.
@@ -38,3 +39,4 @@ M0 — Nền móng **xong**. M1 đang làm (M1-01 xong: `@kiemi/schema`; M1-02 x
 | 2026-11-16 | M1-01 | Xong — `@kiemi/schema`: Locator (7 chiến lược theo thứ tự C-01) + Fingerprint, Element/Target, Step, TestCase v1, Dataset/nguồn dữ liệu, Env/Secrets, RunResult; framework migration + fixture v1; JSON Schema commit sẵn | 35 unit test; ADR 0003 |
 | 2026-11-16 | M1-02 | Xong — `@kiemi/engine`: `defineAction` + `ActionRegistry` (validate params bằng Zod), `runTestCase` tuần tự, event `runStart/stepStart/log/stepEnd/runEnd`, timeout từng step + mặc định, soft/hard, bỏ step tắt, cleanup luôn chạy, hủy run | 14 unit test; ADR 0004 |
 | 2026-11-16 | M1-03 | Xong — `resolveLocator`: thử chiến lược theo thứ tự, chờ phần tử xuất hiện, bỏ qua kết quả mơ hồ, scope `within`/`row`/`near`, `nth`, ID động (`ctl00_…`, ID ngẫu nhiên → khớp phần ổn định), hỗ trợ iframe | 36 test mới (unit stable-id + trình duyệt thật + e2e WebForms demo-site); ADR 0005 |
+| 2026-11-16 | M1-04 | Xong — phát hiện Edge/Chrome theo OS, `launchBrowser` (auto/chọn trình duyệt, headless/headed, slowMo), tải Chromium có tiến trình, context riêng theo session, viewport + giả lập mobile | 23 test mới; đã thử tải Chromium thật (~150 MB) và chạy được; ADR 0006 |

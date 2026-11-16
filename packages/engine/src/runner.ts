@@ -9,7 +9,9 @@ import type {
   StepResult,
   TestCase,
 } from '@kiemi/schema';
+import type { Browser } from 'playwright-core';
 import type { z } from 'zod';
+import { SessionPages, type ViewportSettings } from './browser';
 import type { ActionContext, ActionRegistry } from './define-action';
 import { EngineError, toRunError } from './errors';
 import type { EngineEvent, EngineEventListener, LogLevel, StepPhase } from './events';
@@ -27,12 +29,16 @@ export interface RunRequest {
   options?: {
     /** Fallback timeout for steps without `timeoutMs`. */
     defaultStepTimeoutMs?: number;
+    /** Screen size / device emulation for every session [G-03]. */
+    viewport?: ViewportSettings;
   };
 }
 
 export interface RunOptions {
   registry: ActionRegistry;
   onEvent?: EngineEventListener;
+  /** Launched browser (see `launchBrowser`); each session gets its own context. */
+  browser?: Browser;
   /** Abort to cancel the run; cleanup still runs. */
   signal?: AbortSignal;
   /** Injectable clock for tests. */
@@ -47,6 +53,7 @@ export async function runTestCase(request: RunRequest, options: RunOptions): Pro
   const now = options.now ?? (() => new Date());
   const runSignal = options.signal ?? new AbortController().signal;
   const defaultTimeout = request.options?.defaultStepTimeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
+  const pages = new SessionPages(options.browser, request.options?.viewport);
 
   const emit = (event: EngineEvent) => {
     try {
@@ -107,7 +114,7 @@ export async function runTestCase(request: RunRequest, options: RunOptions): Pro
     let error: RunError | undefined;
     let cancelled = false;
     try {
-      await executeStep(step, index, timeoutMs, signal, options.registry, (message, level) =>
+      await executeStep(step, index, timeoutMs, signal, options.registry, pages, (message, level) =>
         log(level ?? 'info', message, step.id),
       );
     } catch (err) {
@@ -163,6 +170,8 @@ export async function runTestCase(request: RunRequest, options: RunOptions): Pro
     status = 'error';
     runError = toRunError(err, 'ENGINE_ERROR');
     log('error', runError.message);
+  } finally {
+    await pages.closeAll();
   }
 
   const result: RunResult = {
@@ -187,6 +196,7 @@ async function executeStep(
   timeoutMs: number,
   runSignal: AbortSignal,
   registry: ActionRegistry,
+  pages: SessionPages,
   log: ActionContext['log'],
 ): Promise<void> {
   const stepNo = index + 1;
@@ -237,6 +247,8 @@ async function executeStep(
     timeoutMs,
     signal: controller.signal,
     log,
+    page: () => pages.page(step.session),
+    context: () => pages.context(step.session),
   };
 
   try {
