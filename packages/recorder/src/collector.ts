@@ -4,8 +4,8 @@ import type { RecordedEvent, RecordedTarget } from './events';
 
 /** How the step list changed after one event; `index` is the position in the list. */
 export type StepChange =
-  | { type: 'add'; index: number; step: Step }
-  | { type: 'update'; index: number; step: Step }
+  | { type: 'add'; index: number; step: Step; password?: boolean }
+  | { type: 'update'; index: number; step: Step; password?: boolean }
   | { type: 'remove'; index: number; step: Step };
 
 export interface CollectorOptions {
@@ -36,6 +36,8 @@ export class StepCollector {
   private readonly newId: () => string;
   /** Tab the last step ran in. */
   private currentTab: number | undefined;
+  /** Ids of "Nhập" steps typed into password fields [K-05]. */
+  readonly passwords = new Set<string>();
 
   constructor(options: CollectorOptions = {}) {
     this.session = options.session ?? DEFAULT_SESSION;
@@ -119,11 +121,15 @@ export class StepCollector {
             : event.kind === 'select'
               ? { target: targetParam(event.target), by: 'label', option: event.option }
               : { target: targetParam(event.target), checked: event.checked };
-        if (last?.element === element && last.step.action === event.kind) {
-          changes.push(this.updateLast(params));
-        } else {
-          changes.push(this.add(event.kind, params, element));
-        }
+        const change =
+          last?.element === element && last.step.action === event.kind
+            ? this.updateLast(params)
+            : this.add(event.kind, params, element);
+        // A password typed while recording: offer to keep it as a Secret [K-05].
+        if (event.kind === 'fill' && event.secret) {
+          this.passwords.add(change.step.id);
+          changes.push({ ...change, password: true });
+        } else changes.push(change);
         break;
       }
       case 'assert': {
@@ -162,7 +168,11 @@ export class StepCollector {
     return changes;
   }
 
-  private add(action: string, params: Record<string, unknown>, element?: string): StepChange {
+  private add(
+    action: string,
+    params: Record<string, unknown>,
+    element?: string,
+  ): Extract<StepChange, { type: 'add' }> {
     const step: Step = {
       id: this.newId(),
       action,
@@ -175,7 +185,7 @@ export class StepCollector {
     return { type: 'add', index: this.entries.length - 1, step };
   }
 
-  private updateLast(params: Record<string, unknown>): StepChange {
+  private updateLast(params: Record<string, unknown>): Extract<StepChange, { type: 'update' }> {
     const index = this.entries.length - 1;
     const entry = this.entries[index] as Entry;
     entry.step = { ...entry.step, params };

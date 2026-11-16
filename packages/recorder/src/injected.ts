@@ -428,7 +428,9 @@ export function installRecorder(binding: string, config: InjectedConfig): void {
           ? (el as HTMLInputElement).value
           : // biome-ignore lint/performance/useDomNodeTextContent: the rendered text is what testers see
             ((el as HTMLElement).innerText ?? '');
-      send({ kind: 'fill', target: target(el), value });
+      // Password fields: the app offers to turn the value into a Secret [K-05].
+      const secret = isInput(el) && el.type === 'password';
+      send({ kind: 'fill', target: target(el), value, ...(secret ? { secret } : {}) });
     },
     opts,
   );

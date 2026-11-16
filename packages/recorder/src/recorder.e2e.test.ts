@@ -1,8 +1,14 @@
 import { type DemoSite, startDemoSite } from '@kiemi/demo-site/server';
-import { createDefaultRegistry, resolveLocator, runTestCase } from '@kiemi/engine';
+import {
+  createDefaultRegistry,
+  resolveLocator,
+  runTestCase,
+  type SessionPages,
+} from '@kiemi/engine';
 import { type Locator, type Step, type StepInput, TestCaseSchema } from '@kiemi/schema';
 import { type Browser, type BrowserContext, chromium } from 'playwright-core';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import type { StepChange } from './collector';
 import { type Recorder, startRecorder } from './recorder';
 
 let browser: Browser;
@@ -413,5 +419,46 @@ describe('Pick and Highlight [C-06]', () => {
     const none = await rec.highlight({ strategies: [{ kind: 'css', value: '#nope' }] });
     expect(none).toEqual({ count: 0 });
     expect(await page.locator('kiemi-recorder .mark').count()).toBe(0);
+  });
+});
+
+describe('record from step X, passwords [K-04, K-05]', () => {
+  it('continues recording in the browser left at step X', async () => {
+    let kept: SessionPages | undefined;
+    const testCase = TestCaseSchema.parse({
+      schemaVersion: 1,
+      id: '0193a5b2-7c4e-7d1a-9f3b-2c8e4a6d1f13',
+      name: 'prefix',
+      steps: [
+        { id: 's1', action: 'goto', params: { url: '/login.html' } },
+        { id: 's2', action: 'fill', params: { target: { css: '#username' }, value: 'nhanvien' } },
+        { id: 's3', action: 'click', params: { target: { css: 'h1' } } },
+      ],
+    });
+    await fetch(`${site.url}/api/reset`, { method: 'POST' });
+    await runTestCase(
+      {
+        runId: 'prefix-1',
+        testCase,
+        env: { id: 'demo', name: 'Demo', baseUrl: site.url, variables: {}, secretNames: [] },
+        options: { stopAfterStepId: 's2' },
+      },
+      { registry: createDefaultRegistry(), browser, keepSessions: (p) => (kept = p) },
+    );
+    if (!kept) throw new Error('not kept');
+    const ctx = await kept.context('default');
+    const changes: StepChange[] = [];
+    const rec = await startRecorder(ctx, {
+      baseUrl: site.url,
+      onChange: (c) => changes.push(...c),
+    });
+    const page = await kept.page('default');
+    await page.locator('#password').pressSequentially('123456');
+    const list = await steps(rec, 1);
+    expect(brief(list)).toEqual(['fill {"value":"123456"}']);
+    // Typed into a password field → the app offers a Secret.
+    expect(changes.at(-1)).toMatchObject({ type: 'update', password: true });
+    await rec.stop();
+    await kept.closeAll();
   });
 });

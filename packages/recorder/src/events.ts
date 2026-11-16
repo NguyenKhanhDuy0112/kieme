@@ -29,6 +29,8 @@ export const PageEventSchema = z.discriminatedUnion('kind', [
     kind: z.literal('fill'),
     target: RecordedTargetSchema,
     value: z.string().max(100_000),
+    /** Typed in a password field [K-05]. */
+    secret: z.boolean().optional(),
   }),
   z.object({
     kind: z.literal('select'),

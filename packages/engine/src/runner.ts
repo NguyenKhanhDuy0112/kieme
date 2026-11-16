@@ -67,6 +67,11 @@ export interface RunRequest {
     filesDir?: string;
     /** "Chạy từ bước X": earlier top-level steps are skipped [H-03]. */
     startAtStepId?: string;
+    /**
+     * Stop after this top-level step: later steps are skipped and cleanup does
+     * not run — e.g. to record more steps from there [K-04].
+     */
+    stopAfterStepId?: string;
   };
 }
 
@@ -81,6 +86,11 @@ export interface RunOptions {
   debugger?: RunDebugger;
   /** Injectable clock for tests. */
   now?: () => Date;
+  /**
+   * Keep the browser sessions open at the end and hand them over (the caller
+   * closes them) instead of closing them — e.g. to record from step X [K-04].
+   */
+  keepSessions?: (pages: SessionPages) => void;
 }
 
 interface Parent {
@@ -255,15 +265,17 @@ class Run {
 
       await this.#runList(testCase.steps, 'steps', runSignal, undefined, steps);
 
-      // Cleanup always runs [D-05], even after a failure or cancel, with its own signal.
-      await this.#runList(
-        testCase.cleanup,
-        'cleanup',
-        new AbortController().signal,
-        undefined,
-        cleanup,
-        true,
-      );
+      // Cleanup always runs [D-05], even after a failure or cancel, with its own signal —
+      // except when stopping early to keep the pages as they are [K-04].
+      if (!this.#req.options?.stopAfterStepId)
+        await this.#runList(
+          testCase.cleanup,
+          'cleanup',
+          new AbortController().signal,
+          undefined,
+          cleanup,
+          true,
+        );
 
       if (runSignal.aborted) status = 'cancelled';
       else if (anyFailed([...steps, ...cleanup])) status = 'failed';
@@ -272,7 +284,15 @@ class Run {
       runError = this.#maskError(toRunError(err, 'ENGINE_ERROR'));
       this.#log('error', runError.message);
     } finally {
-      for (const a of await this.#pages.closeAll()) {
+      const keep = this.#opts.keepSessions;
+      if (keep) {
+        try {
+          keep(this.#pages);
+        } catch {
+          // The caller's problem; the run result still comes back.
+        }
+      }
+      for (const a of keep ? [] : await this.#pages.closeAll()) {
         if (!artifactsOpt) continue;
         const ref: ArtifactRef = { kind: a.kind, path: relative(artifactsOpt.dir, a.path) };
         runArtifacts.push(ref);
@@ -349,6 +369,8 @@ class Run {
         stopped = true;
         if (outcome.result.error && !firstHard) firstHard = outcome.result.error;
       }
+      if (!parent && phase === 'steps' && step.id === this.#req.options?.stopAfterStepId)
+        stopped = true;
     }
     return firstHard;
   }
