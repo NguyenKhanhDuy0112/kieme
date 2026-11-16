@@ -1,0 +1,183 @@
+import { describe, expect, it } from 'vitest';
+import { DatasetSchema, DatasetSourceSchema } from './dataset';
+import { EnvSchema } from './env';
+import { RunResultSchema } from './run-result';
+import { StepSchema } from './step';
+import { collectRefs, TestCaseSchema } from './test-case';
+
+const ID = '0193a5b2-7c4e-7d1a-9f3b-2c8e4a6d1f00';
+
+describe('StepSchema', () => {
+  it('applies defaults (session "default", enabled, hard mode, empty params)', () => {
+    expect(StepSchema.parse({ id: 's1', action: 'reload' })).toEqual({
+      id: 's1',
+      action: 'reload',
+      params: {},
+      session: 'default',
+      enabled: true,
+      mode: 'hard',
+    });
+  });
+
+  it('accepts a per-step timeout [D-07] and rejects bad ones', () => {
+    expect(StepSchema.parse({ id: 's1', action: 'click', timeoutMs: 5000 }).timeoutMs).toBe(5000);
+    expect(StepSchema.safeParse({ id: 's1', action: 'click', timeoutMs: 0 }).success).toBe(false);
+    expect(StepSchema.safeParse({ id: 's1', action: 'click', timeoutMs: 1.5 }).success).toBe(false);
+  });
+});
+
+describe('TestCaseSchema [N-08]', () => {
+  const base = { schemaVersion: 1, id: ID, name: 'T' };
+
+  it('requires schemaVersion 1 and a uuid id', () => {
+    expect(TestCaseSchema.safeParse(base).success).toBe(true);
+    expect(TestCaseSchema.safeParse({ ...base, schemaVersion: 2 }).success).toBe(false);
+    expect(TestCaseSchema.safeParse({ id: ID, name: 'T' }).success).toBe(false);
+    expect(TestCaseSchema.safeParse({ ...base, id: 'abc' }).success).toBe(false);
+  });
+
+  it('defaults sessions to ["default"]', () => {
+    const tc = TestCaseSchema.parse(base);
+    expect(tc.sessions).toEqual(['default']);
+    expect(tc.steps).toEqual([]);
+    expect(tc.cleanup).toEqual([]);
+  });
+
+  it('rejects duplicate step ids across steps and cleanup', () => {
+    const r = TestCaseSchema.safeParse({
+      ...base,
+      steps: [{ id: 's1', action: 'goto' }],
+      cleanup: [{ id: 's1', action: 'goto' }],
+    });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.path).toEqual(['cleanup', 0, 'id']);
+  });
+
+  it('rejects steps using an undeclared session', () => {
+    const r = TestCaseSchema.safeParse({
+      ...base,
+      sessions: ['a'],
+      steps: [{ id: 's1', action: 'goto', session: 'b' }],
+    });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toContain('"b"');
+  });
+
+  it('rejects refs to elements that do not exist', () => {
+    const elements = { el_ok: { name: 'OK', strategies: [{ kind: 'text', value: 'OK' }] } };
+    const ok = TestCaseSchema.safeParse({
+      ...base,
+      elements,
+      steps: [{ id: 's1', action: 'click', params: { target: { ref: 'el_ok' } } }],
+    });
+    expect(ok.success).toBe(true);
+    const bad = TestCaseSchema.safeParse({
+      ...base,
+      elements,
+      steps: [{ id: 's1', action: 'click', params: { target: { ref: 'el_missing' } } }],
+    });
+    expect(bad.success).toBe(false);
+  });
+
+  it('collectRefs finds nested refs only in {ref} objects', () => {
+    expect(
+      collectRefs({
+        target: { ref: 'a' },
+        condition: { assert: 'visible', target: { ref: 'b' } },
+        list: [{ ref: 'c' }],
+        other: { ref: 'x', extra: 1 },
+      }),
+    ).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('DatasetSchema [E-03]', () => {
+  it('accepts consistent columns and rows', () => {
+    expect(
+      DatasetSchema.safeParse({
+        id: 'd1',
+        name: 'Đơn nghỉ',
+        columns: ['soNgay', 'lyDo'],
+        rows: [{ soNgay: '2', lyDo: 'Ốm' }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects duplicate or unknown columns', () => {
+    expect(
+      DatasetSchema.safeParse({ id: 'd', name: 'd', columns: ['a', 'a'], rows: [] }).success,
+    ).toBe(false);
+    expect(
+      DatasetSchema.safeParse({ id: 'd', name: 'd', columns: ['a'], rows: [{ b: '1' }] }).success,
+    ).toBe(false);
+  });
+
+  it('supports excel, csv, table and saved sources', () => {
+    for (const src of [
+      { source: 'excel', file: 'a.xlsx', sheet: 'Sheet1' },
+      { source: 'csv', file: 'a.csv' },
+      { source: 'table', columns: ['a'], rows: [{ a: '1' }] },
+      { source: 'saved', datasetId: 'd1' },
+    ]) {
+      expect(DatasetSourceSchema.safeParse(src).success).toBe(true);
+    }
+    expect(DatasetSourceSchema.safeParse({ source: 'excel' }).success).toBe(false);
+  });
+});
+
+describe('EnvSchema', () => {
+  it('holds variables and secret names, never secret values', () => {
+    const env = EnvSchema.parse({
+      id: 'e1',
+      name: 'Staging',
+      baseUrl: 'https://staging.example.com',
+      variables: { portalUrl: 'https://staging.example.com/portal' },
+      secretNames: ['nvPass'],
+    });
+    expect(env.secretNames).toEqual(['nvPass']);
+    expect(EnvSchema.safeParse({ id: 'e', name: 'e', baseUrl: 'not a url' }).success).toBe(false);
+    expect(EnvSchema.safeParse({ id: 'e', name: 'e', variables: { 'a-b': 'x' } }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe('RunResultSchema', () => {
+  it('parses a run with a soft failure and cleanup', () => {
+    const r = RunResultSchema.parse({
+      runId: 'r1',
+      testCaseId: ID,
+      status: 'failed',
+      startedAt: '2026-11-16T09:00:00.000+07:00',
+      durationMs: 1200,
+      steps: [
+        {
+          stepId: 's1',
+          session: 'default',
+          status: 'failed',
+          soft: true,
+          startedAt: '2026-11-16T09:00:00.100+07:00',
+          durationMs: 300,
+          error: { code: 'ELEMENT_NOT_FOUND', message: 'Bước 1: Không tìm thấy nút "Lưu"' },
+          artifacts: [{ kind: 'screenshot', path: 's1.png' }],
+        },
+      ],
+    });
+    expect(r.cleanup).toEqual([]);
+    expect(r.steps[0]?.error?.code).toBe('ELEMENT_NOT_FOUND');
+  });
+
+  it('rejects unknown statuses and non-ISO dates', () => {
+    const run = {
+      runId: 'r',
+      testCaseId: 't',
+      status: 'passed',
+      startedAt: '2026-11-16T02:00:00Z',
+      durationMs: 1,
+      steps: [],
+    };
+    expect(RunResultSchema.safeParse(run).success).toBe(true);
+    expect(RunResultSchema.safeParse({ ...run, status: 'ok' }).success).toBe(false);
+    expect(RunResultSchema.safeParse({ ...run, startedAt: '16/11/2026' }).success).toBe(false);
+  });
+});

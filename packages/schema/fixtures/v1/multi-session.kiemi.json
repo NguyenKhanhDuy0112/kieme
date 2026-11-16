@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "id": "0193a5b2-7c4e-7d1a-9f3b-2c8e4a6d1f00",
+  "name": "Tạo đơn ở A, quản lý thấy ở B",
+  "tags": ["smoke"],
+  "sessions": ["nhanvien", "quanly"],
+  "elements": {
+    "el_soNgay": {
+      "name": "Ô Số ngày",
+      "strategies": [
+        { "kind": "label", "value": "Số ngày" },
+        { "kind": "css", "value": "#soNgay" }
+      ],
+      "fingerprint": {
+        "tag": "input",
+        "attributes": { "id": "soNgay", "type": "number" },
+        "neighbors": ["Số ngày"]
+      }
+    },
+    "el_btnGui": {
+      "name": "Nút Gửi",
+      "strategies": [
+        { "kind": "role", "role": "button", "name": "Gửi" },
+        { "kind": "text", "value": "Gửi", "exact": true },
+        { "kind": "xpath", "value": "//button[@type='submit']" }
+      ]
+    }
+  },
+  "dataset": { "source": "excel", "file": "don-nghi.xlsx" },
+  "steps": [
+    {
+      "id": "s1",
+      "session": "nhanvien",
+      "action": "goto",
+      "params": { "url": "{{env.portalUrl}}" }
+    },
+    {
+      "id": "s2",
+      "session": "nhanvien",
+      "action": "fill",
+      "params": { "target": { "ref": "el_soNgay" }, "value": "{{row.soNgay}}" }
+    },
+    {
+      "id": "s3",
+      "session": "nhanvien",
+      "action": "click",
+      "params": { "target": { "ref": "el_btnGui" } },
+      "timeoutMs": 15000
+    },
+    {
+      "id": "s4",
+      "session": "quanly",
+      "action": "assertVisible",
+      "params": { "target": { "strategies": [{ "kind": "text", "value": "{{maDon}}" }] } },
+      "mode": "soft"
+    }
+  ],
+  "cleanup": [
+    {
+      "id": "c1",
+      "session": "nhanvien",
+      "action": "api",
+      "params": { "method": "DELETE", "url": "{{env.apiUrl}}/don/{{maDon}}" }
+    }
+  ]
+}

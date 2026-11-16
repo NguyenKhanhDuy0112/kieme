@@ -1,0 +1,32 @@
+import { z } from 'zod';
+
+export const DEFAULT_SESSION = 'default';
+
+/** Session name: one browser context per session [F-01]. */
+export const SessionNameSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]+$/, 'Session name must be letters, digits, `_` or `-`');
+
+export const StepIdSchema = z.string().min(1);
+
+/**
+ * One step. `params` is validated by the action plugin registered for `action`
+ * (engine `defineAction`), so the schema keeps it open here.
+ */
+export const StepSchema = z.object({
+  id: StepIdSchema,
+  action: z.string().min(1),
+  params: z.record(z.string(), z.unknown()).default({}),
+  session: SessionNameSchema.default(DEFAULT_SESSION),
+  /** Optional label shown instead of the auto-generated description. */
+  name: z.string().optional(),
+  note: z.string().optional(),
+  /** Disabled steps are skipped [D-06]. */
+  enabled: z.boolean().default(true),
+  /** `soft` failures are recorded but the test keeps running. */
+  mode: z.enum(['hard', 'soft']).default('hard'),
+  /** Per-step timeout override in milliseconds [D-07]. */
+  timeoutMs: z.number().int().positive().optional(),
+});
+export type Step = z.infer<typeof StepSchema>;
+export type StepInput = z.input<typeof StepSchema>;

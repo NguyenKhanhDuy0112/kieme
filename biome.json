@@ -7,7 +7,15 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/dist", "!**/out", "!**/coverage", "!**/.turbo", "!**/*.md"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/out",
+      "!**/coverage",
+      "!**/.turbo",
+      "!**/*.md",
+      "!packages/schema/json-schema"
+    ]
   },
   "formatter": {
     "enabled": true,
