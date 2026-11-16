@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Hộp thoại — Kiemi Demo</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Hộp thoại &amp; cửa sổ mới</h1>
+      <div class="card">
+        <div class="actions">
+          <button type="button" class="btn" id="btn-alert">Hiện thông báo</button>
+          <button type="button" class="btn" id="btn-confirm">Hỏi xác nhận</button>
+          <button type="button" class="btn" id="btn-prompt">Nhập tên</button>
+        </div>
+        <p>Kết quả: <strong id="dialog-result">—</strong></p>
+      </div>
+      <div class="card">
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-popup">Mở cửa sổ phụ</button>
+          <a href="/popup.html" target="_blank" id="link-new-tab">Mở trong tab mới</a>
+        </div>
+        <p>Cửa sổ phụ: <strong id="popup-status">Chưa mở</strong></p>
+      </div>
+    </main>
+    <script type="module" src="/src/dialogs.ts"></script>
+  </body>
+</html>

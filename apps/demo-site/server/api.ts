@@ -1,0 +1,165 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { type DemoStore, LEAVE_TYPES, type RequestStatus, type User } from './store';
+import { handleWebForms } from './webforms';
+
+const COOKIE = 'demo_session';
+
+function parseCookies(header: string | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const part of (header ?? '').split(';')) {
+    const [k, ...v] = part.trim().split('=');
+    if (k) out[k] = decodeURIComponent(v.join('='));
+  }
+  return out;
+}
+
+async function readBody(req: IncomingMessage): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const raw = await readBody(req);
+  if (!raw) return {};
+  try {
+    const v: unknown = JSON.parse(raw);
+    return v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function send(
+  res: ServerResponse,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
+  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', ...headers });
+  res.end(JSON.stringify(body));
+}
+
+function publicUser(u: User) {
+  return { username: u.username, fullName: u.fullName, role: u.role };
+}
+
+/**
+ * Handles `/api/*` and `/webforms.aspx`. Returns false for anything else so Vite serves it.
+ */
+export async function handleRequest(
+  store: DemoStore,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<boolean> {
+  const url = new URL(req.url ?? '/', 'http://localhost');
+  const method = req.method ?? 'GET';
+  const path = url.pathname;
+
+  if (path === '/webforms.aspx') {
+    let form: Record<string, string> | null = null;
+    if (method === 'POST') form = Object.fromEntries(new URLSearchParams(await readBody(req)));
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(handleWebForms(form));
+    return true;
+  }
+
+  if (!path.startsWith('/api/')) return false;
+
+  const token = parseCookies(req.headers.cookie)[COOKIE];
+  const me = store.userByToken(token);
+
+  // ----- public endpoints -----
+  if (path === '/api/login' && method === 'POST') {
+    const body = await readJson(req);
+    const result = store.login(String(body.username ?? ''), String(body.password ?? ''));
+    if (!result) {
+      send(res, 401, { error: 'Sai tên đăng nhập hoặc mật khẩu' });
+      return true;
+    }
+    send(
+      res,
+      200,
+      { user: publicUser(result.user) },
+      {
+        'set-cookie': `${COOKIE}=${result.token}; Path=/; HttpOnly; SameSite=Lax`,
+      },
+    );
+    return true;
+  }
+  if (path === '/api/logout' && method === 'POST') {
+    if (token) store.logout(token);
+    send(res, 200, { ok: true }, { 'set-cookie': `${COOKIE}=; Path=/; Max-Age=0` });
+    return true;
+  }
+  if (path === '/api/reset' && method === 'POST') {
+    store.reset();
+    send(res, 200, { ok: true });
+    return true;
+  }
+  if (path === '/api/products' && method === 'GET') {
+    // Small artificial latency so the table shows a loading state.
+    await new Promise((r) => setTimeout(r, 150));
+    const q = url.searchParams.get('q');
+    send(
+      res,
+      200,
+      store.listProducts({
+        page: Number(url.searchParams.get('page') ?? 1),
+        pageSize: Number(url.searchParams.get('pageSize') ?? 10),
+        ...(q ? { q } : {}),
+      }),
+    );
+    return true;
+  }
+  if (path === '/api/meta' && method === 'GET') {
+    send(res, 200, { leaveTypes: LEAVE_TYPES, syncDelayMs: store.syncDelayMs });
+    return true;
+  }
+
+  // ----- authenticated endpoints -----
+  if (!me) {
+    send(res, 401, { error: 'Bạn chưa đăng nhập' });
+    return true;
+  }
+  if (path === '/api/me' && method === 'GET') {
+    send(res, 200, { user: publicUser(me) });
+    return true;
+  }
+  if (path === '/api/requests' && method === 'GET') {
+    send(res, 200, { items: store.listRequests(me) });
+    return true;
+  }
+  if (path === '/api/requests' && method === 'POST') {
+    if (me.role !== 'nhanvien') {
+      send(res, 403, { error: 'Chỉ nhân viên được tạo đơn' });
+      return true;
+    }
+    const result = store.createRequest(me, await readJson(req));
+    if (!result.ok) send(res, 422, { errors: result.errors });
+    else send(res, 201, { request: result.request });
+    return true;
+  }
+  const action = path.match(/^\/api\/requests\/([^/]+)(?:\/(approve|reject))?$/);
+  if (action?.[1]) {
+    const id = decodeURIComponent(action[1]);
+    if (method === 'DELETE' && !action[2]) {
+      const ok = store.deleteRequest(me, id);
+      send(res, ok ? 200 : 404, ok ? { ok } : { error: 'Không tìm thấy đơn' });
+      return true;
+    }
+    if (method === 'POST' && action[2]) {
+      const status: RequestStatus = action[2] === 'approve' ? 'da-duyet' : 'tu-choi';
+      const updated = store.setStatus(me, id, status);
+      send(
+        res,
+        updated ? 200 : 404,
+        updated ? { request: updated } : { error: 'Không tìm thấy đơn' },
+      );
+      return true;
+    }
+  }
+
+  send(res, 404, { error: 'Không tìm thấy' });
+  return true;
+}

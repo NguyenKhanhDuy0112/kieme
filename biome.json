@@ -50,5 +50,15 @@
     "parser": {
       "tailwindDirectives": true
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["apps/demo-site/**/*.html"],
+      "linter": {
+        "rules": {
+          "a11y": "off"
+        }
+      }
+    }
+  ]
 }

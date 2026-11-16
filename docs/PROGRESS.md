@@ -1,28 +1,13 @@
 # PROGRESS
 
 ## Trạng thái hiện tại
-M0 — Nền móng đang làm. Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`).
+M0 — Nền móng đang làm. Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), và `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180).
 
 ## Đang làm dở
-**M0-05** — `apps/demo-site` (code CHƯA commit, nằm trong working tree; chưa `pnpm install`).
-- Đã có:
-  - `server/store.ts`: dữ liệu trong bộ nhớ gồm users (`nhanvien`, `nhanvien2`, `quanly`, mật khẩu `123456`), đơn nghỉ có validate, sản phẩm phân trang. Quản lý chỉ thấy đơn sau `syncDelayMs` (mặc định 5000, đổi bằng env `DEMO_SYNC_DELAY_MS`).
-  - `server/webforms.ts`: trang `/webforms.aspx` render phía server, ID `ctl00_MainContent_ctlNN_*` đổi mỗi lần tải, có `__VIEWSTATE`, `__doPostBack`, dropdown Tỉnh có AutoPostBack đổi danh sách Quận, nút Lưu, LinkButton "Xóa hết".
-  - `server/api.ts`: `/api/login|logout|me|reset|meta|products`, `/api/requests` (GET, POST, DELETE `:id`, POST `:id/approve|reject`), cookie `demo_session`.
-  - `server/plugin.ts`: middleware cho cả `vite` dev và `vite preview`.
-  - `vite.config.ts`: MPA, cổng 5180 `strictPort`.
-  - `public/style.css`, `src/common.ts` (`api`, `$`, `toast`, `initPage` + thanh điều hướng), `index.html` + `src/index.ts`, `login.html` + `src/login.ts`.
-- Còn thiếu:
-  1. `form.html` + `src/form.ts`: tạo đơn nghỉ gồm dropdown tự làm (div/ul `role=listbox`, `li role=option`) cho Loại nghỉ; `<select>` thường cho Bộ phận; ô Từ ngày dạng `dd/MM/yyyy` kèm nút mở lịch chọn ngày; Số ngày; Lý do (textarea); Ghi chú (contenteditable); checkbox Khẩn cấp; radio Nhận kết quả qua Email/SMS; upload Đính kèm (gửi tên file). Validate phía client và hiện lỗi theo từng ô từ API (422). Thành công → toast "Tạo đơn thành công: DN-xxxx" + phần tử `#ma-don`.
-  2. `requests.html` + `src/requests.ts`: bảng đơn; quản lý có nút Duyệt / Từ chối (Từ chối hỏi `confirm`); nút "Tải lại"; trạng thái rỗng.
-  3. `table.html` + `src/table.ts`: ô tìm kiếm, chọn số dòng/trang, Trước/Sau + số trang, hiện "Đang tải…".
-  4. `iframe.html` → `frames/inner.html` (có ô nhập + nút) → `frames/nested.html` (iframe lồng, có nút + kết quả).
-  5. `dialogs.html` + `src/dialogs.ts`: nút alert / confirm / prompt (hiện kết quả ra trang), `window.open('/popup.html')`, link `target=_blank`; `popup.html` có nút Đóng.
-  6. Unit test `server/*.test.ts`: store (độ trễ đồng bộ với `now` giả, validate, phân trang), webforms (ID đổi mỗi lần render, postback lưu tên, AutoPostBack đổi quận), api (dựng `http.createServer` thật, login → cookie → tạo đơn → quản lý thấy sau độ trễ).
-  7. `pnpm install`, lint/typecheck/test, chạy thử `pnpm --filter @kiemi/demo-site dev`, cập nhật docs, commit `feat(demo-site): … [M0-05]`.
+(không có)
 
 ## Tiếp theo
-Hoàn thành **M0-05** (mục "Đang làm dở"), sau đó **M0-06** — GitHub Actions lint + typecheck + test trên Windows & macOS.
+**M0-06** — GitHub Actions lint + typecheck + test trên Windows & macOS.
 
 ## Vấn đề tồn đọng / Câu hỏi cho người dùng
 - **Phiên bản công cụ** (chốt ở M0-01): Node ≥ 22.12 (`.nvmrc` = 24), pnpm 11.1.3, TypeScript 7.0.2 (bản viết lại bằng Go), Biome 2.6.4, Vitest 5.1, Turbo 2.11. Nếu sau này thư viện nào cần TypeScript compiler API (TS 7 không còn API JS như TS 5) thì cân nhắc thêm `typescript@5`/`6` riêng cho thư viện đó.
@@ -32,6 +17,7 @@ Hoàn thành **M0-05** (mục "Đang làm dở"), sau đó **M0-06** — GitHub 
 - Preload chạy sandbox nên phải là CommonJS → `apps/desktop/package.json` **không** đặt `"type": "module"`.
 - Nếu shell có biến `ELECTRON_RUN_AS_NODE=1` (vd terminal do extension VS Code sinh ra), Electron chạy như Node và app lỗi `app is undefined` → chạy `env -u ELECTRON_RUN_AS_NODE pnpm dev`.
 - **Quy ước i18n**: thêm chuỗi vào `packages/shared/src/i18n/locales/vi.ts` trước (nguồn chuẩn), rồi `en.ts` — TypeScript báo lỗi nếu thiếu key; test kiểm tra không rỗng và `{{biến}}` khớp. Gọi `t('nhom.khoa')` qua `useT()` (key có kiểu chặt).
+- **Demo-site** (`pnpm --filter @kiemi/demo-site dev`, http://localhost:5180): dữ liệu trong bộ nhớ, dùng chung giữa mọi browser context; `POST /api/reset` để xóa sạch trước mỗi e2e. Độ trễ đồng bộ đổi bằng `DEMO_SYNC_DELAY_MS` (e2e nên đặt nhỏ). Biome tắt nhóm luật a11y cho `apps/demo-site/**/*.html` vì trang cố tình có phần tử không chuẩn (dropdown tự làm, contenteditable).
 - Ngôn ngữ đang lưu tạm ở `localStorage` (`kiemi.language`) — chuyển sang Cài đặt trong DB ở M3-07 (S-07).
 
 ## Nhật ký
@@ -43,3 +29,4 @@ Hoàn thành **M0-05** (mục "Đang làm dở"), sau đó **M0-06** — GitHub 
 | 2026-11-16 | M0-03 | Xong — electron-trpc 1.0 + tRPC 11 + TanStack Query; router `app.info`, `app.echo` (Zod) | Chạy thật: renderer hiện version lấy từ main; chỉ có `window.electronTRPC`; `allow` chặn trang lạ (unit test); ADR 0002 |
 | 2026-11-16 | M0-04 | Xong — i18next 27 + react-i18next 18; `createI18n`, `useT`, key có kiểu chặt; nút đổi ngôn ngữ tạm trên màn chính | Chạy thật: đổi vi↔en, `<html lang>` cập nhật, nhớ lựa chọn. Thêm happy-dom + Testing Library cho test React |
 | 2026-11-16 | — | Đổi workflow: 1 chat = 1 task, kết thúc phiên thì dừng; UI dùng shadcn/ui + Blocks; thêm cách chạy tự động `claude -p` | CLAUDE.md §2, §5.8; START-PROMPT.md |
+| 2026-11-16 | M0-05 | Xong — `apps/demo-site` (Vite MPA): login 2 vai trò, form đơn nghỉ (dropdown tự làm, lịch dd/MM/yyyy, contenteditable, upload, lỗi theo ô), danh sách đơn (duyệt/từ chối + confirm, đồng bộ trễ), bảng phân trang + tìm kiếm, iframe lồng 2 lớp, alert/confirm/prompt/popup/tab mới, WebForms ID động + postback | 18 unit test server (store, webforms, api qua HTTP thật). Chạy thử dev server: mọi trang 200, quản lý thấy đơn sau độ trễ; Chrome headless xác nhận JS client render |

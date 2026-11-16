@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Khung ngoài</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body style="padding: 16px">
+    <h2>Khung ngoài</h2>
+    <div class="field">
+      <label for="inner-name">Tên của bạn</label>
+      <input type="text" id="inner-name" />
+    </div>
+    <div class="actions">
+      <button type="button" class="btn primary" id="inner-greet">Chào</button>
+    </div>
+    <p id="inner-result" role="status"></p>
+    <iframe id="nested-frame" name="nested" title="Khung trong" src="/frames/nested.html" height="160"></iframe>
+    <script>
+      document.getElementById('inner-greet').addEventListener('click', () => {
+        var name = document.getElementById('inner-name').value.trim() || 'bạn';
+        document.getElementById('inner-result').textContent = `Xin chào, ${name}!`;
+      });
+    </script>
+  </body>
+</html>

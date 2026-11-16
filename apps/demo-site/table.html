@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sản phẩm — Kiemi Demo</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Danh sách sản phẩm</h1>
+      <div class="actions" style="margin-bottom: 12px">
+        <input type="text" id="search" placeholder="Tìm theo tên hoặc mã" aria-label="Tìm kiếm" />
+        <label>Số dòng/trang
+          <select id="page-size">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+          </select>
+        </label>
+        <span id="loading" hidden>Đang tải…</span>
+      </div>
+      <table class="table" id="products-table">
+        <thead><tr><th>Mã</th><th>Tên sản phẩm</th><th>Nhóm</th><th>Giá</th><th>Tồn kho</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <nav class="pagination" aria-label="Phân trang">
+        <button type="button" class="btn" id="prev">Trước</button>
+        <span id="pages"></span>
+        <button type="button" class="btn" id="next">Sau</button>
+        <span class="hint" id="summary"></span>
+      </nav>
+    </main>
+    <script type="module" src="/src/table.ts"></script>
+  </body>
+</html>

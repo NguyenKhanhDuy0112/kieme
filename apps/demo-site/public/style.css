@@ -1,0 +1,246 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #1b1f33;
+  background: #f6f7fb;
+  font-size: 15px;
+}
+a {
+  color: #2f49c9;
+}
+.topbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 24px;
+  background: #1f2a5c;
+  color: #fff;
+}
+.topbar a {
+  color: #fff;
+  text-decoration: none;
+}
+.topbar .spacer {
+  flex: 1;
+}
+.container {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 0 24px;
+}
+.card {
+  background: #fff;
+  border: 1px solid #dfe2ec;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.hint {
+  color: #5b6280;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+  max-width: 420px;
+}
+.field label,
+.field .label {
+  font-weight: 600;
+}
+input[type="text"],
+input[type="password"],
+input[type="number"],
+select,
+textarea,
+.editable {
+  padding: 8px 10px;
+  border: 1px solid #c9cde0;
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+}
+.editable {
+  min-height: 60px;
+}
+.error-text {
+  color: #c62828;
+  font-size: 13px;
+}
+input.invalid,
+select.invalid,
+textarea.invalid,
+button.invalid {
+  border-color: #c62828;
+}
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #c9cde0;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+.btn.primary {
+  background: #1f2a5c;
+  color: #fff;
+  border-color: #1f2a5c;
+}
+.btn.danger {
+  background: #e5484d;
+  color: #fff;
+  border-color: #e5484d;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+.table th,
+.table td {
+  border-bottom: 1px solid #e6e8f0;
+  padding: 8px 10px;
+  text-align: left;
+}
+.table .empty {
+  text-align: center;
+  color: #5b6280;
+}
+.alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.alert.success {
+  background: #e3f9ec;
+  color: #11683a;
+}
+.alert.error {
+  background: #fde8e8;
+  color: #a3242a;
+}
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  padding: 12px 18px;
+  border-radius: 8px;
+  color: #fff;
+  background: #11683a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+.toast.error {
+  background: #a3242a;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: #eef0f7;
+}
+.badge.da-duyet {
+  background: #e3f9ec;
+  color: #11683a;
+}
+.badge.tu-choi {
+  background: #fde8e8;
+  color: #a3242a;
+}
+.dropdown {
+  position: relative;
+  max-width: 420px;
+}
+.dropdown-trigger {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid #c9cde0;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+.dropdown-menu {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #c9cde0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+.dropdown-menu li {
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.dropdown-menu li:hover,
+.dropdown-menu li[aria-selected="true"] {
+  background: #eef0f7;
+}
+.calendar {
+  position: absolute;
+  z-index: 10;
+  background: #fff;
+  border: 1px solid #c9cde0;
+  border-radius: 8px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(7, 36px);
+  gap: 2px;
+}
+.calendar .cal-head {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.calendar button.day {
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.calendar button.day:hover {
+  background: #eef0f7;
+}
+.pagination {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 12px;
+}
+.pagination button[aria-current="page"] {
+  background: #1f2a5c;
+  color: #fff;
+}
+.scenario-list li {
+  margin-bottom: 8px;
+}
+iframe {
+  width: 100%;
+  border: 1px dashed #8b90a8;
+  border-radius: 8px;
+  background: #fff;
+}

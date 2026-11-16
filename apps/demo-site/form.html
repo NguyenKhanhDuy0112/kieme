@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tạo đơn nghỉ — Kiemi Demo</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Tạo đơn nghỉ</h1>
+      <div id="form-error" class="alert error" role="alert" hidden></div>
+      <form id="leave-form" class="card" novalidate>
+        <div class="field">
+          <span class="label" id="type-label">Loại nghỉ</span>
+          <div class="dropdown" id="type-dropdown">
+            <button type="button" class="dropdown-trigger" id="type-trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="type-label type-trigger">-- Chọn loại nghỉ --</button>
+            <ul class="dropdown-menu" role="listbox" id="type-listbox" aria-labelledby="type-label" hidden></ul>
+          </div>
+          <span class="error-text" data-error-for="type"></span>
+        </div>
+        <div class="field">
+          <label for="department">Bộ phận</label>
+          <select id="department" name="department">
+            <option value="">-- Chọn bộ phận --</option>
+            <option value="ke-toan">Kế toán</option>
+            <option value="ky-thuat">Kỹ thuật</option>
+            <option value="kinh-doanh">Kinh doanh</option>
+            <option value="nhan-su">Nhân sự</option>
+          </select>
+        </div>
+        <div class="field" style="position: relative">
+          <label for="from-date">Từ ngày</label>
+          <div style="display: flex; gap: 8px">
+            <input type="text" id="from-date" name="fromDate" placeholder="dd/MM/yyyy" autocomplete="off" style="flex: 1" />
+            <button type="button" class="btn" id="open-calendar" aria-label="Mở lịch">📅</button>
+          </div>
+          <div class="calendar" id="calendar" role="dialog" aria-label="Chọn ngày" hidden></div>
+          <span class="error-text" data-error-for="fromDate"></span>
+        </div>
+        <div class="field">
+          <label for="days">Số ngày</label>
+          <input type="number" id="days" name="days" min="1" max="30" />
+          <span class="error-text" data-error-for="days"></span>
+        </div>
+        <div class="field">
+          <label for="reason">Lý do</label>
+          <textarea id="reason" name="reason" rows="3" placeholder="Nhập lý do nghỉ"></textarea>
+          <span class="error-text" data-error-for="reason"></span>
+        </div>
+        <div class="field">
+          <span class="label" id="note-label">Ghi chú</span>
+          <div class="editable" id="note" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="note-label"></div>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="urgent" name="urgent" /> Khẩn cấp</label>
+        </div>
+        <fieldset class="field" style="border: none; padding: 0">
+          <legend class="label">Nhận kết quả qua</legend>
+          <label><input type="radio" name="notify" value="email" checked /> Email</label>
+          <label><input type="radio" name="notify" value="sms" /> SMS</label>
+        </fieldset>
+        <div class="field">
+          <label for="attachment">Đính kèm</label>
+          <input type="file" id="attachment" name="attachment" />
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn primary" id="submit">Gửi đơn</button>
+          <button type="reset" class="btn">Làm lại</button>
+        </div>
+      </form>
+      <p hidden id="result">Mã đơn: <strong id="ma-don"></strong></p>
+    </main>
+    <script type="module" src="/src/form.ts"></script>
+  </body>
+</html>

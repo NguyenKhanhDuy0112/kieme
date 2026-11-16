@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Khung trong</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body style="padding: 16px">
+    <h3>Khung trong</h3>
+    <button type="button" class="btn primary" id="nested-confirm">Xác nhận</button>
+    <p id="nested-result" role="status"></p>
+    <script>
+      var count = 0;
+      document.getElementById('nested-confirm').addEventListener('click', () => {
+        count += 1;
+        document.getElementById('nested-result').textContent = `Đã xác nhận (${count})`;
+      });
+    </script>
+  </body>
+</html>

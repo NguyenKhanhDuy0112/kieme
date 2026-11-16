@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Đăng nhập — Kiemi Demo</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <div class="card" style="max-width: 460px">
+        <h1>Đăng nhập</h1>
+        <div id="login-error" class="alert error" role="alert" hidden></div>
+        <form id="login-form" novalidate>
+          <div class="field">
+            <label for="username">Tên đăng nhập</label>
+            <input type="text" id="username" name="username" autocomplete="username" placeholder="vd: nhanvien" />
+          </div>
+          <div class="field">
+            <label for="password">Mật khẩu</label>
+            <input type="password" id="password" name="password" autocomplete="current-password" />
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn primary">Đăng nhập</button>
+          </div>
+        </form>
+      </div>
+    </main>
+    <script type="module" src="/src/login.ts"></script>
+  </body>
+</html>

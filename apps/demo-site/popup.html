@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cửa sổ phụ — Kiemi Demo</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body style="padding: 16px">
+    <h1>Cửa sổ phụ</h1>
+    <div class="field">
+      <label for="popup-note">Ghi chú</label>
+      <input type="text" id="popup-note" />
+    </div>
+    <div class="actions">
+      <button type="button" class="btn primary" id="popup-close">Đóng</button>
+    </div>
+    <script>
+      document.getElementById('popup-close').addEventListener('click', () => {
+        if (window.opener) window.opener.postMessage('popup-closed', location.origin);
+        window.close();
+      });
+    </script>
+  </body>
+</html>
