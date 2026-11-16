@@ -8,8 +8,37 @@
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: kiemi-artifact:; media-src 'self' kiemi-artifact:; font-src 'self' data:"
     />
     <title>Kiemi</title>
+    <!-- Launch splash [U-18]: plain HTML/CSS so it paints before React loads. -->
+    <link rel="stylesheet" href="/splash.css" />
   </head>
   <body>
+    <div id="splash" role="status" aria-label="Kiemi">
+      <div class="splash-stage">
+        <div class="splash-bubble" aria-hidden="true"></div>
+        <svg class="splash-owl" viewBox="0 0 200 200" width="132" height="132" aria-hidden="true">
+          <ellipse cx="82" cy="186" rx="11" ry="6" fill="#f5b83d" />
+          <ellipse cx="118" cy="186" rx="11" ry="6" fill="#f5b83d" />
+          <path d="M46 64 L36 22 L82 46 Z M154 64 L164 22 L118 46 Z" fill="#5b6cd6" />
+          <ellipse cx="100" cy="112" rx="70" ry="74" fill="#5b6cd6" />
+          <ellipse class="splash-wing-l" cx="36" cy="128" rx="15" ry="30" fill="#3f4fb0" />
+          <ellipse class="splash-wing-r" cx="164" cy="128" rx="15" ry="30" fill="#3f4fb0" />
+          <ellipse cx="100" cy="150" rx="42" ry="32" fill="#ffffff" />
+          <path class="splash-tick" d="M80 150 L95 164 L121 136" stroke="#3ddc84" stroke-width="11" fill="none" stroke-linecap="round" stroke-linejoin="round" pathLength="1" />
+          <g class="splash-eyes">
+            <circle cx="72" cy="86" r="26" fill="#fff" />
+            <circle cx="128" cy="86" r="26" fill="#fff" />
+            <circle cx="75" cy="90" r="12" fill="#141b3d" />
+            <circle cx="125" cy="90" r="12" fill="#141b3d" />
+            <circle cx="79" cy="85" r="4.5" fill="#fff" />
+            <circle cx="129" cy="85" r="4.5" fill="#fff" />
+          </g>
+          <path d="M100 104 L91 114 Q100 121 109 114 Z" fill="#f5b83d" />
+        </svg>
+      </div>
+      <div class="splash-name">Kiemi</div>
+      <div class="splash-slogan">Bấm một lần, kiểm mãi mãi.</div>
+      <div class="splash-progress"><span></span></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

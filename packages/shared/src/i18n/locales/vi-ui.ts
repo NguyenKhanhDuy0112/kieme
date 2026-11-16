@@ -444,6 +444,9 @@ export const viUi = {
       error: 'Chưa kiểm tra được bản mới (có thể do không có mạng)',
     },
   },
+  splash: {
+    hello: 'Xin chào!',
+  },
   crashReports: {
     setting: 'Gửi báo cáo lỗi ẩn danh',
     hint: 'Khi Kiemi gặp lỗi, gửi thông tin kỹ thuật để đội phát triển sửa. Không gửi test, dữ liệu, địa chỉ trang hay mật khẩu. Mặc định tắt.',

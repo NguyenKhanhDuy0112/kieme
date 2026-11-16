@@ -9,6 +9,7 @@ import { WelcomeDialog } from '@renderer/features/onboarding/welcome-dialog';
 import { TestsScreen } from '@renderer/features/tests/tests-screen';
 import { UpdateNotice } from '@renderer/features/update/update-notice';
 import { useT } from '@renderer/i18n/use-t';
+import { hideSplash } from '@renderer/lib/splash';
 import { useAppStore, watchSystemTheme } from '@renderer/lib/store';
 import { trpc } from '@renderer/lib/trpc';
 import { useTx } from '@renderer/lib/tx';
@@ -62,6 +63,12 @@ export function App() {
   const toggleDetail = useAppStore((s) => s.toggleDetail);
 
   useEffect(() => watchSystemTheme(), []);
+  // Launch splash [U-18]: gone as soon as settings are known; first launch waves hello first.
+  const settingsReady = settings.isSuccess || settings.isError;
+  const firstRun = settings.data ? !settings.data.onboardingDone : false;
+  useEffect(() => {
+    if (settingsReady) void hideSplash({ firstRun, hello: tx('ui.splash.hello') });
+  }, [settingsReady, firstRun, tx]);
   // First load: the default project, and the saved language/theme (S-07).
   useEffect(() => {
     if (!projectId && info.data?.defaultProjectId) setProject(info.data.defaultProjectId);

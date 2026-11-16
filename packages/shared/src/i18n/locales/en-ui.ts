@@ -445,6 +445,9 @@ export const enUi = {
       error: 'Could not check for updates (maybe no internet connection)',
     },
   },
+  splash: {
+    hello: 'Hello!',
+  },
   crashReports: {
     setting: 'Send anonymous error reports',
     hint: 'When Kiemi hits an error, send technical details so the team can fix it. Tests, data, page addresses and passwords are never sent. Off by default.',

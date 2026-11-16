@@ -1,5 +1,6 @@
 import { createI18n } from '@renderer/i18n';
 import { reportUncaughtErrors } from '@renderer/lib/report-errors';
+import { hideSplash } from '@renderer/lib/splash';
 import { queryClient, trpcClient } from '@renderer/lib/trpc';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
@@ -13,6 +14,8 @@ if (!rootEl) throw new Error('Root element #root not found');
 
 reportUncaughtErrors(window, (e) => trpcClient.app.reportError.mutate(e));
 const i18n = createI18n();
+// Safety net: the splash never stays if the app fails to load its settings [U-18].
+setTimeout(() => void hideSplash(), 10_000);
 
 createRoot(rootEl).render(
   <StrictMode>

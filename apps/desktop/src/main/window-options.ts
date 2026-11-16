@@ -12,7 +12,8 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
     minHeight: 600,
     show: false,
     title: 'Kiemi',
-    backgroundColor: '#FFFFFF',
+    // Same colour as the launch splash: no white flash before it paints [U-18].
+    backgroundColor: '#1F2A5C',
     autoHideMenuBar: true,
     webPreferences: {
       preload: preloadPath,

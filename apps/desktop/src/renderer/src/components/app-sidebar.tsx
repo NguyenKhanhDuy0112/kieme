@@ -64,7 +64,7 @@ export function AppSidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton size="lg" aria-label={tx('ui.nav.switchProject')}>
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary dark:bg-muted">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-secondary">
                     <Mascot size={26} />
                   </div>
                   <div className="grid flex-1 text-left leading-tight">
