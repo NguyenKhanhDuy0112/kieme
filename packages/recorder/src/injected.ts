@@ -9,10 +9,27 @@
 /** Name of the binding the injected script calls. */
 export const RECORDER_BINDING = '__kiemiRecord';
 
-export function installRecorder(binding: string): void {
+/** Options of the in-page script (structured-cloneable). */
+export interface InjectedConfig {
+  /** Strings of the toolbar and menus (`recorder.*` of `@kiemi/shared`). */
+  strings: Record<string, string>;
+  /** Show the floating toolbar in the top frame [K-03]. */
+  toolbar: boolean;
+  /** Report user actions (off = only Pick / Highlight, e.g. picking from the editor). */
+  capture: boolean;
+}
+
+export function installRecorder(binding: string, config: InjectedConfig): void {
   const w = window as unknown as Record<string, unknown>;
   if (w.__kiemiRecorderInstalled) return;
   w.__kiemiRecorderInstalled = true;
+  const state = {
+    capture: config.capture,
+    /** Pick mode: the next click chooses an element instead of acting on the page. */
+    pick: null as null | 'pick' | 'assert' | 'extract',
+  };
+  const fromUi = (e: Event): boolean =>
+    e.composedPath().some((n) => n instanceof Element && n.hasAttribute('data-kiemi-ui'));
 
   const send = (payload: unknown): void => {
     const fn = w[binding];
@@ -360,6 +377,7 @@ export function installRecorder(binding: string): void {
   document.addEventListener(
     'click',
     (e) => {
+      if (!state.capture || fromUi(e)) return;
       if (!e.isTrusted || e.button !== 0) return;
       if (e.detail === 0 && Date.now() - enterAt < 500) return;
       const raw = eventTarget(e);
@@ -374,6 +392,7 @@ export function installRecorder(binding: string): void {
   document.addEventListener(
     'dblclick',
     (e) => {
+      if (!state.capture || fromUi(e)) return;
       if (!e.isTrusted) return;
       const raw = eventTarget(e);
       if (!raw || isQuietClick(raw)) return;
@@ -385,6 +404,7 @@ export function installRecorder(binding: string): void {
   document.addEventListener(
     'contextmenu',
     (e) => {
+      if (!state.capture || fromUi(e)) return;
       if (!e.isTrusted) return;
       const raw = eventTarget(e);
       if (!raw) return;
@@ -396,6 +416,7 @@ export function installRecorder(binding: string): void {
   document.addEventListener(
     'input',
     (e) => {
+      if (!state.capture || fromUi(e)) return;
       if (!e.isTrusted) return;
       const raw = eventTarget(e);
       if (!raw) return;
@@ -415,6 +436,7 @@ export function installRecorder(binding: string): void {
   document.addEventListener(
     'change',
     (e) => {
+      if (!state.capture || fromUi(e)) return;
       if (!e.isTrusted) return;
       const el = eventTarget(e);
       if (!el) return;
@@ -461,6 +483,7 @@ export function installRecorder(binding: string): void {
   document.addEventListener(
     'keydown',
     (e) => {
+      if (!state.capture || fromUi(e)) return;
       if (!e.isTrusted || e.isComposing || e.repeat) return;
       const key = e.key;
       if (['Control', 'Alt', 'Shift', 'Meta', 'Tab', 'CapsLock'].includes(key)) return;
@@ -490,9 +513,373 @@ export function installRecorder(binding: string): void {
     },
     opts,
   );
+
+  // ---- in-page UI: toolbar, pick mode, menus, highlight [K-03, C-06] -----------
+  const T = (key: string, vars: Record<string, string | number> = {}): string =>
+    (config.strings[key] ?? key).replace(/\{\{(\w+)\}\}/g, (_, k: string) => String(vars[k] ?? ''));
+  const INDIGO = '#1F2A5C';
+  const GREEN = '#3DDC84';
+  const RED = '#E5484D';
+  const STYLE = `
+    :host { all: initial; }
+    * { box-sizing: border-box; font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .bar { position: fixed; z-index: 2147483647; left: 50%; bottom: 16px; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px;
+      background: ${INDIGO}; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: ${RED}; }
+    .count { opacity: .8; margin-right: 4px; }
+    button { cursor: pointer; border: 1px solid rgba(255,255,255,.35); background: transparent; color: inherit;
+      border-radius: 8px; padding: 4px 10px; }
+    button:hover, button:focus-visible { background: rgba(255,255,255,.15); outline: none; }
+    button.stop { background: ${RED}; border-color: ${RED}; }
+    .hint { position: fixed; z-index: 2147483647; left: 50%; top: 12px; transform: translateX(-50%);
+      padding: 6px 12px; border-radius: 8px; background: ${INDIGO}; color: #fff; }
+    .box { position: fixed; z-index: 2147483646; pointer-events: none; border: 2px solid ${INDIGO};
+      background: rgba(31,42,92,.12); border-radius: 4px; }
+    .box.many { border-color: ${RED}; background: rgba(229,72,77,.12); }
+    .tag { position: absolute; left: -2px; top: -22px; white-space: nowrap; padding: 1px 6px; border-radius: 4px;
+      background: ${INDIGO}; color: #fff; font-size: 12px; }
+    .box.many .tag { background: ${RED}; }
+    .menu { position: fixed; z-index: 2147483647; min-width: 220px; max-width: 360px; padding: 6px; border-radius: 12px;
+      background: #fff; color: #111; border: 1px solid #d0d4e4; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+      display: flex; flex-direction: column; gap: 4px; }
+    .menu button { color: ${INDIGO}; border-color: transparent; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .menu button:hover, .menu button:focus-visible { background: #eef0f8; }
+    .menu button.cancel { color: #555; }
+    .menu input { border: 1px solid #c3c8dc; border-radius: 8px; padding: 4px 8px; color: #111; background: #fff; }
+    .menu label { color: #444; font-size: 12px; }
+    .err { color: ${RED}; font-size: 12px; }
+    .ok { color: #1a7f4b; }
+    .ok::before { content: "✓ "; color: ${GREEN}; }
+  `;
+
+  /** One shadow-root host per frame, ignored by the recording listeners. */
+  let root: ShadowRoot | undefined;
+  const ui = (): ShadowRoot => {
+    if (root?.host.isConnected) return root;
+    const host = document.createElement('kiemi-recorder');
+    host.setAttribute('data-kiemi-ui', '');
+    root = host.attachShadow({ mode: 'open' });
+    const style = document.createElement('style');
+    style.textContent = STYLE;
+    root.appendChild(style);
+    (document.body ?? document.documentElement).appendChild(host);
+    return root;
+  };
+  const el = <K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    props: { className?: string; text?: string } = {},
+  ): HTMLElementTagNameMap[K] => {
+    const n = document.createElement(tag);
+    if (props.className) n.className = props.className;
+    if (props.text !== undefined) n.textContent = props.text;
+    return n;
+  };
+  const removeAll = (selector: string) => {
+    for (const n of Array.from(root?.querySelectorAll(selector) ?? [])) n.remove();
+  };
+
+  // Toolbar (top frame only).
+  let stepCount: HTMLElement | undefined;
+  const showToolbar = () => {
+    if (!config.toolbar || window.top !== window || root?.querySelector('.bar')) return;
+    const bar = el('div', { className: 'bar' });
+    bar.setAttribute('role', 'toolbar');
+    bar.append(el('span', { className: 'dot' }), el('strong', { text: T('recording') }));
+    stepCount = el('span', { className: 'count', text: '' });
+    bar.append(stepCount);
+    const cmd = (key: string, command: string, className = '') => {
+      const b = el('button', { className, text: T(key) });
+      b.type = 'button';
+      b.dataset.command = command;
+      b.addEventListener('click', (e) => {
+        e.preventDefault();
+        send({ kind: 'command', command });
+      });
+      bar.append(b);
+    };
+    cmd('addCheck', 'assert');
+    cmd('saveValue', 'extract');
+    cmd('saveLogin', 'saveLogin');
+    cmd('stop', 'stop', 'stop');
+    ui().append(bar);
+  };
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', showToolbar, { once: true });
+  else showToolbar();
+
+  // Hover box + menus while picking.
+  const boxFor = (target: Element, label: string, many = false): HTMLElement => {
+    const r = target.getBoundingClientRect();
+    const box = el('div', { className: many ? 'box many' : 'box' });
+    Object.assign(box.style, {
+      left: `${r.left}px`,
+      top: `${r.top}px`,
+      width: `${r.width}px`,
+      height: `${r.height}px`,
+    });
+    if (label) box.append(el('span', { className: 'tag', text: label }));
+    return box;
+  };
+  const short = (s: string, n = 40) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+  let hovered: Element | undefined;
+
+  const stopPick = () => {
+    state.pick = null;
+    hovered = undefined;
+    removeAll('.hover, .hint, .menu');
+  };
+  const startPick = (purpose: 'pick' | 'assert' | 'extract') => {
+    stopPick();
+    state.pick = purpose;
+    if (window.top === window) ui().append(el('div', { className: 'hint', text: T('pickHint') }));
+  };
+
+  const fieldValue = (t: Element): string | undefined =>
+    isTextField(t) && (isInput(t) || t.tagName === 'TEXTAREA')
+      ? (t as HTMLInputElement).value
+      : isSelect(t)
+        ? (t.selectedOptions[0]?.label ?? '')
+        : undefined;
+
+  const menuAt = (t: Element): HTMLElement => {
+    const r = t.getBoundingClientRect();
+    const menu = el('div', { className: 'menu' });
+    menu.setAttribute('role', 'menu');
+    const top = r.bottom + 6 + 200 > window.innerHeight ? Math.max(8, r.top - 206) : r.bottom + 6;
+    Object.assign(menu.style, {
+      left: `${Math.max(8, Math.min(r.left, window.innerWidth - 240))}px`,
+      top: `${top}px`,
+    });
+    ui().append(menu);
+    return menu;
+  };
+  const menuButton = (menu: HTMLElement, text: string, onClick: () => void, className = '') => {
+    const b = el('button', { className, text });
+    b.type = 'button';
+    b.setAttribute('role', 'menuitem');
+    b.addEventListener('click', (e) => {
+      e.preventDefault();
+      onClick();
+    });
+    menu.append(b);
+    return b;
+  };
+  const finish = () => {
+    stopPick();
+    send({ kind: 'pickDone' });
+  };
+
+  const assertMenu = (t: Element) => {
+    const menu = menuAt(t);
+    const tgt = target(t);
+    menuButton(menu, T('checkVisible'), () => {
+      send({ kind: 'assert', target: tgt, check: 'visible' });
+      finish();
+    });
+    const value = fieldValue(t);
+    if (value !== undefined) {
+      menuButton(menu, T('checkValue', { value: short(value) }), () => {
+        send({ kind: 'assert', target: tgt, check: 'value', value });
+        finish();
+      });
+    } else {
+      const text = visibleText(t);
+      if (text)
+        menuButton(menu, T('checkText', { value: short(text) }), () => {
+          send({ kind: 'assert', target: tgt, check: 'text', value: text.slice(0, 1000) });
+          finish();
+        });
+    }
+    if (isCheckable(t) && t.checked)
+      menuButton(menu, T('checkChecked'), () => {
+        send({ kind: 'assert', target: tgt, check: 'checked' });
+        finish();
+      });
+    menuButton(menu, T('cancel'), finish, 'cancel');
+    (menu.querySelector('button') as HTMLButtonElement | null)?.focus();
+  };
+
+  const NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+  /** Asks for a name, then calls `done(name)`. */
+  const nameForm = (menu: HTMLElement, labelKey: string, done: (name: string) => void) => {
+    const label = el('label', { text: T(labelKey) });
+    const input = el('input');
+    input.setAttribute('aria-label', T(labelKey));
+    const err = el('span', { className: 'err' });
+    menu.append(label, input, err);
+    input.focus();
+    return () => {
+      const name = input.value.trim();
+      if (!NAME_RE.test(name)) {
+        err.textContent = T('invalidName');
+        input.focus();
+        return;
+      }
+      done(name);
+    };
+  };
+
+  const extractMenu = (t: Element) => {
+    const menu = menuAt(t);
+    const tgt = target(t);
+    const value = fieldValue(t);
+    const text = visibleText(t);
+    let from: 'text' | 'value' = value !== undefined ? 'value' : 'text';
+    const submit = nameForm(menu, 'variableName', (into) => {
+      send({ kind: 'extract', target: tgt, from, into });
+      finish();
+    });
+    if (value !== undefined)
+      menuButton(menu, T('saveFieldValue', { value: short(value) }), () => {
+        from = 'value';
+        submit();
+      });
+    if (text && value === undefined)
+      menuButton(menu, T('saveText', { value: short(text) }), () => {
+        from = 'text';
+        submit();
+      });
+    menuButton(menu, T('cancel'), finish, 'cancel');
+    menu.querySelector('input')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submit();
+    });
+  };
+
+  /** Asks the name of the login session to save (top frame) [F-02]. */
+  const loginMenu = () => {
+    removeAll('.menu');
+    const menu = el('div', { className: 'menu' });
+    Object.assign(menu.style, { left: '50%', bottom: '64px', transform: 'translateX(-50%)' });
+    ui().append(menu);
+    const submit = nameForm(menu, 'loginName', (name) => {
+      removeAll('.menu');
+      send({ kind: 'saveLogin', name });
+    });
+    menuButton(menu, T('saveLogin'), submit);
+    menuButton(menu, T('cancel'), () => removeAll('.menu'), 'cancel');
+    menu.querySelector('input')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submit();
+    });
+  };
+
+  const pickTarget = (e: Event): Element | undefined => {
+    const raw = eventTarget(e);
+    if (!raw) return undefined;
+    return isQuietClick(raw) && raw.tagName === 'LABEL'
+      ? ((raw as HTMLLabelElement).control ?? raw)
+      : clickTarget(raw);
+  };
+
+  window.addEventListener(
+    'mouseover',
+    (e) => {
+      if (!state.pick || fromUi(e) || root?.querySelector('.menu')) return;
+      const t = pickTarget(e);
+      if (!t || t === hovered) return;
+      hovered = t;
+      removeAll('.hover');
+      const box = boxFor(t, short(nameOf(t, roleOf(t)) || t.tagName.toLowerCase(), 50));
+      box.classList.add('hover');
+      ui().append(box);
+    },
+    true,
+  );
+  for (const type of [
+    'pointerdown',
+    'mousedown',
+    'pointerup',
+    'mouseup',
+    'dblclick',
+    'contextmenu',
+  ]) {
+    window.addEventListener(
+      type,
+      (e) => {
+        if (!state.pick || fromUi(e)) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      },
+      true,
+    );
+  }
+  window.addEventListener(
+    'click',
+    (e) => {
+      if (!state.pick || fromUi(e)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (root?.querySelector('.menu')) return;
+      const t = pickTarget(e);
+      if (!t) return;
+      const purpose = state.pick;
+      if (purpose === 'pick') {
+        send({ kind: 'picked', target: target(t) });
+        stopPick();
+        return;
+      }
+      removeAll('.hint');
+      if (purpose === 'assert') assertMenu(t);
+      else extractMenu(t);
+    },
+    true,
+  );
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key !== 'Escape') return;
+      if (state.pick) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        stopPick();
+        send({ kind: 'pickDone', cancelled: true });
+      } else if (root?.querySelector('.menu')) {
+        removeAll('.menu');
+      }
+    },
+    true,
+  );
+
+  /** Shows boxes on the given elements (Highlight [C-06]); `null` clears them. */
+  const highlight = (els: Element[] | null, label = '') => {
+    removeAll('.mark');
+    if (!els?.length) return;
+    els[0]?.scrollIntoView({ block: 'center', inline: 'nearest' });
+    const many = els.length > 1;
+    for (const [i, x] of els.entries()) {
+      const box = boxFor(x, i === 0 ? label : '', many);
+      box.classList.add('mark');
+      ui().append(box);
+    }
+    window.setTimeout(() => removeAll('.mark'), 4000);
+  };
+
+  // API used by the recorder (Node side) through `frame.evaluate`.
+  w.__kiemiRecorder = {
+    setPick: (purpose: 'pick' | 'assert' | 'extract' | null) =>
+      purpose ? startPick(purpose) : stopPick(),
+    setCapture: (on: boolean) => {
+      state.capture = on;
+    },
+    setSteps: (count: number) => {
+      if (stepCount) stepCount.textContent = T('steps', { count });
+    },
+    askLogin: () => {
+      if (window.top === window) loginMenu();
+    },
+    highlight,
+    clear: () => highlight(null),
+    /** Recording ended: no more events, no toolbar. */
+    teardown: () => {
+      state.capture = false;
+      stopPick();
+      root?.host.remove();
+      root = undefined;
+    },
+  };
 }
 
 /** Source of the init script that installs the recorder in a page or frame. */
-export function injectedSource(binding: string = RECORDER_BINDING): string {
-  return `(${installRecorder.toString()})(${JSON.stringify(binding)});`;
+export function injectedSource(config: InjectedConfig, binding: string = RECORDER_BINDING): string {
+  return `(${installRecorder.toString()})(${JSON.stringify(binding)}, ${JSON.stringify(config)});`;
 }

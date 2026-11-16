@@ -162,6 +162,28 @@ export const vi = {
       },
     },
   },
+  /** Strings shown inside the recorded web page (toolbar, pick menu) [K-03, C-06]. */
+  recorder: {
+    recording: 'Đang ghi',
+    steps: '{{count}} bước',
+    addCheck: 'Thêm kiểm tra',
+    saveValue: 'Lưu giá trị',
+    saveLogin: 'Lưu đăng nhập',
+    stop: 'Dừng',
+    pickHint: 'Bấm vào phần tử trên trang · Esc để hủy',
+    checkVisible: 'Đang hiển thị',
+    checkText: 'Có chữ “{{value}}”',
+    checkValue: 'Có giá trị “{{value}}”',
+    checkChecked: 'Đang được chọn',
+    saveText: 'Lưu chữ “{{value}}”',
+    saveFieldValue: 'Lưu giá trị ô “{{value}}”',
+    variableName: 'Tên biến',
+    invalidName: 'Tên biến gồm chữ không dấu, số, dấu _ và không bắt đầu bằng số',
+    loginName: 'Tên phiên đăng nhập',
+    cancel: 'Hủy',
+    matches: '{{count}} phần tử khớp',
+    picked: 'Đã chọn',
+  },
   settings: {
     language: 'Ngôn ngữ',
     languages: {

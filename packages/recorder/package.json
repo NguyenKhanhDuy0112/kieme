@@ -11,14 +11,15 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@kiemi/engine": "workspace:*",
     "@kiemi/schema": "workspace:*",
+    "@kiemi/shared": "workspace:*",
     "playwright-core": "1.64.1",
     "uuid": "^14.0.3",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@kiemi/demo-site": "workspace:*",
-    "@kiemi/engine": "workspace:*",
     "@types/node": "^26.6.6",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"

@@ -243,7 +243,9 @@ describe('recorded locators [C-01, C-02]', () => {
     if (!page) throw new Error('no page');
     await page.locator('#username').pressSequentially('nhanvien');
     await page.locator('#password').pressSequentially('1');
-    await page.getByRole('button', { name: 'Đăng nhập' }).click({ modifiers: ['Alt'] });
+    await page
+      .getByRole('button', { name: 'Đăng nhập', exact: true })
+      .click({ modifiers: ['Alt'] });
 
     const list = await steps(rec, 4);
     const targets = list.slice(1).map((s) => s.params.target as Locator);
@@ -292,5 +294,124 @@ describe('recorded locators [C-01, C-02]', () => {
     expect(t.strategies[0]).toEqual({ kind: 'role', role: 'radio', name: 'SMS', exact: true });
     expect(t.strategies).toContainEqual({ kind: 'css', value: 'input[name="n"][value="sms"]' });
     expect(t.fingerprint?.neighbors).toContain('Thông báo');
+  });
+});
+
+describe('floating toolbar [K-03]', () => {
+  it('adds checks and saved values by clicking elements, without recording those clicks', async () => {
+    const rec = await record('/login.html');
+    const page = rec.page;
+    if (!page) throw new Error('no page');
+    const bar = page.locator('kiemi-recorder .bar');
+    await expect.poll(() => bar.count()).toBe(1);
+    await page.locator('#username').pressSequentially('nhanvien');
+
+    await bar.getByRole('button', { name: 'Thêm kiểm tra' }).click();
+    await page.locator('h1').click();
+    await page.getByRole('menuitem', { name: 'Có chữ “Đăng nhập”' }).click();
+
+    await bar.getByRole('button', { name: 'Thêm kiểm tra' }).click();
+    await page.locator('#username').click();
+    await page.getByRole('menuitem', { name: 'Có giá trị “nhanvien”' }).click();
+
+    await bar.getByRole('button', { name: 'Lưu giá trị' }).click();
+    await page.locator('h1').click();
+    await page.getByRole('textbox', { name: 'Tên biến' }).fill('1sai');
+    await page.getByRole('menuitem', { name: 'Lưu chữ “Đăng nhập”' }).click();
+    await expect
+      .poll(() => page.locator('kiemi-recorder .err').textContent())
+      .toContain('Tên biến');
+    await page.getByRole('textbox', { name: 'Tên biến' }).fill('tieuDe');
+    await page.getByRole('menuitem', { name: 'Lưu chữ “Đăng nhập”' }).click();
+
+    // Esc cancels a pick: nothing added.
+    await bar.getByRole('button', { name: 'Thêm kiểm tra' }).click();
+    await page.keyboard.press('Escape');
+
+    const list = await steps(rec, 5);
+    expect(brief(list)).toEqual([
+      'goto {"url":"/login.html"}',
+      'fill {"value":"nhanvien"}',
+      'assertText {"value":"Đăng nhập"}',
+      'assertValue {"value":"nhanvien"}',
+      'extract {"from":"text","into":"tieuDe"}',
+    ]);
+    await expect.poll(() => bar.textContent()).toContain('5 bước');
+    await replay(list, [check('assertVariable', { name: 'tieuDe', value: 'Đăng nhập' })]);
+  });
+
+  it('asks the recorder to stop, and removes the toolbar once stopped', async () => {
+    let stopAsked = 0;
+    await fetch(`${site.url}/api/reset`, { method: 'POST' });
+    context = await browser.newContext();
+    const rec = await startRecorder(context, {
+      startUrl: `${site.url}/iframe.html`,
+      onStopRequest: () => stopAsked++,
+    });
+    const page = rec.page;
+    if (!page) throw new Error('no page');
+    // Only the top frame shows the toolbar.
+    await expect.poll(() => page.locator('kiemi-recorder .bar').count()).toBe(1);
+    expect(await page.frameLocator('#outer-frame').locator('kiemi-recorder .bar').count()).toBe(0);
+    await page.getByRole('button', { name: 'Dừng' }).click();
+    await expect.poll(() => stopAsked).toBe(1);
+    await rec.stop();
+    expect(await page.locator('kiemi-recorder').count()).toBe(0);
+  });
+});
+
+describe('Pick and Highlight [C-06]', () => {
+  it('picks an element inside an iframe without acting on the page or recording', async () => {
+    await fetch(`${site.url}/api/reset`, { method: 'POST' });
+    context = await browser.newContext();
+    const rec = await startRecorder(context, {
+      startUrl: `${site.url}/iframe.html`,
+      capture: false,
+      toolbar: false,
+    });
+    const page = rec.page;
+    if (!page) throw new Error('no page');
+    const frame = page.frameLocator('#outer-frame');
+    await frame.locator('#inner-greet').waitFor();
+    const picked = rec.pick();
+    await new Promise((r) => setTimeout(r, 200));
+    await frame.getByRole('button', { name: 'Chào' }).click();
+    const locator = await picked;
+    expect(locator?.strategies[0]).toEqual({
+      kind: 'role',
+      role: 'button',
+      name: 'Chào',
+      exact: true,
+    });
+    // The click was swallowed: the greeting did not run.
+    expect(await frame.locator('#inner-result').textContent()).toBe('');
+    expect(rec.steps).toEqual([]);
+
+    // Esc → null.
+    const cancelled = rec.pick();
+    await new Promise((r) => setTimeout(r, 200));
+    await page.keyboard.press('Escape');
+    expect(await cancelled).toBeNull();
+  });
+
+  it('highlights where a locator points and reports 0 / 1 / several matches', async () => {
+    const rec = await record('/form.html', undefined);
+    const page = rec.page;
+    if (!page) throw new Error('no page');
+    await page.locator('#username').pressSequentially('nhanvien');
+    const one = await rec.highlight({ strategies: [{ kind: 'css', value: '#username' }] });
+    expect(one).toEqual({ count: 1, strategyIndex: 0 });
+    expect(await page.locator('kiemi-recorder .mark').count()).toBe(1);
+
+    const many = await rec.highlight({ strategies: [{ kind: 'css', value: 'input' }] });
+    expect(many.count).toBe(2);
+    expect(await page.locator('kiemi-recorder .mark.many').count()).toBe(2);
+    expect(await page.locator('kiemi-recorder .mark .tag').first().textContent()).toBe(
+      '2 phần tử khớp',
+    );
+
+    const none = await rec.highlight({ strategies: [{ kind: 'css', value: '#nope' }] });
+    expect(none).toEqual({ count: 0 });
+    expect(await page.locator('kiemi-recorder .mark').count()).toBe(0);
   });
 });

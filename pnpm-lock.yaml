@@ -275,9 +275,15 @@ importers:
 
   packages/recorder:
     dependencies:
+      '@kiemi/engine':
+        specifier: workspace:*
+        version: link:../engine
       '@kiemi/schema':
         specifier: workspace:*
         version: link:../schema
+      '@kiemi/shared':
+        specifier: workspace:*
+        version: link:../shared
       playwright-core:
         specifier: 1.64.1
         version: 1.64.1
@@ -291,9 +297,6 @@ importers:
       '@kiemi/demo-site':
         specifier: workspace:*
         version: link:../../apps/demo-site
-      '@kiemi/engine':
-        specifier: workspace:*
-        version: link:../engine
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6

@@ -69,6 +69,9 @@ export class StepCollector {
         changes.push(this.add('goto', { url }));
         break;
       }
+      case 'saveSession':
+        changes.push(this.add('saveSession', { name: event.name }));
+        break;
       case 'reload':
         changes.push(this.add('navigate', { to: 'reload' }));
         break;
@@ -123,6 +126,29 @@ export class StepCollector {
         }
         break;
       }
+      case 'assert': {
+        const t = { target: targetParam(event.target) };
+        const [action, params] =
+          event.check === 'visible'
+            ? ['assertVisible', t]
+            : event.check === 'checked'
+              ? ['assertState', { ...t, state: 'checked' }]
+              : [
+                  event.check === 'text' ? 'assertText' : 'assertValue',
+                  { ...t, value: event.value ?? '' },
+                ];
+        changes.push(this.add(action, params));
+        break;
+      }
+      case 'extract':
+        changes.push(
+          this.add('extract', {
+            target: targetParam(event.target),
+            from: event.from,
+            into: event.into,
+          }),
+        );
+        break;
       case 'press':
         changes.push(
           this.add(

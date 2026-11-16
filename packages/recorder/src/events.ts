@@ -41,8 +41,46 @@ export const PageEventSchema = z.discriminatedUnion('kind', [
     keys: z.string().min(1).max(100),
     target: RecordedTargetSchema.optional(),
   }),
+  /** "Thêm kiểm tra" on an element [K-03]. */
+  z.object({
+    kind: z.literal('assert'),
+    target: RecordedTargetSchema,
+    check: z.enum(['visible', 'text', 'value', 'checked']),
+    value: z.string().max(10_000).optional(),
+  }),
+  /** "Lưu giá trị" of an element into a variable [K-03]. */
+  z.object({
+    kind: z.literal('extract'),
+    target: RecordedTargetSchema,
+    from: z.enum(['text', 'value']),
+    into: z
+      .string()
+      .regex(/^[A-Za-z_][A-Za-z0-9_]*$/)
+      .max(64),
+  }),
 ]);
 export type PageEvent = z.infer<typeof PageEventSchema>;
+
+/** Messages of the in-page UI that drive the recorder rather than add steps. */
+export const UiEventSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('command'),
+    command: z.enum(['assert', 'extract', 'saveLogin', 'stop']),
+  }),
+  /** Pick mode ended (menu answered, or Esc). */
+  z.object({ kind: z.literal('pickDone'), cancelled: z.boolean().optional() }),
+  /** An element chosen with Pick [C-06]. */
+  z.object({ kind: z.literal('picked'), target: RecordedTargetSchema }),
+  /** "Lưu đăng nhập" with the session name typed in the page [F-02]. */
+  z.object({
+    kind: z.literal('saveLogin'),
+    name: z
+      .string()
+      .regex(/^[A-Za-z_][A-Za-z0-9_]*$/)
+      .max(64),
+  }),
+]);
+export type UiEvent = z.infer<typeof UiEventSchema>;
 
 /** A tab of the recorded browser context: stable id + 1-based position. */
 export interface TabRef {
@@ -58,4 +96,6 @@ export type RecordedEvent =
   | (PageEvent & { tab: TabRef; frame: number })
   | { kind: 'goto'; tab: TabRef; url: string }
   | { kind: 'reload'; tab: TabRef }
-  | { kind: 'newTab'; tab: TabRef; url: string };
+  | { kind: 'newTab'; tab: TabRef; url: string }
+  /** Login session saved from the toolbar [F-02]. */
+  | { kind: 'saveSession'; tab: TabRef; name: string };
