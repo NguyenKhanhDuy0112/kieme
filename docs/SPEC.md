@@ -17,9 +17,10 @@ Mỗi yêu cầu có ID để ROADMAP, commit và test tham chiếu.
 | N-07 | Secret (mật khẩu, token) mã hóa bằng keychain hệ điều hành, không lộ trong log/ảnh/báo cáo | v1 |
 | N-08 | Test file có `schemaVersion`; file cũ luôn mở và chạy được trên app mới | v1 |
 | N-09 | Tự cập nhật app; báo lỗi crash (opt-in) | v1 |
-| N-11 | **Phát hành tự động**: push tag `vX.Y.Z` → GitHub Actions build Win/Mac/portable, ký code, upload lên GitHub Releases (repo public `kiemi-releases` nếu repo code private) | v1 |
-| N-12 | **Tự cập nhật không cần tải lại**: kiểm tra khi mở app, tải ngầm, hiện "Có gì mới" + nút "Khởi động lại để cập nhật"; dữ liệu giữ nguyên; DB migration tự chạy khi mở bản mới. Bản portable: chỉ thông báo có bản mới | v1 |
+| N-11 | **Phát hành tự động**: push tag `vX.Y.Z` → GitHub Actions build Win/Mac/portable, ký code **khi có chứng chỉ** (v1 phát hành chưa ký — xem N-14), upload lên GitHub Releases (repo public `kiemi-releases` nếu repo code private) | v1 |
+| N-12 | **Tự cập nhật không cần tải lại**: kiểm tra khi mở app, tải ngầm, hiện "Có gì mới" + nút "Khởi động lại để cập nhật"; dữ liệu giữ nguyên; DB migration tự chạy khi mở bản mới. Bản portable **và bản macOS chưa ký**: chỉ thông báo có bản mới + nút "Tải bản mới" (cài đè, dữ liệu giữ nguyên) | v1 |
 | N-13 | **Không cần cài thêm gì**: không cần quyền admin (cài per-user), không cần Node/Playwright/tài khoản; trình duyệt dùng Edge/Chrome có sẵn hoặc tự tải 1 lần | v1 |
+| N-14 | **Ký code**: Windows (chứng chỉ OV/EV hoặc Azure Trusted Signing) + macOS (Developer ID + notarize) → không còn cảnh báo SmartScreen/Gatekeeper; bản macOS tự cập nhật như Windows. Tiêu chí: cài trên máy sạch không có cảnh báo; mac cập nhật bằng "Khởi động lại để cập nhật" | v1.x |
 | N-10 | Có bản **portable** cho Windows (1 file .exe, không cần cài, không cần quyền admin) để chạy trực tiếp trên máy/server chỉ truy cập được qua RDP | v1 |
 
 ---
@@ -232,6 +233,7 @@ Load testing · Pentest · App mobile native · App desktop · Vượt captcha �
 |---|---|---|---|
 | 2026-11-16 | — | Phiên bản SPEC đầu tiên | |
 | 2026-11-16 | N-11, N-12, N-13 | Thêm phát hành tự động, tự cập nhật, không cần cài thêm | Người dùng chỉ tải 1 lần rồi dùng |
+| 2026-11-16 | N-11, N-12, N-14 | v1 phát hành **chưa ký code**; mac chưa ký chỉ thông báo bản mới; ký code tách thành N-14 (v1.x) | Chưa có chứng chỉ; người dùng chốt phát hành không ký |
 
 ---
 

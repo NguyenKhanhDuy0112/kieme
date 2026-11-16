@@ -72,11 +72,12 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 
 ## M7 — Đóng gói & Phát hành
 - [x] **M7-01** electron-builder: `.exe` (NSIS) + `.dmg` + **Windows portable `.exe`** [N-10]
-- [ ] **M7-02** Ký code Windows + notarize macOS (cần chứng chỉ — hỏi người dùng) — *cấu hình + workflow đã sẵn (ADR 0015), chỉ chờ chứng chỉ/secret*
+- [x] **M7-02** Ký code Windows + notarize macOS — *chốt 2026-11-16: v1 phát hành chưa ký; cấu hình + workflow ký sẵn qua secret (ADR 0015); mac chưa ký chỉ báo bản mới [N-12]; ký thật = N-14 (v1.x)*
 - [x] **M7-03** Auto-update (electron-updater, nguồn GitHub Releases): tải ngầm, "Có gì mới", khởi động lại để cập nhật; DB migration khi mở bản mới; portable chỉ thông báo [N-09, N-12]
 - [x] **M7-03b** GitHub Actions release: tag → build Win (NSIS per-user + portable) & Mac (dmg, universal) → ký code → publish Releases; release notes từ Changesets [N-11, N-13]
 - [x] **M7-04** Sentry opt-in [N-09]
 - [x] **M7-05** Hướng dẫn sử dụng (docs người dùng) + checklist phát hành v1.0
 
 ## Sau v1 (v1.x)
+N-14 (ký code Windows + notarize macOS, khi có chứng chỉ).
 M-04 → M-07 (AI tạo test, import), A-19, A-20, B-12 → B-14, C-08, D-08, F-05 → F-09, G-02, G-04, H-05 → H-08, I-06 → I-08, J-05.
