@@ -29,7 +29,7 @@ module.exports = {
   extraResources: [{ from: '../demo-site/dist', to: 'sample-site', filter: ['**/*'] }],
   // better-sqlite3 uses N-API prebuilds that load in Electron as-is (ADR 0008).
   npmRebuild: false,
-  publish: [{ provider: 'github', owner: releaseOwner, repo: releaseRepo, releaseType: 'release' }],
+  publish: [{ provider: 'github', owner: releaseOwner, repo: releaseRepo, releaseType: 'draft' }],
   win: {
     icon: 'build/icon.png',
     target: [

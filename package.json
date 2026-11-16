@@ -14,10 +14,13 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "changeset": "changeset",
+    "release:version": "changeset version && biome format --write apps/desktop/package.json"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
+    "@changesets/cli": "3.0.3",
     "@types/node": "^26.6.6",
     "turbo": "^2.11.11",
     "typescript": "^7.0.2",

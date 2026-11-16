@@ -1,0 +1,113 @@
+# Push a tag vX.Y.Z → build Windows (NSIS per-user + portable) and macOS (universal dmg/zip),
+# sign when certificates are configured, publish to GitHub Releases [N-11, N-13].
+# Steps: draft release with notes from CHANGELOG → each OS uploads into the draft →
+# publish only when every build succeeded (users never see a half-uploaded release).
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  # Optional: publish to another repo (e.g. kiemi-releases when the code repo is private).
+  KIEMI_RELEASE_OWNER: ${{ vars.KIEMI_RELEASE_OWNER }}
+  KIEMI_RELEASE_REPO: ${{ vars.KIEMI_RELEASE_REPO }}
+  # GITHUB_TOKEN can only write this repo; set KIEMI_RELEASE_TOKEN for another one.
+  GH_TOKEN: ${{ secrets.KIEMI_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+jobs:
+  draft:
+    name: Draft release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - name: Release notes (fails if the tag ≠ app version)
+        run: node apps/desktop/scripts/release-notes.mts "${{ github.ref_name }}" release-notes.md
+      - name: Create draft
+        run: |
+          REPO="${KIEMI_RELEASE_OWNER:-${{ github.repository_owner }}}/${KIEMI_RELEASE_REPO:-${{ github.event.repository.name }}}"
+          gh release view "${{ github.ref_name }}" --repo "$REPO" >/dev/null 2>&1 \
+            || gh release create "${{ github.ref_name }}" --repo "$REPO" --draft \
+                 --title "Kiemi ${{ github.ref_name }}" --notes-file release-notes.md
+      - uses: actions/upload-artifact@v5
+        with:
+          name: release-notes
+          path: release-notes.md
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: draft
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win
+          - os: macos-latest
+            target: --mac
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check
+        run: pnpm lint && pnpm typecheck && pnpm test
+      - name: Build (demo site + app)
+        run: pnpm build
+      - uses: actions/download-artifact@v5
+        with:
+          name: release-notes
+          path: apps/desktop
+      - name: Package, sign and upload
+        working-directory: apps/desktop
+        shell: bash
+        env:
+          # Windows: .pfx (base64) + password — electron-builder reads WIN_CSC_* for Windows.
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          # macOS: Developer ID Application .p12 (base64) + password.
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          # macOS notarization (App Store Connect API key).
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then CERT="$WIN_CSC_LINK"; else CERT="$CSC_LINK"; fi
+          [ -z "$WIN_CSC_LINK" ] && unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD
+          [ -z "$CSC_LINK" ] && unset CSC_LINK CSC_KEY_PASSWORD
+          if [ -z "$CERT" ]; then
+            echo "::warning::No signing certificate for $RUNNER_OS: building unsigned."
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          if [ -n "$APPLE_API_KEY_BASE64" ] && [ "$RUNNER_OS" = "macOS" ]; then
+            echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/apple-api-key.p8"
+            export APPLE_API_KEY="$RUNNER_TEMP/apple-api-key.p8"
+          fi
+          pnpm exec electron-builder --config electron-builder.config.js ${{ matrix.target }} \
+            --publish always -c.releaseInfo.releaseNotesFile=release-notes.md
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish the draft
+        run: |
+          REPO="${KIEMI_RELEASE_OWNER:-${{ github.repository_owner }}}/${KIEMI_RELEASE_REPO:-${{ github.event.repository.name }}}"
+          gh release edit "${{ github.ref_name }}" --repo "$REPO" --draft=false --latest
