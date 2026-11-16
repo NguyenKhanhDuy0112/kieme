@@ -1,9 +1,10 @@
-import type { TestCase } from '@kiemi/schema';
+import type { LocatorStrategy, TestCase } from '@kiemi/schema';
 import { EmptyState } from '@renderer/components/empty-state';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { elementUsages } from '@renderer/features/editor/doc-model';
+import { strategyText } from '@renderer/features/editor/strategies';
 import { errorMessage } from '@renderer/lib/errors';
 import { useAppStore } from '@renderer/lib/store';
 import { trpc, trpcClient } from '@renderer/lib/trpc';
@@ -36,6 +37,8 @@ export function ElementsScreen() {
   const openTestId = useAppStore((s) => s.openTestId);
   const openTest = useAppStore((s) => s.openTest);
   const lib = useQuery({ ...trpc.elements.list.queryOptions({ projectId }), enabled: !!projectId });
+  const settings = useQuery(trpc.system.settings.queryOptions());
+  const advanced = settings.data?.advancedMode === true;
   const test = useQuery({
     ...trpc.testCases.get.queryOptions({ id: openTestId ?? '' }),
     enabled: !!openTestId,
@@ -116,6 +119,7 @@ export function ElementsScreen() {
                         <Trash2 />
                       </Button>
                     </div>
+                    {advanced && <StrategyList strategies={el.strategies} />}
                     <p className="mt-2 text-xs text-muted-foreground">
                       {used.length ? (
                         <>
@@ -198,5 +202,19 @@ export function ElementsScreen() {
         </section>
       </div>
     </div>
+  );
+}
+
+/** Advanced mode: the raw ways to find an element, in the order they are tried (C-07). */
+function StrategyList({ strategies }: { strategies: readonly LocatorStrategy[] }) {
+  return (
+    <ol className="mt-2 flex list-decimal flex-col gap-0.5 pl-9 font-mono text-xs text-muted-foreground">
+      {strategies.map((s, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: order is the identity.
+        <li key={i} className="break-all">
+          {strategyText(s)}
+        </li>
+      ))}
+    </ol>
   );
 }

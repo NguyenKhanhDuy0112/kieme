@@ -1,4 +1,4 @@
-import type { TestCase } from '@kiemi/schema';
+import type { LocatorStrategy, TestCase } from '@kiemi/schema';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
@@ -17,6 +17,8 @@ import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
 import { toLocator } from '../record/apply-changes';
 import { useEditorStore } from './editor-store';
+import { ROLES, type TargetKind, targetKindsFor, useAdvancedMode } from './strategies';
+import { StrategiesEditor } from './strategies-editor';
 import { VariableInput } from './variable-input';
 
 export type JsonSchema = {
@@ -411,35 +413,21 @@ function JsonField({
   );
 }
 
-const ROLES = [
-  'button',
-  'link',
-  'textbox',
-  'checkbox',
-  'radio',
-  'combobox',
-  'option',
-  'heading',
-  'cell',
-  'row',
-  'tab',
-  'menuitem',
-  'img',
-  'dialog',
-];
-type TargetKind = 'ref' | 'text' | 'label' | 'placeholder' | 'role' | 'css' | 'locator';
-
 /** Which way a target value is expressed. */
 export function targetKind(v: unknown): TargetKind {
   if (!v || typeof v !== 'object') return 'text';
   const o = v as Record<string, unknown>;
   if ('ref' in o) return 'ref';
   if ('strategies' in o) return 'locator';
-  for (const k of ['text', 'label', 'placeholder', 'role', 'css'] as const) if (k in o) return k;
+  for (const k of ['text', 'label', 'placeholder', 'role', 'testId', 'css'] as const)
+    if (k in o) return k;
   return 'text';
 }
 
-/** Element chooser: saved element, visible text, label, placeholder, type + name, or CSS (advanced). */
+/**
+ * Element chooser: saved element, visible text, label, placeholder, type + name; in advanced
+ * mode also test id, CSS and the full list of strategies (C-07).
+ */
 function TargetField({
   id,
   value,
@@ -452,24 +440,46 @@ function TargetField({
   elements: TestCase['elements'];
 }) {
   const tx = useTx();
+  const advanced = useAdvancedMode();
   const kind = targetKind(value);
   const o = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
   const refs = Object.entries(elements);
-  const kinds: { k: TargetKind; label: string }[] = [
-    ...(refs.length ? [{ k: 'ref' as const, label: tx('ui.props.target.fromLibrary') }] : []),
-    { k: 'text', label: tx('ui.props.target.byText') },
-    { k: 'label', label: tx('ui.props.target.byLabel') },
-    { k: 'placeholder', label: tx('ui.props.target.byPlaceholder') },
-    { k: 'role', label: tx('ui.props.target.byRole') },
-    { k: 'css', label: tx('ui.props.target.byCss') },
-    ...(kind === 'locator'
-      ? [{ k: 'locator' as const, label: tx('ui.props.target.fromLibrary') }]
-      : []),
-  ];
+  const label = (k: TargetKind): string => {
+    switch (k) {
+      case 'ref':
+        return tx('ui.props.target.fromLibrary');
+      case 'text':
+        return tx('ui.props.target.byText');
+      case 'label':
+        return tx('ui.props.target.byLabel');
+      case 'placeholder':
+        return tx('ui.props.target.byPlaceholder');
+      case 'role':
+        return tx('ui.props.target.byRole');
+      case 'testId':
+        return tx('ui.advanced.byTestId');
+      case 'css':
+        return tx('ui.props.target.byCss');
+      case 'locator':
+        return advanced ? tx('ui.advanced.byStrategies') : tx('ui.props.target.fromLibrary');
+    }
+  };
   const change = (k: TargetKind) => {
     if (k === 'ref') onChange({ ref: refs[0]?.[0] ?? '' });
     else if (k === 'role') onChange({ role: 'button', name: '' });
-    else if (k !== 'locator') onChange({ [k]: '' });
+    else if (k === 'locator') {
+      const loc = toLocator(value, elements);
+      onChange({ strategies: loc?.strategies ?? [{ kind: 'css', value: '' }] });
+    } else onChange({ [k]: '' });
+  };
+  const ref = typeof o.ref === 'string' ? o.ref : '';
+  const saved = kind === 'ref' ? elements[ref] : undefined;
+  const editSaved = (strategies: LocatorStrategy[]) => {
+    if (!saved) return;
+    useEditorStore.getState().apply((d) => ({
+      ...d,
+      elements: { ...d.elements, [ref]: { ...saved, strategies } },
+    }));
   };
   return (
     <div className="flex flex-col gap-1.5 rounded-md border p-2">
@@ -478,21 +488,25 @@ function TargetField({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {kinds.map((x) => (
-            <SelectItem key={x.k} value={x.k}>
-              {x.label}
+          {targetKindsFor(kind, refs.length > 0, advanced).map((k) => (
+            <SelectItem key={k} value={k}>
+              {label(k)}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       {kind === 'ref' && (
-        <Select value={String(o.ref ?? '')} onValueChange={(ref) => onChange({ ref })}>
-          <SelectTrigger size="sm" className="w-full">
+        <Select value={ref} onValueChange={(r) => onChange({ ref: r })}>
+          <SelectTrigger
+            size="sm"
+            className="w-full"
+            aria-label={tx('ui.props.target.fromLibrary')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {refs.map(([ref, el]) => (
-              <SelectItem key={ref} value={ref}>
+            {refs.map(([key, el]) => (
+              <SelectItem key={key} value={key}>
                 {el.name}
               </SelectItem>
             ))}
@@ -520,20 +534,40 @@ function TargetField({
             className="flex-1"
             value={String(o.name ?? '')}
             placeholder={tx('ui.props.target.name')}
+            label={tx('ui.props.target.name')}
             onChange={(name) => onChange({ ...o, name })}
           />
         </div>
       )}
-      {(kind === 'text' || kind === 'label' || kind === 'placeholder' || kind === 'css') && (
+      {(kind === 'text' ||
+        kind === 'label' ||
+        kind === 'placeholder' ||
+        kind === 'testId' ||
+        kind === 'css') && (
         <VariableInput
+          className={kind === 'css' || kind === 'testId' ? 'font-mono text-xs' : ''}
           value={String(o[kind] ?? '')}
+          label={label(kind)}
           onChange={(v) => onChange({ ...o, [kind]: v })}
         />
       )}
-      {kind === 'locator' && (
-        <p className="text-xs text-muted-foreground">
-          {tx('ui.elements.strategies', { count: (o.strategies as unknown[]).length })}
-        </p>
+      {kind === 'locator' &&
+        (advanced ? (
+          <StrategiesEditor
+            value={(o.strategies as LocatorStrategy[]) ?? []}
+            onChange={(strategies) => onChange({ ...o, strategies })}
+          />
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {tx('ui.elements.strategies', { count: (o.strategies as unknown[]).length })}
+          </p>
+        ))}
+      {advanced && saved && (
+        <StrategiesEditor
+          value={saved.strategies}
+          onChange={editSaved}
+          note={tx('ui.advanced.sharedElement', { name: saved.name })}
+        />
       )}
       <PickButtons value={value} onChange={onChange} elements={elements} />
     </div>

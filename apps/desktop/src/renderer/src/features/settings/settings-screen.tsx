@@ -138,6 +138,20 @@ export function SettingsScreen() {
             }}
           />
         </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-0.5">
+            <Label htmlFor="set-advanced">{tx('ui.advanced.setting')}</Label>
+            <p id="set-advanced-hint" className="text-xs text-muted-foreground">
+              {tx('ui.advanced.settingHint')}
+            </p>
+          </div>
+          <Switch
+            id="set-advanced"
+            aria-describedby="set-advanced-hint"
+            checked={s.advancedMode}
+            onCheckedChange={(advancedMode) => void save({ advancedMode })}
+          />
+        </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="set-dir">{tx('ui.settingsScreen.resultsDir')}</Label>
           <Input

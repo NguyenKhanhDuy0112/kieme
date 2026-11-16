@@ -20,6 +20,7 @@ import { useEditorStore } from './editor-store';
 import { DataTab, SessionsTab, VariablesTab } from './editor-tabs';
 import { PropsPanel } from './props-panel';
 import { AddStepMenu, StepTable, useDeleteStep } from './step-table';
+import { AdvancedModeContext } from './strategies';
 import { VariableSourcesContext } from './variable-input';
 import type { VariableSources } from './variable-suggest';
 
@@ -46,6 +47,7 @@ export function EditorScreen({ testId }: { testId: string }) {
   const del = useDeleteStep();
 
   const test = useQuery(trpc.testCases.get.queryOptions({ id: testId }));
+  const settings = useQuery(trpc.system.settings.queryOptions());
   const save = useMutation(trpc.testCases.save.mutationOptions());
   const envs = useQuery({
     ...trpc.environments.list.queryOptions({ projectId: projectId ?? '' }),
@@ -209,147 +211,149 @@ export function EditorScreen({ testId }: { testId: string }) {
   );
 
   return (
-    <VariableSourcesContext.Provider value={sources}>
-      <div className="flex min-h-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b px-3 py-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={tx('ui.editor.back')}
-            onClick={() => openTest(null)}
-          >
-            <ArrowLeft />
-          </Button>
-          <h1 className="min-w-0 truncate text-base font-semibold">{doc.name}</h1>
-          {status}
-          <div className="ml-auto flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={tx('ui.editor.undo')}
-                  disabled={!past.length}
-                  onClick={store.undo}
-                >
-                  <Undo2 />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{tx('ui.editor.undo')}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={tx('ui.editor.redo')}
-                  disabled={!future.length}
-                  onClick={store.redo}
-                >
-                  <Redo2 />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{tx('ui.editor.redo')}</TooltipContent>
-            </Tooltip>
-            <EditorMoreMenu testId={testId} doc={doc} beforeCreate={doSave} />
-            <span data-tour="record" className="inline-flex">
-              <RecordButton
-                testId={testId}
-                doc={doc}
-                selectedId={selectedId}
-                beforeRecord={doSave}
-              />
-            </span>
-            <span data-tour="run" className="inline-flex">
-              <EditorRunButton
-                testId={testId}
-                testCase={doc}
-                beforeRun={doSave}
-                dialogStartAt={runFrom ?? undefined}
-                onDialogClose={() => setRunFrom(null)}
-              />
-            </span>
-          </div>
-        </header>
-        <RecordPanel testId={testId} />
-        {conflict && (
-          <div
-            role="alert"
-            className="flex items-center gap-3 border-b border-warning/40 bg-warning/10 px-4 py-2 text-sm"
-          >
-            {tx('ui.editor.conflict')}
+    <AdvancedModeContext.Provider value={settings.data?.advancedMode === true}>
+      <VariableSourcesContext.Provider value={sources}>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <header className="flex items-center gap-2 border-b px-3 py-2">
             <Button
-              size="sm"
-              variant="outline"
-              onClick={async () => {
-                const fresh = await test.refetch();
-                if (fresh.data)
-                  useEditorStore.getState().load(testId, fresh.data.content, fresh.data.version);
-                setConflict(false);
-              }}
+              variant="ghost"
+              size="icon"
+              aria-label={tx('ui.editor.back')}
+              onClick={() => openTest(null)}
             >
-              {tx('ui.editor.reload')}
+              <ArrowLeft />
             </Button>
-          </div>
-        )}
-        <div className="flex min-h-0 flex-1">
-          <Tabs defaultValue="steps" className="flex min-w-0 flex-1 flex-col gap-0">
-            <TabsList className="mx-3 mt-2">
-              <TabsTrigger value="steps">{tx('ui.editor.tabs.steps')}</TabsTrigger>
-              <TabsTrigger value="data">{tx('ui.editor.tabs.data')}</TabsTrigger>
-              <TabsTrigger value="variables">{tx('ui.editor.tabs.variables')}</TabsTrigger>
-              <TabsTrigger value="sessions">{tx('ui.editor.tabs.sessions')}</TabsTrigger>
-            </TabsList>
-            <TabsContent
-              value="steps"
-              data-tour="steps"
-              className="flex min-h-0 flex-1 flex-col overflow-auto"
-            >
-              {doc.steps.length === 0 && doc.cleanup.length === 0 ? (
-                <EmptyState
-                  icon={ListChecks}
-                  title={tx('ui.editor.emptyTitle')}
-                  text={tx('ui.editor.emptyText')}
-                  action={<AddStepMenu />}
+            <h1 className="min-w-0 truncate text-base font-semibold">{doc.name}</h1>
+            {status}
+            <div className="ml-auto flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={tx('ui.editor.undo')}
+                    disabled={!past.length}
+                    onClick={store.undo}
+                  >
+                    <Undo2 />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tx('ui.editor.undo')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={tx('ui.editor.redo')}
+                    disabled={!future.length}
+                    onClick={store.redo}
+                  >
+                    <Redo2 />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tx('ui.editor.redo')}</TooltipContent>
+              </Tooltip>
+              <EditorMoreMenu testId={testId} doc={doc} beforeCreate={doSave} />
+              <span data-tour="record" className="inline-flex">
+                <RecordButton
+                  testId={testId}
+                  doc={doc}
+                  selectedId={selectedId}
+                  beforeRecord={doSave}
                 />
-              ) : (
-                <>
-                  <StepTable
-                    sharedNames={sharedNames}
-                    onRunFrom={setRunFrom}
-                    onChip={(id, param) => {
-                      store.select(id);
-                      setFocusParam(param);
-                    }}
-                  />
-                  <div className="p-3">
-                    <AddStepMenu variant="outline" />
-                  </div>
-                </>
-              )}
-            </TabsContent>
-            <TabsContent value="data" className="overflow-auto">
-              <DataTab />
-            </TabsContent>
-            <TabsContent value="variables" className="overflow-auto">
-              <VariablesTab />
-            </TabsContent>
-            <TabsContent value="sessions" className="overflow-auto">
-              <SessionsTab />
-            </TabsContent>
-          </Tabs>
-          {detailOpen && (
-            <aside
-              className="w-96 shrink-0 overflow-auto border-l"
-              aria-label={tx('ui.props.title')}
+              </span>
+              <span data-tour="run" className="inline-flex">
+                <EditorRunButton
+                  testId={testId}
+                  testCase={doc}
+                  beforeRun={doSave}
+                  dialogStartAt={runFrom ?? undefined}
+                  onDialogClose={() => setRunFrom(null)}
+                />
+              </span>
+            </div>
+          </header>
+          <RecordPanel testId={testId} />
+          {conflict && (
+            <div
+              role="alert"
+              className="flex items-center gap-3 border-b border-warning/40 bg-warning/10 px-4 py-2 text-sm"
             >
-              <PropsPanel key={selectedId ?? 'none'} focusParam={focusParam} />
-            </aside>
+              {tx('ui.editor.conflict')}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  const fresh = await test.refetch();
+                  if (fresh.data)
+                    useEditorStore.getState().load(testId, fresh.data.content, fresh.data.version);
+                  setConflict(false);
+                }}
+              >
+                {tx('ui.editor.reload')}
+              </Button>
+            </div>
           )}
+          <div className="flex min-h-0 flex-1">
+            <Tabs defaultValue="steps" className="flex min-w-0 flex-1 flex-col gap-0">
+              <TabsList className="mx-3 mt-2">
+                <TabsTrigger value="steps">{tx('ui.editor.tabs.steps')}</TabsTrigger>
+                <TabsTrigger value="data">{tx('ui.editor.tabs.data')}</TabsTrigger>
+                <TabsTrigger value="variables">{tx('ui.editor.tabs.variables')}</TabsTrigger>
+                <TabsTrigger value="sessions">{tx('ui.editor.tabs.sessions')}</TabsTrigger>
+              </TabsList>
+              <TabsContent
+                value="steps"
+                data-tour="steps"
+                className="flex min-h-0 flex-1 flex-col overflow-auto"
+              >
+                {doc.steps.length === 0 && doc.cleanup.length === 0 ? (
+                  <EmptyState
+                    icon={ListChecks}
+                    title={tx('ui.editor.emptyTitle')}
+                    text={tx('ui.editor.emptyText')}
+                    action={<AddStepMenu />}
+                  />
+                ) : (
+                  <>
+                    <StepTable
+                      sharedNames={sharedNames}
+                      onRunFrom={setRunFrom}
+                      onChip={(id, param) => {
+                        store.select(id);
+                        setFocusParam(param);
+                      }}
+                    />
+                    <div className="p-3">
+                      <AddStepMenu variant="outline" />
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+              <TabsContent value="data" className="overflow-auto">
+                <DataTab />
+              </TabsContent>
+              <TabsContent value="variables" className="overflow-auto">
+                <VariablesTab />
+              </TabsContent>
+              <TabsContent value="sessions" className="overflow-auto">
+                <SessionsTab />
+              </TabsContent>
+            </Tabs>
+            {detailOpen && (
+              <aside
+                className="w-96 shrink-0 overflow-auto border-l"
+                aria-label={tx('ui.props.title')}
+              >
+                <PropsPanel key={selectedId ?? 'none'} focusParam={focusParam} />
+              </aside>
+            )}
+          </div>
         </div>
-      </div>
-      <span hidden data-version={version} />
-      <EditorTour />
-    </VariableSourcesContext.Provider>
+        <span hidden data-version={version} />
+        <EditorTour />
+      </VariableSourcesContext.Provider>
+    </AdvancedModeContext.Provider>
   );
 }

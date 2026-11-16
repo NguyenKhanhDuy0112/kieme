@@ -24,6 +24,8 @@ export function VariableInput({
   placeholder,
   invalid,
   className,
+  label,
+  describedBy,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -31,6 +33,9 @@ export function VariableInput({
   placeholder?: string;
   invalid?: boolean;
   className?: string;
+  /** Accessible name when there is no visible <label>. */
+  label?: string;
+  describedBy?: string;
 }) {
   const tx = useTx();
   const sources = useContext(VariableSourcesContext);
@@ -65,6 +70,8 @@ export function VariableInput({
         value={value}
         placeholder={placeholder}
         aria-invalid={invalid || undefined}
+        aria-label={label}
+        aria-describedby={describedBy}
         role="combobox"
         aria-expanded={items.length > 0}
         aria-controls={listId}
