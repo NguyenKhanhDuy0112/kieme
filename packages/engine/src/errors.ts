@@ -20,6 +20,15 @@ export const ENGINE_ERROR_CODES = [
   'PROXY_SECRET_MISSING',
   'UNKNOWN_VARIABLE',
   'INVALID_EXPRESSION',
+  'CONSOLE_ERROR',
+  'HTTP_ERROR',
+  'ASSERTION_FAILED',
+  'CONDITION_TIMEOUT',
+  'API_ERROR',
+  'FILE_NOT_FOUND',
+  'TAB_NOT_FOUND',
+  'UNKNOWN_SHARED_STEP',
+  'ACTION_FAILED',
   'ENGINE_ERROR',
 ] as const;
 export type EngineErrorCode = (typeof ENGINE_ERROR_CODES)[number];
@@ -36,8 +45,19 @@ export class EngineError extends Error {
   }
 }
 
+/** A nested step failed hard: the parent step fails with the same error. */
+export class StepFailure extends Error {
+  readonly runError: RunError;
+  constructor(runError: RunError) {
+    super(runError.message);
+    this.name = 'StepFailure';
+    this.runError = runError;
+  }
+}
+
 /** Converts anything thrown by an action into a serialisable `RunError`. */
 export function toRunError(err: unknown, fallback: EngineErrorCode = 'STEP_FAILED'): RunError {
+  if (err instanceof StepFailure) return err.runError;
   if (err instanceof EngineError) {
     return err.details === undefined
       ? { code: err.code, message: err.message }

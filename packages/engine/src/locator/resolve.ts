@@ -53,7 +53,7 @@ interface Attempt {
  * `timeoutMs`, so elements that appear late are still found.
  */
 export async function resolveLocator(
-  root: LocatorRoot,
+  root: LocatorRoot | (() => LocatorRoot[]),
   locator: Locator,
   options: ResolveOptions,
 ): Promise<ResolvedLocator> {
@@ -64,8 +64,23 @@ export async function resolveLocator(
 
   for (;;) {
     throwIfAborted(signal);
-    last = await attempt(root, locator, options.state ?? 'visible');
-    if (last.found) return last.found;
+    // Several roots = every frame of the page, main frame first [A-15].
+    const roots = typeof root === 'function' ? root() : [root];
+    let merged: Attempt = {};
+    for (const r of roots) {
+      const a = await attempt(r, locator, options.state ?? 'visible');
+      if (a.found) return a.found;
+      merged = {
+        ...((merged.ambiguous ?? a.ambiguous)
+          ? { ambiguous: (merged.ambiguous ?? a.ambiguous) as NonNullable<Attempt['ambiguous']> }
+          : {}),
+        ...(merged.scopeMissing || a.scopeMissing ? { scopeMissing: true } : {}),
+        ...((a.lastError ?? merged.lastError) !== undefined
+          ? { lastError: (a.lastError ?? merged.lastError) as string }
+          : {}),
+      };
+    }
+    last = merged;
     const remaining = deadline - Date.now();
     if (remaining <= 0) break;
     await sleep(Math.min(pollMs, remaining), signal);
@@ -317,4 +332,29 @@ function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
     }
     signal?.addEventListener('abort', onAbort, { once: true });
   });
+}
+
+/**
+ * How many elements a locator matches (first strategy with any match, after
+ * scopes), for "count" assertions and table loops [B-07, D-04].
+ */
+export async function countMatches(
+  root: LocatorRoot,
+  locator: Locator,
+  state: 'visible' | 'attached' = 'visible',
+): Promise<{ count: number; locator: PwLocator | undefined }> {
+  const scoped = await applyScopes(root, locator.scope ?? []);
+  if (!scoped) return { count: 0, locator: undefined };
+  for (const strategy of locator.strategies) {
+    for (const variant of strategyVariants(scoped.root, strategy)) {
+      try {
+        const l = state === 'visible' ? variant.locator.filter({ visible: true }) : variant.locator;
+        const count = await l.count();
+        if (count > 0) return { count, locator: l };
+      } catch {
+        // invalid selector: try next
+      }
+    }
+  }
+  return { count: 0, locator: undefined };
 }

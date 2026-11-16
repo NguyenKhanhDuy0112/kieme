@@ -25,6 +25,15 @@ export const ArtifactRefSchema = z.object({
 });
 export type ArtifactRef = z.infer<typeof ArtifactRefSchema>;
 
+export const DiagnosticSchema = z.object({
+  kind: z.enum(['console', 'pageError', 'http']),
+  session: SessionNameSchema,
+  message: z.string(),
+  url: z.string().optional(),
+  status: z.number().int().optional(),
+});
+export type Diagnostic = z.infer<typeof DiagnosticSchema>;
+
 export const StepResultSchema = z.object({
   stepId: StepIdSchema,
   session: SessionNameSchema,
@@ -53,5 +62,9 @@ export const RunResultSchema = z.object({
   steps: z.array(StepResultSchema),
   cleanup: z.array(StepResultSchema).default([]),
   error: RunErrorSchema.optional(),
+  /** Run-level files: videos, traces [I-03]. */
+  artifacts: z.array(ArtifactRefSchema).default([]),
+  /** Console errors and failed requests seen during the run [F-04]. */
+  diagnostics: z.array(DiagnosticSchema).default([]),
 });
 export type RunResult = z.infer<typeof RunResultSchema>;

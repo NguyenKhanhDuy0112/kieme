@@ -109,3 +109,27 @@ function runPlaywrightCli(
     });
   });
 }
+
+let ffmpegReady: Promise<void> | undefined;
+
+/**
+ * Makes sure Playwright's ffmpeg (needed to record videos, ~1 MB) is installed
+ * in the browsers folder Playwright uses for this process [I-03]. Runs once per
+ * process; a failed attempt is retried next time.
+ */
+export function ensureFfmpeg(run: InstallChromiumOptions['run'] = runPlaywrightCli): Promise<void> {
+  ffmpegReady ??= (async () => {
+    const output: string[] = [];
+    const code = await run(['install', 'ffmpeg'], { ...process.env }, (l) => output.push(l));
+    if (code !== 0) {
+      throw new EngineError('BROWSER_DOWNLOAD_FAILED', 'Could not download ffmpeg for videos', {
+        exitCode: code,
+        output: output.slice(-5).join('\n'),
+      });
+    }
+  })().catch((err: unknown) => {
+    ffmpegReady = undefined;
+    throw err;
+  });
+  return ffmpegReady;
+}

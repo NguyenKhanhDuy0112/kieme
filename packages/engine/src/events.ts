@@ -1,4 +1,4 @@
-import type { RunResult, StepResult } from '@kiemi/schema';
+import type { ArtifactRef, RunResult, StepResult } from '@kiemi/schema';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -16,8 +16,20 @@ export type EngineEvent =
       index: number;
       session: string;
       at: string;
+      /** Set for nested steps (if/else, loop, shared step) [D-01, D-03, D-04]. */
+      parentStepId?: string;
+      /** Step number shown to testers: `5` or `5.2`. */
+      stepNo?: string;
     }
-  | { type: 'stepEnd'; runId: string; phase: StepPhase; index: number; result: StepResult }
+  | {
+      type: 'stepEnd';
+      runId: string;
+      phase: StepPhase;
+      index: number;
+      result: StepResult;
+      parentStepId?: string;
+    }
+  | { type: 'artifact'; runId: string; stepId?: string; artifact: ArtifactRef }
   | { type: 'log'; runId: string; stepId?: string; level: LogLevel; message: string; at: string }
   | { type: 'runEnd'; runId: string; result: RunResult };
 

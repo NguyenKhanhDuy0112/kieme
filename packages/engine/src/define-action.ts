@@ -1,23 +1,47 @@
 import type { Step } from '@kiemi/schema';
-import type { BrowserContext, Page } from 'playwright-core';
+import type { BrowserContext, Page, Locator as PwLocator } from 'playwright-core';
 import type { z } from 'zod';
 import { EngineError } from './errors';
 import type { LogLevel } from './events';
+import type { ResolvedLocator } from './locator/resolve';
+import type { RunServices } from './run/services';
+import type { TargetParam } from './run/target';
+import type { VariableStore } from './vars/store';
 
 /** What an action receives while it runs. */
 export interface ActionContext {
   readonly step: Step;
+  /** Step number shown to testers: `5`, or `5.2` for a nested step. */
+  readonly stepNo: string;
   /** Session (browser context) this step runs in [F-01]. */
   readonly session: string;
   /** Effective timeout for this step in milliseconds [D-07]. */
   readonly timeoutMs: number;
   /** Aborted when the step times out or the run is cancelled. */
   readonly signal: AbortSignal;
+  /** Milliseconds left before this step times out (≥ 0). */
+  remainingMs(): number;
   log(message: string, level?: LogLevel): void;
   /** Active page of this step's session (context created on first use). */
   page(): Promise<Page>;
   /** Browser context of this step's session (own cookies/storage). */
   context(): Promise<BrowserContext>;
+  /** Run variables [E-01, E-02]. */
+  readonly vars: VariableStore;
+  /** Run-wide services (test case, env, sessions, dialogs…). */
+  readonly run: RunServices;
+  /**
+   * Finds the element a target points at in the active page, searching every
+   * frame [A-15, C-01]. Waits up to the step's remaining time.
+   */
+  resolve(
+    target: TargetParam,
+    options?: { state?: 'visible' | 'attached'; timeoutMs?: number },
+  ): Promise<ResolvedLocator>;
+  /** Runs nested steps (if/else, loops, shared steps) as children of this step. */
+  runSteps(steps: readonly unknown[], frame?: Record<string, unknown>): Promise<void>;
+  /** Marks a field that holds a secret so screenshots mask it [E-08]. */
+  markSecret(locator: PwLocator): void;
 }
 
 export interface ActionUi {
@@ -33,6 +57,13 @@ export interface ActionDefinition<P extends z.ZodType = z.ZodType> {
   type: string;
   params: P;
   ui: ActionUi;
+  /** Top-level param keys holding nested steps: not interpolated up front. */
+  rawParams?: readonly string[];
+  /**
+   * Container steps (if/loop/call/waitUntil) are not limited by the step
+   * timeout; their children have their own.
+   */
+  container?: boolean;
   execute(params: z.output<P>, ctx: ActionContext): Promise<void> | void;
 }
 

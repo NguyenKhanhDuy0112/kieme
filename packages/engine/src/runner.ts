@@ -1,23 +1,45 @@
-import type {
-  Dataset,
-  Env,
-  RunError,
-  RunResult,
-  RunStatus,
-  Secrets,
-  Step,
-  StepResult,
-  TestCase,
+import { mkdir } from 'node:fs/promises';
+import { basename, join, relative } from 'node:path';
+import {
+  type ArtifactRef,
+  type Dataset,
+  type Diagnostic,
+  type Env,
+  type RunError,
+  type RunResult,
+  type RunStatus,
+  type Secrets,
+  type SharedStep,
+  type Step,
+  type StepResult,
+  StepSchema,
+  type TestCase,
 } from '@kiemi/schema';
-import type { Browser } from 'playwright-core';
+import type { Browser, Page, Locator as PwLocator } from 'playwright-core';
 import type { z } from 'zod';
-import { proxyFor, SessionPages, type ViewportSettings } from './browser';
+import { ensureFfmpeg, proxyFor, SessionPages, type ViewportSettings } from './browser';
 import type { ActionContext, ActionRegistry } from './define-action';
-import { EngineError, toRunError } from './errors';
+import { EngineError, StepFailure, toRunError } from './errors';
 import type { EngineEvent, EngineEventListener, LogLevel, StepPhase } from './events';
+import { evaluateCondition } from './flow/condition';
+import { type ResolvedLocator, resolveLocator } from './locator/resolve';
+import { DialogController, type RunServices } from './run/services';
+import { toLocator } from './run/target';
+import { maskSecrets, VariableStore } from './vars/store';
 
 /** Default per-step timeout when neither the step nor the request sets one [D-07]. */
 export const DEFAULT_STEP_TIMEOUT_MS = 10_000;
+
+export interface ArtifactOptions {
+  /** Folder for this run's screenshots, videos and traces. */
+  dir: string;
+  /** Screenshots: on failed steps (default), every step, or never [I-02]. */
+  screenshots?: 'onFailure' | 'always' | 'off';
+  /** Record a video of every session [I-03]. */
+  video?: boolean;
+  /** Record a Playwright trace of every session [I-03]. */
+  trace?: boolean;
+}
 
 export interface RunRequest {
   runId: string;
@@ -26,11 +48,22 @@ export interface RunRequest {
   env?: Env;
   secrets?: Secrets;
   rowIndex?: number;
+  /** Shared steps callable with the `call` action [D-01]. */
+  sharedSteps?: SharedStep[];
+  /** Suite-level variables [E-02]. */
+  suiteVariables?: Record<string, string>;
   options?: {
     /** Fallback timeout for steps without `timeoutMs`. */
     defaultStepTimeoutMs?: number;
     /** Screen size / device emulation for every session [G-03]. */
     viewport?: ViewportSettings;
+    /** Fail the step when the page logs a JS error [F-04]. */
+    failOnConsoleError?: boolean;
+    /** Fail the step when a request answers 4xx/5xx [F-04]. */
+    failOnHttpError?: boolean;
+    artifacts?: ArtifactOptions;
+    /** Base folder for relative upload paths [A-11]. */
+    filesDir?: string;
   };
 }
 
@@ -45,220 +78,612 @@ export interface RunOptions {
   now?: () => Date;
 }
 
+interface Parent {
+  step: Step;
+  stepNo: string;
+  children: StepResult[];
+  /** Top-level step number, for error details. */
+  topNo: number;
+}
+
 type Outcome = { result: StepResult; stop: boolean };
 
 /** Runs a test case's steps sequentially, then its cleanup steps, streaming events. */
 export async function runTestCase(request: RunRequest, options: RunOptions): Promise<RunResult> {
-  const { runId, testCase } = request;
-  const now = options.now ?? (() => new Date());
-  const runSignal = options.signal ?? new AbortController().signal;
-  const defaultTimeout = request.options?.defaultStepTimeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
+  return new Run(request, options).execute();
+}
 
-  const emit = (event: EngineEvent) => {
+class Run {
+  readonly #req: RunRequest;
+  readonly #opts: RunOptions;
+  readonly #now: () => Date;
+  readonly #vars: VariableStore;
+  readonly #dialogs = new DialogController();
+  readonly #diagnostics: Diagnostic[] = [];
+  readonly #secretFields = new Map<string, PwLocator[]>();
+  readonly #defaultTimeout: number;
+  #pages = new SessionPages(undefined);
+  #services!: RunServices;
+
+  constructor(request: RunRequest, options: RunOptions) {
+    this.#req = request;
+    this.#opts = options;
+    this.#now = options.now ?? (() => new Date());
+    this.#defaultTimeout = request.options?.defaultStepTimeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
+    const row =
+      request.rowIndex === undefined ? undefined : request.dataset?.rows[request.rowIndex];
+    this.#vars = new VariableStore(
+      {
+        env: request.env,
+        suite: request.suiteVariables,
+        test: request.testCase.variables,
+        row,
+        secrets: request.secrets,
+      },
+      this.#now,
+    );
+  }
+
+  #emit(event: EngineEvent): void {
     try {
-      options.onEvent?.(event);
+      this.#opts.onEvent?.(event);
     } catch {
       // A broken listener must never break the run.
     }
-  };
-  const log = (level: LogLevel, message: string, stepId?: string) =>
-    emit(
+  }
+
+  #mask(text: string): string {
+    return maskSecrets(text, this.#vars.secretValues());
+  }
+
+  #maskDeep(value: unknown): unknown {
+    if (typeof value === 'string') return this.#mask(value);
+    if (Array.isArray(value)) return value.map((v) => this.#maskDeep(v));
+    if (value !== null && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, this.#maskDeep(v)]));
+    }
+    return value;
+  }
+
+  #maskError(error: RunError): RunError {
+    return this.#maskDeep(error) as RunError;
+  }
+
+  #log(level: LogLevel, message: string, stepId?: string): void {
+    const at = this.#now().toISOString();
+    const runId = this.#req.runId;
+    const text = this.#mask(message);
+    this.#emit(
       stepId === undefined
-        ? { type: 'log', runId, level, message, at: now().toISOString() }
-        : { type: 'log', runId, stepId, level, message, at: now().toISOString() },
+        ? { type: 'log', runId, level, message: text, at }
+        : { type: 'log', runId, stepId, level, message: text, at },
     );
+  }
 
-  const runStarted = now();
-  emit({
-    type: 'runStart',
-    runId,
-    testCaseId: testCase.id,
-    at: runStarted.toISOString(),
-    stepCount: testCase.steps.length,
-  });
+  #onPage(session: string, page: Page): void {
+    this.#dialogs.attach(session, page, (d) => {
+      this.#vars.set('dialogMessage', d.message);
+      this.#log('info', `Dialog (${d.type}) "${d.message}" → ${d.response}`);
+    });
+    const push = (d: Diagnostic) => {
+      const masked = { ...d, message: this.#mask(d.message) };
+      this.#diagnostics.push(masked);
+      this.#log(
+        'warn',
+        `${d.kind === 'http' ? 'Request failed' : 'Page error'}: ${masked.message}`,
+      );
+    };
+    page.on('console', (msg) => {
+      // Network failures also show up as console errors: they are reported as `http` instead.
+      if (msg.type() === 'error' && !msg.text().startsWith('Failed to load resource')) {
+        push({ kind: 'console', session, message: msg.text(), url: page.url() });
+      }
+    });
+    page.on('pageerror', (err) =>
+      push({ kind: 'pageError', session, message: err.message, url: page.url() }),
+    );
+    page.on('response', (res) => {
+      const status = res.status();
+      // The browser asks for /favicon.ico on its own; a missing icon is not a page error.
+      if (status >= 400 && !/\/favicon\.ico(\?|$)/.test(res.url())) {
+        push({
+          kind: 'http',
+          session,
+          message: `${status} ${res.request().method()} ${res.url()}`,
+          url: res.url(),
+          status,
+        });
+      }
+    });
+  }
 
-  const skipped = (step: Step, error?: RunError): StepResult => ({
-    stepId: step.id,
-    session: step.session,
-    status: 'skipped',
-    soft: false,
-    startedAt: now().toISOString(),
-    durationMs: 0,
-    artifacts: [],
-    ...(error ? { error } : {}),
-  });
+  async execute(): Promise<RunResult> {
+    const { runId, testCase } = this.#req;
+    const runSignal = this.#opts.signal ?? new AbortController().signal;
+    const artifactsOpt = this.#req.options?.artifacts;
+    const runStarted = this.#now();
+    this.#emit({
+      type: 'runStart',
+      runId,
+      testCaseId: testCase.id,
+      at: runStarted.toISOString(),
+      stepCount: testCase.steps.length,
+    });
 
-  const runStep = async (step: Step, index: number, phase: StepPhase, signal: AbortSignal) => {
-    if (!step.enabled) return { result: skipped(step), stop: false };
+    const steps: StepResult[] = [];
+    const cleanup: StepResult[] = [];
+    const runArtifacts: ArtifactRef[] = [];
+    let status: RunStatus = 'passed';
+    let runError: RunError | undefined;
+
+    try {
+      if (artifactsOpt) await mkdir(artifactsOpt.dir, { recursive: true });
+      let video = artifactsOpt?.video === true && this.#opts.browser !== undefined;
+      if (video) {
+        try {
+          await ensureFfmpeg();
+        } catch (err) {
+          video = false;
+          this.#log(
+            'warn',
+            `Video recording is off: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
+      this.#pages = new SessionPages(this.#opts.browser, {
+        ...(this.#req.options?.viewport ? { viewport: this.#req.options.viewport } : {}),
+        proxy: proxyFor(this.#req.env, this.#req.secrets),
+        videoDir: video && artifactsOpt ? join(artifactsOpt.dir, 'video') : undefined,
+        traceDir: artifactsOpt?.trace ? artifactsOpt.dir : undefined,
+        onPage: (session, page) => this.#onPage(session, page),
+      });
+      this.#services = this.#makeServices();
+
+      await this.#runList(testCase.steps, 'steps', runSignal, undefined, steps);
+
+      // Cleanup always runs [D-05], even after a failure or cancel, with its own signal.
+      await this.#runList(
+        testCase.cleanup,
+        'cleanup',
+        new AbortController().signal,
+        undefined,
+        cleanup,
+        true,
+      );
+
+      if (runSignal.aborted) status = 'cancelled';
+      else if (anyFailed([...steps, ...cleanup])) status = 'failed';
+    } catch (err) {
+      status = 'error';
+      runError = this.#maskError(toRunError(err, 'ENGINE_ERROR'));
+      this.#log('error', runError.message);
+    } finally {
+      for (const a of await this.#pages.closeAll()) {
+        if (!artifactsOpt) continue;
+        const ref: ArtifactRef = { kind: a.kind, path: relative(artifactsOpt.dir, a.path) };
+        runArtifacts.push(ref);
+        this.#emit({ type: 'artifact', runId, artifact: ref });
+      }
+    }
+
+    const result: RunResult = {
+      runId,
+      testCaseId: testCase.id,
+      ...(this.#req.rowIndex === undefined ? {} : { rowIndex: this.#req.rowIndex }),
+      status,
+      startedAt: runStarted.toISOString(),
+      durationMs: Math.max(0, this.#now().getTime() - runStarted.getTime()),
+      steps,
+      cleanup,
+      ...(runError ? { error: runError } : {}),
+      artifacts: runArtifacts,
+      diagnostics: [...this.#diagnostics],
+    };
+    this.#emit({ type: 'runEnd', runId, result });
+    return result;
+  }
+
+  #makeServices(): RunServices {
+    const req = this.#req;
+    const shared = new Map((req.sharedSteps ?? []).map((s) => [s.id, s]));
+    const baseUrl = req.env?.baseUrl;
+    return {
+      testCase: req.testCase,
+      env: req.env,
+      secrets: req.secrets ?? {},
+      dataset: req.dataset,
+      sharedSteps: shared,
+      pages: this.#pages,
+      dialogs: this.#dialogs,
+      diagnostics: this.#diagnostics,
+      filesDir: req.options?.filesDir,
+      url: (value) => {
+        if (/^[a-z][a-z0-9+.-]*:/i.test(value) || !baseUrl) return value;
+        return new URL(value, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
+      },
+    };
+  }
+
+  /**
+   * Runs a list of steps. Returns the first hard failure (if any) so a parent
+   * step can fail with it. `runAll`: keep going after hard failures (cleanup).
+   */
+  async #runList(
+    list: readonly Step[],
+    phase: StepPhase,
+    signal: AbortSignal,
+    parent: Parent | undefined,
+    out: StepResult[],
+    runAll = false,
+  ): Promise<RunError | undefined> {
+    let stopped = false;
+    let firstHard: RunError | undefined;
+    for (const [index, step] of list.entries()) {
+      const outcome: Outcome = stopped
+        ? { result: this.#skipped(step), stop: true }
+        : await this.#runOne(step, index, phase, signal, parent);
+      out.push(outcome.result);
+      this.#emit({
+        type: 'stepEnd',
+        runId: this.#req.runId,
+        phase,
+        index,
+        result: outcome.result,
+        ...(parent ? { parentStepId: parent.step.id } : {}),
+      });
+      if (outcome.stop && !runAll) {
+        stopped = true;
+        if (outcome.result.error && !firstHard) firstHard = outcome.result.error;
+      }
+    }
+    return firstHard;
+  }
+
+  #skipped(step: Step, error?: RunError): StepResult {
+    return {
+      stepId: step.id,
+      session: step.session,
+      status: 'skipped',
+      soft: false,
+      startedAt: this.#now().toISOString(),
+      durationMs: 0,
+      artifacts: [],
+      ...(error ? { error } : {}),
+    };
+  }
+
+  async #runOne(
+    step: Step,
+    index: number,
+    phase: StepPhase,
+    signal: AbortSignal,
+    parent: Parent | undefined,
+  ): Promise<Outcome> {
+    if (!step.enabled) return { result: this.#skipped(step), stop: false };
     if (signal.aborted) {
       return {
-        result: skipped(step, { code: 'RUN_CANCELLED', message: 'Run was cancelled' }),
+        result: this.#skipped(step, { code: 'RUN_CANCELLED', message: 'Run was cancelled' }),
         stop: true,
       };
     }
 
-    const started = now();
+    const stepNo = parent ? `${parent.stepNo}.${index + 1}` : `${index + 1}`;
+    const topNo = parent ? parent.topNo : index + 1;
+    const started = this.#now();
     const startMs = performance.now();
-    emit({
+    this.#emit({
       type: 'stepStart',
-      runId,
+      runId: this.#req.runId,
       stepId: step.id,
       phase,
       index,
       session: step.session,
       at: started.toISOString(),
+      stepNo,
+      ...(parent ? { parentStepId: parent.step.id } : {}),
     });
 
-    const timeoutMs = step.timeoutMs ?? defaultTimeout;
+    const self: Parent = { step, stepNo, children: [], topNo };
+    const diagStart = this.#diagnostics.length;
+    let lastLocator: PwLocator | undefined;
     let error: RunError | undefined;
     let cancelled = false;
+    let skipped = false;
+    let container = false;
+
     try {
-      await executeStep(step, index, timeoutMs, signal, options.registry, pages, (message, level) =>
-        log(level ?? 'info', message, step.id),
-      );
+      const action = this.#opts.registry.get(step.action);
+      container = action?.container === true;
+      const run = await this.#executeStep(step, stepNo, topNo, signal, self, (l) => {
+        lastLocator = l;
+      });
+      skipped = run === 'skipped';
+      if (!skipped && !container) this.#checkDiagnostics(diagStart, topNo, stepNo);
     } catch (err) {
-      error = toRunError(err);
+      error = this.#maskError(toRunError(err));
       cancelled = error.code === 'RUN_CANCELLED';
+    }
+
+    const status: StepResult['status'] =
+      cancelled || skipped ? 'skipped' : error ? 'failed' : 'passed';
+    const artifacts: ArtifactRef[] = [];
+    const shot = this.#req.options?.artifacts;
+    const policy = shot?.screenshots ?? 'onFailure';
+    if (
+      shot &&
+      !container &&
+      !skipped &&
+      !cancelled &&
+      (policy === 'always' || (policy === 'onFailure' && status === 'failed'))
+    ) {
+      const ref = await this.#screenshot(step.session, stepNo, status, lastLocator);
+      if (ref) {
+        artifacts.push(ref);
+        this.#emit({ type: 'artifact', runId: this.#req.runId, stepId: step.id, artifact: ref });
+      }
     }
 
     const result: StepResult = {
       stepId: step.id,
       session: step.session,
-      status: cancelled ? 'skipped' : error ? 'failed' : 'passed',
+      status,
       soft: error !== undefined && !cancelled && step.mode === 'soft',
       startedAt: started.toISOString(),
       durationMs: Math.max(0, performance.now() - startMs),
-      artifacts: [],
+      artifacts,
       ...(error ? { error } : {}),
+      ...(self.children.length > 0 ? { children: self.children } : {}),
     };
-    if (error) log(cancelled ? 'warn' : 'error', error.message, step.id);
+    if (error) this.#log(cancelled ? 'warn' : 'error', error.message, step.id);
     return { result, stop: cancelled || (error !== undefined && step.mode === 'hard') };
-  };
-
-  const finish = (outcome: Outcome, phase: StepPhase, index: number, list: StepResult[]) => {
-    list.push(outcome.result);
-    emit({ type: 'stepEnd', runId, phase, index, result: outcome.result });
-  };
-
-  let pages = new SessionPages(undefined);
-  const steps: StepResult[] = [];
-  const cleanup: StepResult[] = [];
-  let status: RunStatus = 'passed';
-  let runError: RunError | undefined;
-
-  try {
-    pages = new SessionPages(options.browser, {
-      ...(request.options?.viewport ? { viewport: request.options.viewport } : {}),
-      proxy: proxyFor(request.env, request.secrets),
-    });
-    let stopped = false;
-    for (const [index, step] of testCase.steps.entries()) {
-      if (stopped) {
-        finish({ result: skipped(step), stop: true }, 'steps', index, steps);
-        continue;
-      }
-      const outcome = await runStep(step, index, 'steps', runSignal);
-      finish(outcome, 'steps', index, steps);
-      stopped = outcome.stop;
-    }
-
-    // Cleanup always runs [D-05], even after a failure or cancel, with its own signal.
-    const cleanupSignal = new AbortController().signal;
-    for (const [index, step] of testCase.cleanup.entries()) {
-      finish(await runStep(step, index, 'cleanup', cleanupSignal), 'cleanup', index, cleanup);
-    }
-
-    if (runSignal.aborted) status = 'cancelled';
-    else if ([...steps, ...cleanup].some((r) => r.status === 'failed')) status = 'failed';
-  } catch (err) {
-    status = 'error';
-    runError = toRunError(err, 'ENGINE_ERROR');
-    log('error', runError.message);
-  } finally {
-    await pages.closeAll();
   }
 
-  const result: RunResult = {
-    runId,
-    testCaseId: testCase.id,
-    ...(request.rowIndex === undefined ? {} : { rowIndex: request.rowIndex }),
-    status,
-    startedAt: runStarted.toISOString(),
-    durationMs: Math.max(0, now().getTime() - runStarted.getTime()),
-    steps,
-    cleanup,
-    ...(runError ? { error: runError } : {}),
-  };
-  emit({ type: 'runEnd', runId, result });
-  return result;
+  #checkDiagnostics(from: number, topNo: number, stepNo: string): void {
+    const fresh = this.#diagnostics.slice(from);
+    const o = this.#req.options;
+    const js = fresh.find((d) => d.kind !== 'http');
+    if (o?.failOnConsoleError && js) {
+      throw new EngineError(
+        'CONSOLE_ERROR',
+        `Step ${stepNo}: the page reported an error: ${js.message}`,
+        {
+          step: topNo,
+          stepNo,
+          message: js.message,
+        },
+      );
+    }
+    const http = fresh.find((d) => d.kind === 'http');
+    if (o?.failOnHttpError && http) {
+      throw new EngineError('HTTP_ERROR', `Step ${stepNo}: request failed: ${http.message}`, {
+        step: topNo,
+        stepNo,
+        status: http.status,
+        url: http.url,
+      });
+    }
+  }
+
+  async #screenshot(
+    session: string,
+    stepNo: string,
+    status: string,
+    highlight: PwLocator | undefined,
+  ): Promise<ArtifactRef | undefined> {
+    const dir = this.#req.options?.artifacts?.dir;
+    if (!dir || !this.#pages.isOpen(session)) return undefined;
+    try {
+      const page = await this.#pages.page(session);
+      const path = join(dir, `step-${stepNo.replace(/\./g, '_')}-${status}.png`);
+      // Red frame around the element the step worked on [I-02].
+      const restore = highlight
+        ? await highlight
+            .evaluate(
+              (el) => {
+                const h = el as HTMLElement;
+                const prev = h.style.outline;
+                const prevOffset = h.style.outlineOffset;
+                h.style.outline = '3px solid #E5484D';
+                h.style.outlineOffset = '2px';
+                return { prev, prevOffset };
+              },
+              undefined,
+              { timeout: 1000 },
+            )
+            .catch(() => undefined)
+        : undefined;
+      const secrets = this.#vars.secretValues().slice(0, 20);
+      await page.screenshot({
+        path,
+        timeout: 5000,
+        mask: [
+          ...(this.#secretFields.get(session) ?? []),
+          ...secrets.map((s) => page.getByText(s)),
+        ],
+        maskColor: '#1F2A5C',
+      });
+      if (highlight && restore) {
+        await highlight
+          .evaluate(
+            (el, r) => {
+              (el as HTMLElement).style.outline = r.prev;
+              (el as HTMLElement).style.outlineOffset = r.prevOffset;
+            },
+            restore,
+            { timeout: 1000 },
+          )
+          .catch(() => undefined);
+      }
+      return { kind: 'screenshot', path: basename(path) };
+    } catch (err) {
+      this.#log(
+        'warn',
+        `Could not take a screenshot: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return undefined;
+    }
+  }
+
+  /** Validates params, then runs the action racing a timeout and the run's cancel signal. */
+  async #executeStep(
+    step: Step,
+    stepNo: string,
+    topNo: number,
+    runSignal: AbortSignal,
+    self: Parent,
+    onResolved: (l: PwLocator) => void,
+  ): Promise<'done' | 'skipped'> {
+    const action = this.#opts.registry.get(step.action);
+    if (!action) {
+      throw new EngineError('UNKNOWN_ACTION', `Step ${stepNo}: unknown action "${step.action}"`, {
+        step: topNo,
+        stepNo,
+        action: step.action,
+      });
+    }
+
+    const timeoutMs = step.timeoutMs ?? this.#defaultTimeout;
+    const deadline = performance.now() + timeoutMs;
+    const controller = new AbortController();
+    const remainingMs = () => Math.max(0, Math.floor(deadline - performance.now()));
+    const log: ActionContext['log'] = (message, level) =>
+      this.#log(level ?? 'info', message, step.id);
+
+    const ctx: ActionContext = {
+      step,
+      stepNo,
+      session: step.session,
+      timeoutMs,
+      signal: controller.signal,
+      remainingMs,
+      log,
+      page: () => this.#pages.page(step.session),
+      context: () => this.#pages.context(step.session),
+      vars: this.#vars,
+      run: this.#services,
+      resolve: async (target, opts) => {
+        const { locator, name } = toLocator(target, this.#req.testCase.elements);
+        const page = await this.#pages.page(step.session);
+        const resolved: ResolvedLocator = await resolveLocator(
+          () => [page.mainFrame(), ...page.frames().filter((f) => f !== page.mainFrame())],
+          this.#vars.interpolate(locator),
+          {
+            // Stop a bit before the step timeout so "not found" (clearer) wins over "timeout".
+            timeoutMs:
+              opts?.timeoutMs ??
+              (action.container ? this.#defaultTimeout : Math.max(0, remainingMs() - 150)),
+            signal: controller.signal,
+            ...(opts?.state ? { state: opts.state } : {}),
+            ...(name === undefined ? {} : { name }),
+          },
+        ).catch((err: unknown) => {
+          if (err instanceof EngineError && err.details) err.details.step = topNo;
+          if (err instanceof EngineError && err.details) err.details.stepNo = stepNo;
+          throw err;
+        });
+        onResolved(resolved.locator);
+        return resolved;
+      },
+      runSteps: async (raw, frame) => {
+        const children = raw.map((s) =>
+          StepSchema.parse({ session: step.session, ...(s as object) }),
+        );
+        const run = () => this.#runList(children, 'steps', controller.signal, self, self.children);
+        const failed = frame ? await this.#vars.withFrame(frame, run) : await run();
+        if (controller.signal.aborted && runSignal.aborted) {
+          throw new EngineError('RUN_CANCELLED', 'Run was cancelled', { step: topNo });
+        }
+        if (failed) throw new StepFailure(failed);
+      },
+      markSecret: (l) => {
+        const list = this.#secretFields.get(step.session) ?? [];
+        list.push(l);
+        this.#secretFields.set(step.session, list);
+      },
+    };
+
+    // Conditional skip [D-06].
+    if (step.skipIf) {
+      const cond = this.#vars.interpolate(step.skipIf);
+      if (await evaluateCondition(cond, ctx)) {
+        log('Skipped: condition met');
+        return 'skipped';
+      }
+    }
+
+    let params: unknown;
+    try {
+      params = this.#vars.interpolate(step.params, action.rawParams ?? []);
+    } catch (err) {
+      if (err instanceof EngineError) {
+        throw new EngineError(err.code, `Step ${stepNo}: ${err.message}`, {
+          ...err.details,
+          step: topNo,
+          stepNo,
+        });
+      }
+      throw err;
+    }
+    const parsed = action.params.safeParse(params);
+    if (!parsed.success) {
+      throw new EngineError('INVALID_PARAMS', `Step ${stepNo}: invalid parameters`, {
+        step: topNo,
+        stepNo,
+        action: step.action,
+        issues: parsed.error.issues.map((i: z.core.$ZodIssue) => ({
+          path: i.path.map(String),
+          message: i.message,
+        })),
+      });
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let onCancel: (() => void) | undefined;
+    const guard = new Promise<never>((_, reject) => {
+      if (!action.container) {
+        timer = setTimeout(() => {
+          const err = new EngineError(
+            'STEP_TIMEOUT',
+            `Step ${stepNo}: did not finish within ${timeoutMs / 1000} seconds`,
+            {
+              step: topNo,
+              stepNo,
+              timeoutMs,
+            },
+          );
+          controller.abort(err);
+          reject(err);
+        }, timeoutMs);
+      }
+      onCancel = () => {
+        const err = new EngineError('RUN_CANCELLED', 'Run was cancelled', { step: topNo });
+        controller.abort(err);
+        reject(err);
+      };
+      if (runSignal.aborted) onCancel();
+      else runSignal.addEventListener('abort', onCancel, { once: true });
+    });
+    guard.catch(() => undefined);
+
+    try {
+      await Promise.race([Promise.resolve().then(() => action.execute(parsed.data, ctx)), guard]);
+    } catch (err) {
+      // Give errors from the action a step number for messages.
+      if (err instanceof EngineError && err.details && err.details.step === undefined) {
+        err.details.step = topNo;
+        err.details.stepNo = stepNo;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+      if (onCancel) runSignal.removeEventListener('abort', onCancel);
+    }
+    return 'done';
+  }
 }
 
-/** Validates params, then runs the action racing a timeout and the run's cancel signal. */
-async function executeStep(
-  step: Step,
-  index: number,
-  timeoutMs: number,
-  runSignal: AbortSignal,
-  registry: ActionRegistry,
-  pages: SessionPages,
-  log: ActionContext['log'],
-): Promise<void> {
-  const stepNo = index + 1;
-  const action = registry.get(step.action);
-  if (!action) {
-    throw new EngineError('UNKNOWN_ACTION', `Step ${stepNo}: unknown action "${step.action}"`, {
-      step: stepNo,
-      action: step.action,
-    });
-  }
-  const parsed = action.params.safeParse(step.params);
-  if (!parsed.success) {
-    throw new EngineError('INVALID_PARAMS', `Step ${stepNo}: invalid parameters`, {
-      step: stepNo,
-      action: step.action,
-      issues: parsed.error.issues.map((i: z.core.$ZodIssue) => ({
-        path: i.path.map(String),
-        message: i.message,
-      })),
-    });
-  }
-
-  const controller = new AbortController();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let onCancel: (() => void) | undefined;
-
-  const guard = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
-      const err = new EngineError(
-        'STEP_TIMEOUT',
-        `Step ${stepNo}: did not finish within ${timeoutMs / 1000} seconds`,
-        { step: stepNo, timeoutMs },
-      );
-      controller.abort(err);
-      reject(err);
-    }, timeoutMs);
-    onCancel = () => {
-      const err = new EngineError('RUN_CANCELLED', 'Run was cancelled', { step: stepNo });
-      controller.abort(err);
-      reject(err);
-    };
-    runSignal.addEventListener('abort', onCancel, { once: true });
-  });
-
-  const ctx: ActionContext = {
-    step,
-    session: step.session,
-    timeoutMs,
-    signal: controller.signal,
-    log,
-    page: () => pages.page(step.session),
-    context: () => pages.context(step.session),
-  };
-
-  try {
-    await Promise.race([Promise.resolve().then(() => action.execute(parsed.data, ctx)), guard]);
-  } finally {
-    clearTimeout(timer);
-    if (onCancel) runSignal.removeEventListener('abort', onCancel);
-  }
+function anyFailed(results: readonly StepResult[]): boolean {
+  return results.some(
+    (r) => r.status === 'failed' || (r.children !== undefined && anyFailed(r.children)),
+  );
 }
