@@ -21,6 +21,23 @@ export const AppSettingsSchema = z.object({
   advancedMode: z.boolean().default(false),
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
+
+const f = AppSettingsSchema.shape;
+/**
+ * Some settings to save. No defaults here: Zod would fill them in even with `.partial()`,
+ * and saving one setting would reset all the others.
+ */
+export const AppSettingsPatchSchema = z.object({
+  language: f.language.unwrap().optional(),
+  theme: f.theme.unwrap().optional(),
+  browser: f.browser.unwrap().optional(),
+  headless: f.headless.unwrap().optional(),
+  defaultTimeoutSec: f.defaultTimeoutSec.unwrap().optional(),
+  resultsDir: f.resultsDir.unwrap().optional(),
+  onboardingDone: f.onboardingDone.unwrap().optional(),
+  tourDone: f.tourDone.unwrap().optional(),
+  advancedMode: f.advancedMode.unwrap().optional(),
+});
 export type AppSettingsKey = keyof AppSettings;
 
 export class SettingsService {
@@ -44,7 +61,7 @@ export class SettingsService {
 
   /** Saves some settings; returns all of them. */
   update(patch: Patch<AppSettings>): AppSettings {
-    const p = AppSettingsSchema.partial().safeParse(patch);
+    const p = AppSettingsPatchSchema.safeParse(patch);
     if (!p.success) throw validation('settings', p.error.issues);
     for (const [key, value] of Object.entries(p.data)) {
       if (value === undefined) continue;

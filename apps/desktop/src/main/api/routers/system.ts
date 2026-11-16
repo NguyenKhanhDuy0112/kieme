@@ -1,4 +1,4 @@
-import { AppSettingsSchema } from '@kiemi/db';
+import { AppSettingsPatchSchema } from '@kiemi/db';
 import { builtinActions, detectInstalledBrowsers } from '@kiemi/engine';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -52,7 +52,7 @@ export const systemRouter = router({
   /** App settings [S-07]. */
   settings: publicProcedure.query(({ ctx }) => ctx.services.settings.getAll()),
   updateSettings: publicProcedure
-    .input(AppSettingsSchema.partial())
+    .input(AppSettingsPatchSchema)
     .mutation(({ ctx, input }) => ctx.services.settings.update(input)),
 
   /** "Kiểm tra kết nối" for an environment's SSH tunnel [G-07]. */

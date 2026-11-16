@@ -73,3 +73,12 @@ describe('system router [M3-03, S-07, G-07]', () => {
     expect(res).toMatchObject({ ok: false, reason: 'missingSecret' });
   });
 });
+
+describe('updateSettings keeps the other settings [S-07]', () => {
+  it('saving one key does not reset the rest', async () => {
+    const { c } = caller();
+    await c.system.updateSettings({ theme: 'dark', onboardingDone: true });
+    const after = await c.system.updateSettings({ tourDone: true });
+    expect(after).toMatchObject({ theme: 'dark', onboardingDone: true, tourDone: true });
+  });
+});
