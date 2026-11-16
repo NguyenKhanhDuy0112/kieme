@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noTemplateCurlyInString: electron-builder file name macros.
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
@@ -10,8 +11,9 @@ interface BuilderConfig {
   productName: string;
   extraResources: { from: string; to: string }[];
   win: { target: Target[] };
-  nsis: { oneClick: boolean; perMachine: boolean; allowElevation: boolean };
-  portable: { requestExecutionLevel: string };
+  nsis: { oneClick: boolean; perMachine: boolean; allowElevation: boolean; artifactName: string };
+  portable: { requestExecutionLevel: string; artifactName: string };
+  dmg: { artifactName: string };
   mac: { target: Target[]; notarize: boolean };
   publish: { provider: string; owner: string; repo: string }[];
   dependencies?: unknown;
@@ -66,6 +68,13 @@ describe('electron-builder config [N-10, N-11, N-13]', () => {
     } finally {
       delete process.env.KIEMI_RELEASE_REPO;
     }
+  });
+
+  it('names files without a version, so README download links never change', () => {
+    // https://github.com/<owner>/<repo>/releases/latest/download/<name>
+    expect(config.nsis.artifactName).toBe('Kiemi-Setup.${ext}');
+    expect(config.portable.artifactName).toBe('Kiemi-Portable.${ext}');
+    expect(config.dmg.artifactName).toBe('Kiemi-mac.${ext}');
   });
 
   it('notarizes only when Apple credentials are present', () => {

@@ -16,7 +16,7 @@ Quy trình kỹ thuật: ADR 0015 (đóng gói, ký, workflow) và ADR 0016 (t�
 3. [ ] `pnpm release:version` → kiểm tra `apps/desktop/package.json` (version) và `apps/desktop/CHANGELOG.md` (mục mới đọc dễ hiểu).
 4. [ ] Commit `chore(release): vX.Y.Z`, push `main`.
 5. [ ] `git tag vX.Y.Z && git push origin vX.Y.Z` → workflow **Release** chạy (draft → build Win/Mac → publish).
-6. [ ] Workflow xanh; release có đủ: `Kiemi-Setup-X.Y.Z.exe` (+ `.blockmap`), `Kiemi-Portable-X.Y.Z.exe`, `Kiemi-X.Y.Z-universal.dmg`, `Kiemi-X.Y.Z-universal-mac.zip` (+ `.blockmap`), `latest.yml`, `latest-mac.yml`.
+6. [ ] Workflow xanh; release có đủ: `Kiemi-Setup.exe` (+ `.blockmap`), `Kiemi-Portable.exe`, `Kiemi-mac.dmg`, `Kiemi-X.Y.Z-universal-mac.zip` (+ `.blockmap`), `latest.yml`, `latest-mac.yml`.
 
 ## C. Kiểm tra sau phát hành (máy sạch, tài khoản không phải admin)
 - [ ] **Windows — bản cài**: cài không hỏi quyền admin; không có cảnh báo SmartScreen "Unknown publisher" (đã ký); mở app ≤ 3 giây; Dự án mẫu → Chạy → Đạt.

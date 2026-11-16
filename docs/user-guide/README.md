@@ -24,9 +24,9 @@ Tải bản mới nhất ở trang **Releases** của Kiemi. Không cần tài k
 
 | Máy | File | Ghi chú |
 |---|---|---|
-| Windows | `Kiemi-Setup-x.y.z.exe` | Bấm đúp là cài xong (chỉ cho tài khoản của bạn). Có biểu tượng Kiemi ngoài màn hình. |
-| Windows (không cài được) | `Kiemi-Portable-x.y.z.exe` | 1 file, không cần cài — chép vào máy (kể cả máy chỉ vào được qua Remote Desktop) rồi bấm đúp. |
-| macOS | `Kiemi-x.y.z-universal.dmg` | Mở file, kéo Kiemi vào thư mục **Applications**. Chạy cả máy chip Intel và Apple. |
+| Windows | `Kiemi-Setup.exe` | Bấm đúp là cài xong (chỉ cho tài khoản của bạn). Có biểu tượng Kiemi ngoài màn hình. |
+| Windows (không cài được) | `Kiemi-Portable.exe` | 1 file, không cần cài — chép vào máy (kể cả máy chỉ vào được qua Remote Desktop) rồi bấm đúp. |
+| macOS | `Kiemi-mac.dmg` | Mở file, kéo Kiemi vào thư mục **Applications**. Chạy cả máy chip Intel và Apple. |
 
 **Trình duyệt**: Kiemi dùng Microsoft Edge hoặc Google Chrome có sẵn trên máy. Máy không có cả hai thì lần chạy đầu Kiemi tự tải một trình duyệt (khoảng 150 MB, chỉ một lần).
 

@@ -45,12 +45,13 @@ module.exports = {
     deleteAppDataOnUninstall: false,
     createDesktopShortcut: true,
     shortcutName: 'Kiemi',
-    artifactName: 'Kiemi-Setup-${version}.${ext}',
+    // No version in the name: the README links to releases/latest/download/<name>.
+    artifactName: 'Kiemi-Setup.${ext}',
   },
   // One .exe, no install, no admin — for machines only reachable over RDP [N-10].
   portable: {
     requestExecutionLevel: 'user',
-    artifactName: 'Kiemi-Portable-${version}.${ext}',
+    artifactName: 'Kiemi-Portable.${ext}',
   },
   mac: {
     icon: 'build/icon.png',
@@ -66,5 +67,5 @@ module.exports = {
     // Notarizes only when the APPLE_* variables are set.
     notarize: Boolean(process.env.APPLE_API_KEY || process.env.APPLE_ID),
   },
-  dmg: { artifactName: 'Kiemi-${version}-${arch}.${ext}' },
+  dmg: { artifactName: 'Kiemi-mac.${ext}' },
 };
