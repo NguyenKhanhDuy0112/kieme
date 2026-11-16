@@ -9,8 +9,18 @@ import { openSshTunnel, testSshConnection, withTunnelProxy } from './ssh-tunnel'
 /** Host name that only the SSH server can resolve (proves DNS through SSH). */
 const INTERNAL = 'kiemi-internal.test';
 
-const hostKey = utils.generateKeyPairSync('ed25519').private;
-const userKeys = utils.generateKeyPairSync('ed25519');
+/**
+ * ssh2 sometimes (~0.4 %) writes an ed25519 key it cannot parse back ("Malformed OpenSSH
+ * private key"), which made this file fail at random. Keep only keys that round-trip.
+ */
+function parsableEd25519(): { private: string; public: string } {
+  for (;;) {
+    const pair = utils.generateKeyPairSync('ed25519');
+    if (!(utils.parseKey(pair.private) instanceof Error)) return pair;
+  }
+}
+const hostKey = parsableEd25519().private;
+const userKeys = parsableEd25519();
 const userPub = utils.parseKey(userKeys.public);
 
 interface FakeSsh {
