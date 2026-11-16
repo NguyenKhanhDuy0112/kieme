@@ -1,0 +1,174 @@
+import type { DataRow, Env, Secrets } from '@kiemi/schema';
+import { EngineError } from '../errors';
+import { type EvalEnv, evaluateExpression, stringify } from './evaluate';
+
+export interface VariableScopes {
+  env?: Env | undefined;
+  /** Suite-level variables. */
+  suite?: Record<string, string> | undefined;
+  /** Test-level variables (`TestCase.variables`). */
+  test?: Record<string, string> | undefined;
+  /** Current dataset row (`{{row.col}}`) [E-03]. */
+  row?: DataRow | undefined;
+  secrets?: Secrets | undefined;
+}
+
+const TEMPLATE = /\{\{([\s\S]+?)\}\}/g;
+const MAX_DEPTH = 5;
+
+/**
+ * Variables of one run [E-01, E-02]. Bare names are looked up
+ * runtime (saved from the page) → loop/shared-step frames → test → suite → env.
+ * Namespaces: `env.x`, `secret.x` [E-08], `row.x`, `param.x` (shared step args), `loop.x`.
+ */
+export class VariableStore {
+  readonly #scopes: VariableScopes;
+  readonly #runtime = new Map<string, unknown>();
+  readonly #frames: Record<string, unknown>[] = [];
+  readonly #now: () => Date;
+  #depth = 0;
+
+  constructor(scopes: VariableScopes = {}, now: () => Date = () => new Date()) {
+    this.#scopes = scopes;
+    this.#now = now;
+  }
+
+  /** Saves a runtime value (e.g. extracted from the page) [E-04]. */
+  set(name: string, value: unknown): void {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+      throw new EngineError('INVALID_PARAMS', `Invalid variable name "${name}"`, { name });
+    }
+    this.#runtime.set(name, value);
+  }
+
+  get(name: string): unknown {
+    const hit = this.#lookup(name);
+    return hit.found ? hit.value : undefined;
+  }
+
+  has(name: string): boolean {
+    return this.#lookup(name).found;
+  }
+
+  /** Runtime variables saved so far. */
+  runtime(): Record<string, unknown> {
+    return Object.fromEntries(this.#runtime);
+  }
+
+  /** Runs `fn` with extra names visible (shared-step params, loop item). */
+  async withFrame<T>(frame: Record<string, unknown>, fn: () => Promise<T>): Promise<T> {
+    this.#frames.push(frame);
+    try {
+      return await fn();
+    } finally {
+      this.#frames.pop();
+    }
+  }
+
+  /** Every secret value, longest first, for masking logs and reports [E-08]. */
+  secretValues(): string[] {
+    return Object.values(this.#scopes.secrets ?? {})
+      .filter((v) => v.length > 0)
+      .sort((a, b) => b.length - a.length);
+  }
+
+  /**
+   * Replaces `{{…}}` in strings, deeply in arrays/objects. A string that is a
+   * single `{{expr}}` keeps the value's type (number, object…). Keys listed in
+   * `raw` (top level only) are left untouched — e.g. nested step lists.
+   */
+  interpolate<T>(value: T, raw: readonly string[] = []): T {
+    return this.#walk(value, raw, true) as T;
+  }
+
+  /** Renders a template to text. */
+  render(template: string): string {
+    return stringify(this.#renderValue(template));
+  }
+
+  /** Evaluates a bare expression (no braces), e.g. a loop count. */
+  evaluate(expression: string): unknown {
+    return evaluateExpression(expression, this.#env());
+  }
+
+  #walk(value: unknown, raw: readonly string[], top: boolean): unknown {
+    if (typeof value === 'string') return value.includes('{{') ? this.#renderValue(value) : value;
+    if (Array.isArray(value)) return value.map((v) => this.#walk(v, [], false));
+    if (value !== null && typeof value === 'object') {
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(value)) {
+        out[k] = top && raw.includes(k) ? v : this.#walk(v, [], false);
+      }
+      return out;
+    }
+    return value;
+  }
+
+  #renderValue(template: string): unknown {
+    if (++this.#depth > MAX_DEPTH) {
+      this.#depth = 0;
+      throw new EngineError('INVALID_EXPRESSION', 'Variables reference each other in a loop', { template });
+    }
+    try {
+      const single = /^\{\{([\s\S]+?)\}\}$/.exec(template);
+      if (single?.[1] !== undefined && !single[1].includes('{{')) {
+        const v = evaluateExpression(single[1], this.#env());
+        return v instanceof Date ? stringify(v) : v;
+      }
+      return template.replace(TEMPLATE, (_m, expr: string) => stringify(evaluateExpression(expr, this.#env())));
+    } finally {
+      this.#depth--;
+    }
+  }
+
+  #env(): EvalEnv {
+    return { lookup: (n) => this.#lookup(n), now: this.#now() };
+  }
+
+  /** Values from env/suite/test/data may themselves contain templates. */
+  #expand(v: unknown): unknown {
+    return typeof v === 'string' && v.includes('{{') ? this.#renderValue(v) : v;
+  }
+
+  #lookup(name: string): { found: true; value: unknown } | { found: false } {
+    const s = this.#scopes;
+    const ok = (value: unknown) => ({ found: true as const, value });
+    switch (name) {
+      case 'env': {
+        const vars: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(s.env?.variables ?? {})) vars[k] = this.#expand(v);
+        if (s.env?.baseUrl !== undefined) vars.baseUrl = s.env.baseUrl;
+        if (s.env?.name !== undefined) vars.name = s.env.name;
+        return ok(vars);
+      }
+      case 'secret':
+        return ok({ ...(s.secrets ?? {}) });
+      case 'row':
+        return ok({ ...(s.row ?? {}) });
+      case 'param':
+      case 'loop':
+        for (let i = this.#frames.length - 1; i >= 0; i--) {
+          const f = this.#frames[i] as Record<string, unknown>;
+          if (Object.hasOwn(f, name)) return ok(f[name]);
+        }
+        return { found: false };
+    }
+    if (this.#runtime.has(name)) return ok(this.#runtime.get(name));
+    for (let i = this.#frames.length - 1; i >= 0; i--) {
+      const f = this.#frames[i] as Record<string, unknown>;
+      const vars = f.vars as Record<string, unknown> | undefined;
+      if (vars && Object.hasOwn(vars, name)) return ok(vars[name]);
+    }
+    for (const scope of [s.test, s.suite, s.env?.variables]) {
+      if (scope && Object.hasOwn(scope, name)) return ok(this.#expand(scope[name]));
+    }
+    return { found: false };
+  }
+}
+
+/** Replaces every secret value in `text` with `••••` [E-08]. */
+export function maskSecrets(text: string, secrets: readonly string[]): string {
+  let out = text;
+  for (const s of secrets) out = out.split(s).join('••••');
+  return out;
+}

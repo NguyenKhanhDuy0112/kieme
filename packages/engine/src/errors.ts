@@ -18,6 +18,8 @@ export const ENGINE_ERROR_CODES = [
   'UNKNOWN_DEVICE',
   'NO_BROWSER',
   'PROXY_SECRET_MISSING',
+  'UNKNOWN_VARIABLE',
+  'INVALID_EXPRESSION',
   'ENGINE_ERROR',
 ] as const;
 export type EngineErrorCode = (typeof ENGINE_ERROR_CODES)[number];

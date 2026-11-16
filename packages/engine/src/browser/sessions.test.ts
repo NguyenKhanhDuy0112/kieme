@@ -63,6 +63,7 @@ const tc = (steps: TestCase['steps'], sessions = ['default']): TestCase => ({
   tags: [],
   sessions,
   elements: {},
+  variables: {},
   steps,
   cleanup: [],
 });

@@ -47,6 +47,7 @@ const testCase = (url: string): TestCase => ({
   tags: [],
   sessions: ['default'],
   elements: {},
+  variables: {},
   steps: [
     {
       id: 's1',

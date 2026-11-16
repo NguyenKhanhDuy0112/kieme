@@ -1,0 +1,164 @@
+import { EnvSchema } from '@kiemi/schema';
+import { describe, expect, it } from 'vitest';
+import { EngineError } from '../errors';
+import { parseDate } from './dates';
+import { toNumber } from './evaluate';
+import { parseExpression } from './expression';
+import { maskSecrets, VariableStore } from './store';
+
+const NOW = new Date(2026, 10, 16, 14, 30, 5); // 16/11/2026 14:30:05 (Monday)
+const env = EnvSchema.parse({
+  id: 'e',
+  name: 'Staging',
+  baseUrl: 'https://staging.example.com',
+  variables: { portalUrl: 'https://portal.example.com', apiUrl: '{{env.portalUrl}}/api', who: 'env' },
+});
+const store = () =>
+  new VariableStore(
+    {
+      env,
+      suite: { who: 'suite', suiteOnly: 's' },
+      test: { who: 'test', soLuong: '3' },
+      row: { soNgay: '2', ten: 'An' },
+      secrets: { nvPass: 'P@ss-123', token: 'tok' },
+    },
+    () => NOW,
+  );
+
+describe('templates & scopes [E-01, E-02]', () => {
+  it('replaces variables in any text', () => {
+    expect(store().render('Xin chào {{row.ten}}, mở {{env.portalUrl}}')).toBe(
+      'Xin chào An, mở https://portal.example.com',
+    );
+  });
+
+  it('looks up bare names runtime → test → suite → env', () => {
+    const s = store();
+    expect(s.render('{{who}}')).toBe('test');
+    expect(s.render('{{suiteOnly}}')).toBe('s');
+    s.set('who', 'runtime');
+    expect(s.render('{{who}}')).toBe('runtime');
+  });
+
+  it('expands variables that reference other variables', () => {
+    expect(store().render('{{env.apiUrl}}/don')).toBe('https://portal.example.com/api/don');
+  });
+
+  it('exposes secrets, params and loop frames', async () => {
+    const s = store();
+    expect(s.render('{{secret.nvPass}}')).toBe('P@ss-123');
+    await s.withFrame({ param: { user: 'an' } }, async () => {
+      expect(s.render('{{param.user}}')).toBe('an');
+    });
+    expect(() => s.render('{{param.user}}')).toThrow(EngineError);
+  });
+
+  it('keeps types for a single expression and walks objects', () => {
+    const s = store();
+    s.set('resp', { body: { items: [{ id: 42 }] } });
+    expect(s.interpolate({ a: '{{resp.body.items[0].id}}', b: ['{{row.ten}}'], steps: [{ x: '{{nope}}' }] }, ['steps'])).toEqual({
+      a: 42,
+      b: ['An'],
+      steps: [{ x: '{{nope}}' }],
+    });
+  });
+
+  it('reports unknown variables with their name', () => {
+    const err = (() => {
+      try {
+        store().render('{{maDon}}');
+      } catch (e) {
+        return e as EngineError;
+      }
+      return undefined;
+    })();
+    expect(err?.code).toBe('UNKNOWN_VARIABLE');
+    expect(err?.details).toMatchObject({ name: 'maDon' });
+  });
+});
+
+describe('generators [E-05]', () => {
+  it('random, timestamp, uuid, strings', () => {
+    const s = store();
+    expect(s.render('{{random}}')).toMatch(/^\d{6}$/);
+    expect(s.render('{{timestamp}}')).toBe(String(NOW.getTime()));
+    expect(s.render('{{uuid}}')).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-/);
+    expect(s.render('{{randomString(12)}}')).toMatch(/^[a-z0-9]{12}$/);
+    expect(s.render('{{randomDigits(4)}}')).toMatch(/^\d{4}$/);
+    const n = Number(s.render('{{random(5, 7)}}'));
+    expect(n).toBeGreaterThanOrEqual(5);
+    expect(n).toBeLessThanOrEqual(7);
+  });
+
+  it('Vietnamese fake data', () => {
+    const s = store();
+    expect(s.render('{{fake.name}}').length).toBeGreaterThan(3);
+    expect(s.render('{{fake.phone}}')).toMatch(/^0[35789]\d{8}$/);
+    expect(s.render('{{fake.email}}')).toMatch(/^[a-z]+\.[a-z0-9]{6}@example\.com$/);
+    expect(s.render('{{fake.address}}')).toContain(',');
+    expect(() => s.render('{{fake.nope}}')).toThrow(/fake\.nope/);
+  });
+});
+
+describe('dates [E-06]', () => {
+  it('today, offsets, month/week bounds, formats', () => {
+    const s = store();
+    expect(s.render('{{today}}')).toBe('16/11/2026');
+    expect(s.render('{{today+3d}}')).toBe('19/11/2026');
+    expect(s.render('{{today - 1M}}')).toBe('16/10/2026');
+    expect(s.render('{{today + 2w | yyyy-MM-dd}}')).toBe('2026-11-30');
+    expect(s.render('{{startOfMonth}}')).toBe('01/11/2026');
+    expect(s.render('{{endOfMonth}}')).toBe('30/11/2026');
+    expect(s.render('{{startOfWeek}}')).toBe('16/11/2026');
+    expect(s.render('{{now | HH:mm}}')).toBe('14:30');
+    expect(s.render('{{now}}')).toBe('16/11/2026 14:30:05');
+    expect(s.render("{{format(date('2026-01-31') + 1M, 'dd/MM')}}")).toBe('28/02');
+  });
+
+  it('parses common date formats', () => {
+    for (const t of ['05/03/2026', '5/3/2026', '2026-03-05', '05-03-2026', '05.03.2026', 'Ngày 05 tháng 03 năm 2026']) {
+      expect(parseDate(t)?.toDateString(), t).toBe(new Date(2026, 2, 5).toDateString());
+    }
+    expect(parseDate('hello')).toBeUndefined();
+  });
+});
+
+describe('expressions [E-07]', () => {
+  it('arithmetic, precedence, concat, rounding', () => {
+    const s = store();
+    expect(s.interpolate('{{row.soNgay + 1}}')).toBe(3);
+    expect(s.interpolate('{{soLuong * 2 + 1}}')).toBe(7);
+    expect(s.interpolate('{{(1 + 2) × 3 ÷ 2}}')).toBe(4.5);
+    expect(s.interpolate('{{round(10 / 3, 2)}}')).toBe(3.33);
+    expect(s.render('Mã {{row.ten & row.soNgay}}')).toBe('Mã An2');
+    expect(s.render("{{'Đơn ' + row.ten}}")).toBe('Đơn An');
+    expect(s.interpolate('{{-row.soNgay}}')).toBe(-2);
+    expect(s.render('{{0.1 + 0.2}}')).toBe('0.3');
+    expect(s.render('{{10 / 4 | 0.00}}')).toBe('2.50');
+  });
+
+  it('rejects bad expressions clearly', () => {
+    expect(() => parseExpression('1 +')).toThrow(/Invalid expression/);
+    expect(() => parseExpression("'abc")).toThrow(/unterminated/);
+    expect(() => store().render('{{row.ten * 2}}')).toThrow(/not a number/);
+    expect(() => store().render('{{1 / 0}}')).toThrow(/Division by zero/);
+    expect(() => store().render('{{nope(1)}}')).toThrow(/Unknown function/);
+  });
+
+  it('reads Vietnamese and English number formats', () => {
+    expect(toNumber('1.000.000')).toBe(1_000_000);
+    expect(toNumber('1,000.50')).toBe(1000.5);
+    expect(toNumber('1.000,50')).toBe(1000.5);
+    expect(toNumber('12,5')).toBe(12.5);
+    expect(toNumber('1.000 đ')).toBe(1000);
+    expect(toNumber('3.5')).toBe(3.5);
+    expect(toNumber('abc')).toBeUndefined();
+  });
+});
+
+describe('secrets [E-08]', () => {
+  it('masks every secret value', () => {
+    const s = store();
+    expect(maskSecrets('login an / P@ss-123 tok', s.secretValues())).toBe('login an / •••• ••••');
+  });
+});

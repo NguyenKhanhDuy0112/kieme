@@ -35,6 +35,10 @@ export const StepResultSchema = z.object({
   durationMs: z.number().nonnegative(),
   error: RunErrorSchema.optional(),
   artifacts: z.array(ArtifactRefSchema).default([]),
+  /** Results of nested steps (if/else, loops, shared steps) [D-01, D-03, D-04]. */
+  get children() {
+    return z.array(StepResultSchema).optional();
+  },
 });
 export type StepResult = z.infer<typeof StepResultSchema>;
 

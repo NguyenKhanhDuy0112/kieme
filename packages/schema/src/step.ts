@@ -27,6 +27,19 @@ export const StepSchema = z.object({
   mode: z.enum(['hard', 'soft']).default('hard'),
   /** Per-step timeout override in milliseconds [D-07]. */
   timeoutMs: z.number().int().positive().optional(),
+  /** Skip the step when this condition holds [D-06]; validated by the engine. */
+  skipIf: z.record(z.string(), z.unknown()).optional(),
 });
 export type Step = z.infer<typeof StepSchema>;
 export type StepInput = z.input<typeof StepSchema>;
+
+/** Reusable step group with parameters, e.g. "Đăng nhập(user, pass)" [D-01]. */
+export const SharedStepSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  /** Parameter names, available as `{{param.<name>}}` inside the steps. */
+  params: z.array(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/)).default([]),
+  steps: z.array(StepSchema).min(1),
+});
+export type SharedStep = z.infer<typeof SharedStepSchema>;
+export type SharedStepInput = z.input<typeof SharedStepSchema>;

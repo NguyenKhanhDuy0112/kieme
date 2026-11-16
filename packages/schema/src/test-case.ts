@@ -20,6 +20,8 @@ export const TestCaseSchema = z
     /** Reusable elements referenced by `{ "ref": "<key>" }` targets [C-01, C-02]. */
     elements: z.record(ElementRefSchema, ElementSchema).default({}),
     dataset: DatasetSourceSchema.optional(),
+    /** Test-level variables (scope: env → suite → test → runtime) [E-02]. */
+    variables: z.record(z.string(), z.string()).default({}),
     steps: z.array(StepSchema).default([]),
     /** Always runs, pass or fail [D-05]. */
     cleanup: z.array(StepSchema).default([]),
