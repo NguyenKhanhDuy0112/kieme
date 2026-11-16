@@ -31,6 +31,7 @@
 | Engine | `packages/engine` (chạy trong utility process) | Nhận `RunRequest`, chạy step, phát event, ghi artifact vào thư mục được chỉ định | Import Electron, DB, React |
 | Recorder | `packages/recorder` | Script nhúng vào trang khi ghi, sinh step + locator nhiều lớp | Gửi dữ liệu ra ngoài máy |
 | Schema | `packages/schema` | Zod types + migration DSL, dùng chung mọi nơi | Phụ thuộc runtime nào khác |
+| DB | `packages/db` (chạy trong main) | SQLite + Drizzle, migration, repository/service, nhập/xuất Excel/CSV/zip (ADR 0008) | Import Electron (keychain được truyền vào qua `SecretCipher`) |
 
 ## Luồng chạy test
 1. Renderer gọi `run.start({ testId | suiteId, envId, options })`.

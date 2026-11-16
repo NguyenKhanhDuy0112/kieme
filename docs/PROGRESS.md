@@ -1,15 +1,17 @@
 # PROGRESS
 
 ## Trạng thái hiện tại
-M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-15). Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
+M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-15). M2 — Lưu trữ **xong** (M2-01 → M2-05, `@kiemi/db`). Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
 
 ## Đang làm dở
 (không có)
 
 ## Tiếp theo
-**M2-01** — SQLite + Drizzle: schema theo Phụ lục 2, migration, seed workspace mặc định.
+**M3-01** — Layout app, điều hướng, trang chủ danh sách [S-01].
 
 ## Vấn đề tồn đọng / Câu hỏi cho người dùng
+- **Dữ liệu** (ADR 0008): `@kiemi/db` — `openDatabase({ path })` (migrate), `ensureDefaultWorkspace`, `createServices(ctx, cipher)` → `projects, folders, testCases, suites, sharedSteps, elements, environments, datasets`; `exportTestCase / importTestCase / exportBundle / importBundle`. tRPC: `projects.*`, `folders.*`, `testCases.*`, `suites.*`, `sharedSteps.*`, `elements.*`, `environments.*` (secret chỉ trả tên), `datasets.*` (`importFile` base64), `io.*`. Lỗi có `error.data.kiemiCode`. Test: `createMemoryServices()`. Thêm bảng/cột = migration mới trong `migrations.ts` (test đối chiếu Drizzle).
+- Chuỗi tiếng Việt cho mã lỗi `DbError` chưa có — thêm khi làm UI M3 (cùng chỗ với `errors.codes`).
 - **Engine runtime** (ADR 0007): `createDefaultRegistry()` có mọi action v1 + `assertX`. `runTestCase(request, { registry, browser, onEvent, signal })`; `RunRequest` nhận `env`, `secrets`, `dataset`+`rowIndex`, `sharedSteps`, `suiteVariables`, `options { defaultStepTimeoutMs, viewport, failOnConsoleError, failOnHttpError, artifacts {dir, screenshots, video, trace}, filesDir }`. Lỗi → `describeRunError(error, t)` ở `@kiemi/shared`. Kịch bản mẫu M1-15: `packages/engine/src/e2e/fixtures/leave-request.kiemi.json`.
 - Chưa làm (để sau, không chặn M2): bước "Chọn ngày" chỉ gõ trực tiếp (chưa bấm trên lịch); dropdown tự làm tìm option theo `role=option`/`li`/`data-value`.
 - **Trình duyệt** (ADR 0006): `launchBrowser({ settings, browsersPath, onDownloadProgress })` → Edge/Chrome có sẵn hoặc tải Chromium vào `browsersPath`. Runner nhận `browser` đã launch; action lấy `await ctx.page()` / `ctx.context()` (mỗi session 1 context, tạo khi cần, đóng sau cleanup). Màn hình: `options.viewport = { device?, viewport? }`. Proxy lấy từ `request.env.proxy` (+ secret mật khẩu). Test có proxy HTTP/SOCKS5 giả ở `src/testing/proxies.ts`.
@@ -55,3 +57,9 @@ M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-
 | 2026-11-16 | M1-13 | Xong — ảnh chụp khoanh đỏ (lỗi / mọi step), video, trace, che secret | e2e; tự cài ffmpeg khi cần video |
 | 2026-11-16 | M1-14 | Xong — lỗi tiếng Việt + gợi ý cho mọi mã lỗi, `describeRunError` (vi/en) | 6 unit test |
 | 2026-11-16 | M1-15 | Xong — test mẫu "nhân viên tạo đơn → quản lý thấy sau đồng bộ trễ, kiểm tra bảng, duyệt" từ file `.kiemi.json`, chạy theo 2 dòng dữ liệu | Pass; cả repo 201 test; ADR 0007 |
+| 2026-11-16 | — | Người dùng yêu cầu làm tiếp M2 cùng phiên, code xong rồi mới test | |
+| 2026-11-16 | M2-01 | Xong — `@kiemi/db`: 17 bảng Phụ lục 2 (Drizzle), migration nhúng + bảng `_kiemi_migrations`, seed workspace/project/môi trường/ngôn ngữ | better-sqlite3 13 (N-API) chạy cả Node lẫn Electron 45 không cần rebuild; đã chạy app thật: tạo `kiemi.db` đúng |
+| 2026-11-16 | M2-02 | Xong — `Repo` (workspace, soft delete, optimistic version) + service Project/Folder/TestCase/Suite/SharedStep/Element + tRPC | Thư mục chống vòng lặp, xóa lan xuống test con |
+| 2026-11-16 | M2-03 | Xong — Môi trường, biến, secret mã hóa bằng `safeStorage`; renderer chỉ thấy tên secret | |
+| 2026-11-16 | M2-04 | Xong — Dataset: bảng nhập tay, nhập CSV (`,`/`;`/tab, BOM), Excel (ngày, công thức, rich text) | |
+| 2026-11-16 | M2-05 | Xong — Xuất/nhập `.kiemi.json` và `.zip` (project/suite), id mới, ánh xạ tham chiếu, không xuất secret | 33 test mới (db 29 + router 4); cả repo 234 test; ADR 0008 |

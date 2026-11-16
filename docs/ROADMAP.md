@@ -29,11 +29,11 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 - [x] **M1-15** E2E: test mẫu "A tạo → B kiểm tra" chạy pass trên demo-site
 
 ## M2 — Lưu trữ
-- [ ] **M2-01** SQLite + Drizzle: schema theo Phụ lục 2, migration, seed workspace mặc định
-- [ ] **M2-02** Repository + tRPC CRUD: Project, Folder, TestCase, Suite, SharedStep, Element
-- [ ] **M2-03** Environment, Variable, Secret (safeStorage) [S-06, E-08, N-07]
-- [ ] **M2-04** Dataset: import Excel/CSV, bảng nhập tay [E-03]
-- [ ] **M2-05** Xuất / Nhập project, test (`.kiemi.json` / `.zip`) [J-03]
+- [x] **M2-01** SQLite + Drizzle: schema theo Phụ lục 2, migration, seed workspace mặc định
+- [x] **M2-02** Repository + tRPC CRUD: Project, Folder, TestCase, Suite, SharedStep, Element
+- [x] **M2-03** Environment, Variable, Secret (safeStorage) [S-06, E-08, N-07]
+- [x] **M2-04** Dataset: import Excel/CSV, bảng nhập tay [E-03]
+- [x] **M2-05** Xuất / Nhập project, test (`.kiemi.json` / `.zip`) [J-03]
 
 ## M3 — UI soạn test
 - [ ] **M3-01** Layout app, điều hướng, trang chủ danh sách [S-01]

@@ -87,6 +87,7 @@ apps/
   demo-site/      # Web mô phỏng ca khó để test engine (iframe, WebForms postback, popup, bảng, đồng bộ trễ, nhiều vai trò)
 packages/
   schema/         # Zod: TestCase, Step, Locator, Dataset, Env, RunResult + migrations DSL
+  db/             # SQLite + Drizzle: bảng, migration, service, nhập/xuất (ADR 0008). KHÔNG import electron
   engine/         # Dịch step → Playwright. KHÔNG import electron/DB/React
   recorder/       # Script bắt thao tác + Pick phần tử
   shared/         # util dùng chung (i18n keys, error codes)
