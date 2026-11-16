@@ -1,15 +1,16 @@
 # PROGRESS
 
 ## Trạng thái hiện tại
-M0 — Nền móng **xong**. M1 đang làm (M1-01 xong: `@kiemi/schema`). Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
+M0 — Nền móng **xong**. M1 đang làm (M1-01 xong: `@kiemi/schema`; M1-02 xong: `@kiemi/engine` runner). Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
 
 ## Đang làm dở
 (không có)
 
 ## Tiếp theo
-**M1-02** — `packages/engine`: `defineAction` registry, runner chạy tuần tự, stream event (stepStart/stepEnd/log), timeout từng step [D-07].
+**M1-03** — Locator resolver nhiều lớp + ngữ cảnh + thứ N + ID động [C-01, C-03, C-04, C-05].
 
 ## Vấn đề tồn đọng / Câu hỏi cho người dùng
+- **Engine** (`@kiemi/engine`, ADR 0004): `runTestCase(request, { registry, onEvent, signal })`. Chưa có Playwright — M1-04 thêm `playwright-core` và mở rộng `ActionContext` (page theo session). Lỗi engine có `code` + `details`; UI phải dịch theo mã (chưa có chuỗi i18n cho lỗi). Timeout mặc định 10 giây.
 - **Schema DSL** (`@kiemi/schema`, ADR 0003): `parseTestCase(json)` = migrate + validate. `Step.params` để mở — action tự validate (M1-02). Đổi schema → làm theo mục "Hệ quả" ADR 0003; JSON Schema cập nhật bằng `pnpm --filter @kiemi/schema test -u`.
 - **Phiên bản công cụ** (chốt ở M0-01): Node ≥ 22.12 (`.nvmrc` = 24), pnpm 11.1.3, TypeScript 7.0.2 (bản viết lại bằng Go), Biome 2.6.4, Vitest 5.1, Turbo 2.11. Nếu sau này thư viện nào cần TypeScript compiler API (TS 7 không còn API JS như TS 5) thì cân nhắc thêm `typescript@5`/`6` riêng cho thư viện đó.
 - pnpm 11 có `minimumReleaseAge` (chặn gói vừa phát hành quá mới) → khi thêm dependency, chọn bản đã phát hành đủ lâu thay vì thêm `minimumReleaseAgeExclude`.
@@ -34,3 +35,4 @@ M0 — Nền móng **xong**. M1 đang làm (M1-01 xong: `@kiemi/schema`). Đã c
 | 2026-11-16 | M0-05 | Xong — `apps/demo-site` (Vite MPA): login 2 vai trò, form đơn nghỉ (dropdown tự làm, lịch dd/MM/yyyy, contenteditable, upload, lỗi theo ô), danh sách đơn (duyệt/từ chối + confirm, đồng bộ trễ), bảng phân trang + tìm kiếm, iframe lồng 2 lớp, alert/confirm/prompt/popup/tab mới, WebForms ID động + postback | 18 unit test server (store, webforms, api qua HTTP thật). Chạy thử dev server: mọi trang 200, quản lý thấy đơn sau độ trễ; Chrome headless xác nhận JS client render |
 | 2026-11-16 | M0-06 | Xong — workflow CI `lint`/`typecheck`/`test` trên Windows & macOS; `.gitattributes` (LF) | Run đầu tiên pass cả 2 OS (actions/runs/43815029737) |
 | 2026-11-16 | M1-01 | Xong — `@kiemi/schema`: Locator (7 chiến lược theo thứ tự C-01) + Fingerprint, Element/Target, Step, TestCase v1, Dataset/nguồn dữ liệu, Env/Secrets, RunResult; framework migration + fixture v1; JSON Schema commit sẵn | 35 unit test; ADR 0003 |
+| 2026-11-16 | M1-02 | Xong — `@kiemi/engine`: `defineAction` + `ActionRegistry` (validate params bằng Zod), `runTestCase` tuần tự, event `runStart/stepStart/log/stepEnd/runEnd`, timeout từng step + mặc định, soft/hard, bỏ step tắt, cleanup luôn chạy, hủy run | 14 unit test; ADR 0004 |
