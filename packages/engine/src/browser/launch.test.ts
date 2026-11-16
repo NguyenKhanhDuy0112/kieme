@@ -103,5 +103,5 @@ describe('launchBrowser [N-03, G-01, G-05]', () => {
     } finally {
       await r.browser.close();
     }
-  }, 30_000);
+  });
 });
