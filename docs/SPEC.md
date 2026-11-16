@@ -47,15 +47,16 @@ Mỗi yêu cầu có ID để ROADMAP, commit và test tham chiếu.
 | U-03 | **Step đọc như câu tiếng Việt**: `Bấm vào [nút Lưu]`, `Nhập [Mã NV] = 003609`, `Kiểm tra [thông báo] chứa "Thành công"` — phần tử và giá trị hiển thị dạng chip bấm được | v1 |
 | U-04 | **Ẩn dần độ phức tạp**: mặc định chỉ hiện ô cần thiết; tùy chọn nâng cao (timeout, selector, retry) nằm trong mục "Nâng cao" thu gọn | v1 |
 | U-05 | **Không thuật ngữ kỹ thuật** ở chế độ thường (không selector, CSS, XPath, Playwright, DOM) | v1 |
-| U-06 | **Trạng thái rỗng có hướng dẫn**: màn hình trống luôn có minh họa + 1 câu giải thích + nút hành động ("Chưa có test nào — Ghi test đầu tiên") | v1 |
+| U-06 | **Trạng thái rỗng có hướng dẫn**: màn hình trống luôn có minh họa (**linh vật Cú Kiemi**, U-16) + 1 câu giải thích + nút hành động ("Chưa có test nào — Ghi test đầu tiên") | v1 |
 | U-07 | **Màu theo ý nghĩa, nhất quán**: xanh lá = pass, đỏ = fail, chàm = đang chạy/chính, vàng = cảnh báo/flaky, xám = bỏ qua. Luôn kèm icon/chữ, không chỉ dựa vào màu | v1 |
 | U-08 | **Undo thay cho hộp thoại xác nhận**: xóa → toast "Đã xóa · Hoàn tác" (trừ thao tác không hoàn tác được) | v1 |
 | U-09 | **Phản hồi tức thì**: mọi thao tác có phản hồi < 100ms (loading skeleton, trạng thái nút); không màn hình đứng | v1 |
 | U-10 | **Phím tắt + Command palette** (Ctrl/Cmd+K): tìm test, chạy, tạo mới; phím tắt hiện trong tooltip | v1 |
 | U-11 | **Sáng / Tối / Theo hệ thống** | v1 |
-| U-12 | **Design tokens**: font *Be Vietnam Pro* (hiển thị dấu tiếng Việt đẹp), lưới 8px, bo góc 8px (control) / 12px (card), viền mảnh, không gradient/bóng đổ nặng; icon Lucide (đi kèm shadcn/ui) | v1 |
+| U-12 | **Design tokens**: font *Be Vietnam Pro* (hiển thị dấu tiếng Việt đẹp), lưới 8px, bo góc **10px (control) / 16px (card)**, nút chính bo tròn hơn, nền trạng thái **pastel nhạt** (chữ/icon trạng thái vẫn đạt AA, U-13), viền mảnh, không gradient/bóng đổ nặng; icon Lucide (đi kèm shadcn/ui) | v1 |
 | U-13 | **Khả năng tiếp cận**: tương phản WCAG AA, điều khiển được bằng bàn phím, focus ring rõ, cỡ chữ tối thiểu 13px | v1 |
 | U-14 | **Hướng dẫn tại chỗ**: tooltip giải thích ngắn cho từng hành động; tour 3 bước ở lần đầu | v1 |
+| U-16 | **Linh vật "Cú Kiemi"**: cú tròn màu chàm, mắt to, bụng/mỏ là dấu tick xanh lá. Xuất hiện ở: icon app, hộp thoại chào mừng, màn hình trống, kết quả chạy (biểu cảm **vui** khi Đạt, **lo lắng** khi Không đạt, **chăm chú** khi đang chạy, **bình thường**). **Không** đặt trong bảng bước / form. Tiêu chí: icon nhận diện được ở 16px; 4 biểu cảm; đẹp ở cả sáng/tối; minh họa không thay chữ (luôn có câu giải thích, `aria-hidden`); vẽ SVG nội tuyến, không làm chậm khởi động (N-05) | v1.x |
 | U-15 | **Kiểm tra cảm nhận**: người chưa từng dùng phải tạo + chạy được test đầu tiên mà không cần hỏi ai (đo bằng N-01) | v1 |
 
 ---
@@ -233,6 +234,7 @@ Load testing · Pentest · App mobile native · App desktop · Vượt captcha �
 |---|---|---|---|
 | 2026-11-16 | — | Phiên bản SPEC đầu tiên | |
 | 2026-11-16 | N-11, N-12, N-13 | Thêm phát hành tự động, tự cập nhật, không cần cài thêm | Người dùng chỉ tải 1 lần rồi dùng |
+| 2026-11-16 | U-16, U-12, U-06 | Thêm linh vật Cú Kiemi (icon, chào mừng, màn trống, kết quả chạy); bo góc 10/16px, nền trạng thái pastel | Giao diện thân thiện, "cute" hơn — người dùng chốt phương án A |
 | 2026-11-16 | N-11, N-12, N-14 | v1 phát hành **chưa ký code**; mac chưa ký chỉ thông báo bản mới; ký code tách thành N-14 (v1.x) | Chưa có chứng chỉ; người dùng chốt phát hành không ký |
 
 ---

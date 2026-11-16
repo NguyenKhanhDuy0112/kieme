@@ -7,7 +7,7 @@ M0 — Nền móng **xong**. M1 — Schema & Engine lõi **xong** (M1-01 → M1-
 (không có)
 
 ## Tiếp theo
-Hết ROADMAP v1 (M0 → M7). Trước khi phát hành **v1.0**: đi checklist `docs/RELEASE-CHECKLIST.md` mục C (cài thử trên máy Windows/macOS sạch, tự cập nhật từ v0.1.0 lên bản kế) và mục D. Việc sau v1: xem mục "Sau v1 (v1.x)" trong ROADMAP (N-14 ký code khi có chứng chỉ).
+**M8** — Giao diện thân thiện (linh vật Cú Kiemi), bắt đầu từ **M8-01** thiết kế linh vật + icon [U-16]. Đọc lại mục U của SPEC trước khi làm. Song song (khi muốn phát hành v1.0): checklist `docs/RELEASE-CHECKLIST.md` mục C, D.
 
 ## Vấn đề tồn đọng / Câu hỏi cho người dùng
 - **(Đã chốt: v1 phát hành chưa ký — N-14)** Thông tin khi có chứng chỉ: Bạn có (hoặc sẽ mua) chứng chỉ ký code không? Cần: (1) Windows — chứng chỉ OV/EV dạng `.pfx` → secret `WIN_CSC_LINK` (base64) + `WIN_CSC_KEY_PASSWORD`; nếu là EV trên USB/HSM thì phải dùng dịch vụ ký đám mây (vd Azure Trusted Signing) → sửa workflow; (2) macOS — tài khoản Apple Developer (99 USD/năm): Developer ID Application `.p12` → `MAC_CSC_LINK` + `MAC_CSC_KEY_PASSWORD`, và API key App Store Connect → `APPLE_API_KEY_BASE64`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`; (3) tùy chọn Sentry DSN → `SENTRY_DSN`. Chưa có thì vẫn phát hành được bản **không ký** (SmartScreen/Gatekeeper cảnh báo; macOS không tự cập nhật được).
@@ -127,3 +127,4 @@ Hết ROADMAP v1 (M0 → M7). Trước khi phát hành **v1.0**: đi checklist `
 | 2026-11-16 | M7-02 | Chốt — v1 phát hành chưa ký (SPEC N-11/N-12 sửa, thêm N-14 v1.x); mac chưa ký chỉ báo bản mới | Workflow đặt `MAIN_VITE_CODE_SIGNED=1` khi có chứng chỉ |
 | 2026-11-16 | — | CI xanh lại cả Windows + macOS (đỏ từ M5): đường dẫn Windows, timeout/retry cho runner chậm, khóa SSH test | |
 | 2026-11-16 | — | **Phát hành v0.1.0** (run 43903073128): Windows NSIS + portable, macOS universal dmg/zip, latest.yml | Sửa: gộp mac universal (`x64ArchFiles`, bỏ Sentry bundler plugins); README nút tải theo OS; đổi tên repo `kiemi` |
+| 2026-11-16 | — | Chốt yêu cầu mới U-16 (linh vật Cú Kiemi), sửa U-12, U-06; thêm M8 | Người dùng chọn phương án A |
