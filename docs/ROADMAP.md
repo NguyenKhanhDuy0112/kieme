@@ -8,7 +8,7 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 - [x] **M0-03** Nối electron-trpc giữa renderer ↔ main, 1 procedure mẫu có Zod
 - [x] **M0-04** i18next (vi/en), cấu trúc file dịch, hook `useT`
 - [x] **M0-05** Tạo `apps/demo-site` (Vite): trang login 2 vai trò, form có validate, bảng phân trang, iframe, popup/confirm, trang giả WebForms ID động, dữ liệu đồng bộ trễ (A tạo → B thấy sau 5s)
-- [ ] **M0-06** GitHub Actions: lint + typecheck + test trên Windows & macOS
+- [x] **M0-06** GitHub Actions: lint + typecheck + test trên Windows & macOS
 
 ## M1 — Schema & Engine lõi
 - [ ] **M1-01** `packages/schema`: Locator, Step, TestCase, Env, Dataset, RunResult (Zod) + `schemaVersion: 1` + framework migration + xuất JSON Schema [N-08, C-01, C-02]

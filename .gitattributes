@@ -1,0 +1,9 @@
+# Keep LF everywhere so Biome formatting checks pass on Windows runners
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
