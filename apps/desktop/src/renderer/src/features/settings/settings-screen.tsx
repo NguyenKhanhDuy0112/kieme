@@ -153,6 +153,20 @@ export function SettingsScreen() {
             onCheckedChange={(advancedMode) => void save({ advancedMode })}
           />
         </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-0.5">
+            <Label htmlFor="set-crash">{tx('ui.crashReports.setting')}</Label>
+            <p id="set-crash-hint" className="text-xs text-muted-foreground">
+              {tx('ui.crashReports.hint')} {tx('ui.crashReports.restartHint')}
+            </p>
+          </div>
+          <Switch
+            id="set-crash"
+            aria-describedby="set-crash-hint"
+            checked={s.crashReports}
+            onCheckedChange={(crashReports) => void save({ crashReports })}
+          />
+        </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="set-dir">{tx('ui.settingsScreen.resultsDir')}</Label>
           <Input

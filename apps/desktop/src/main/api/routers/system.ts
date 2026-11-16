@@ -51,9 +51,11 @@ export const systemRouter = router({
 
   /** App settings [S-07]. */
   settings: publicProcedure.query(({ ctx }) => ctx.services.settings.getAll()),
-  updateSettings: publicProcedure
-    .input(AppSettingsPatchSchema)
-    .mutation(({ ctx, input }) => ctx.services.settings.update(input)),
+  updateSettings: publicProcedure.input(AppSettingsPatchSchema).mutation(({ ctx, input }) => {
+    const next = ctx.services.settings.update(input);
+    if (input.crashReports !== undefined) ctx.crashReports?.setEnabled(input.crashReports);
+    return next;
+  }),
 
   /** "Kiểm tra kết nối" for an environment's SSH tunnel [G-07]. */
   testSsh: publicProcedure

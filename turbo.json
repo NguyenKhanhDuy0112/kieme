@@ -4,7 +4,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "out/**"]
+      "outputs": ["dist/**", "out/**"],
+      "env": ["MAIN_VITE_*"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"],

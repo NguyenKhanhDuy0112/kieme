@@ -19,6 +19,8 @@ export const AppSettingsSchema = z.object({
   tourDone: z.boolean().default(false),
   /** Advanced mode: show and edit raw selectors [C-07]. */
   advancedMode: z.boolean().default(false),
+  /** Send anonymous crash reports (opt-in, off by default) [N-09]. */
+  crashReports: z.boolean().default(false),
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
@@ -37,6 +39,7 @@ export const AppSettingsPatchSchema = z.object({
   onboardingDone: f.onboardingDone.unwrap().optional(),
   tourDone: f.tourDone.unwrap().optional(),
   advancedMode: f.advancedMode.unwrap().optional(),
+  crashReports: f.crashReports.unwrap().optional(),
 });
 export type AppSettingsKey = keyof AppSettings;
 

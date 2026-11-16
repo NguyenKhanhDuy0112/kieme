@@ -1,3 +1,4 @@
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -13,6 +14,7 @@ import { app, BrowserWindow, net, protocol, safeStorage, shell } from 'electron'
 import { createIPCHandler } from 'electron-trpc/main';
 import { autoUpdater } from 'electron-updater';
 import { rootRouter } from './api/root';
+import { CrashReports } from './crash/crash-reports';
 import { isTrustedRendererUrl } from './ipc-allow';
 import { RecorderManager } from './record/recorder-manager';
 import { ARTIFACT_SCHEME, parseArtifactUrl, resolveInside } from './results/artifact-path';
@@ -106,8 +108,13 @@ async function openTraceWindow(file: string): Promise<void> {
   await win.loadURL(url);
 }
 
-function registerIpc(): void {
-  const data = openData();
+const crashReports = new CrashReports({
+  dsn: import.meta.env.MAIN_VITE_SENTRY_DSN,
+  release: app.getVersion(),
+  homeDir: homedir(),
+});
+
+function registerIpc(data: { services: Services; defaultProjectId: string }): void {
   const userData = app.getPath('userData');
   // Engine runs in its own utility process so the window never freezes [N-05].
   const runManager = new RunManager({
@@ -156,6 +163,7 @@ function registerIpc(): void {
       recorder: recorderManager,
       sampleSiteUrl: () => sampleSiteUrl(data.services),
       updates: updateService,
+      crashReports,
       desktop: {
         openExternal: (url: string) => {
           if (url.startsWith('https://')) void shell.openExternal(url);
@@ -216,8 +224,12 @@ if (!gotLock) {
     }
   });
 
+  // Opened before `ready`: the crash-report choice must be known before Sentry starts [N-09].
+  const data = openData();
+  crashReports.start(data.services.settings.getAll().crashReports);
+
   void app.whenReady().then(() => {
-    registerIpc();
+    registerIpc(data);
     createMainWindow();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow();

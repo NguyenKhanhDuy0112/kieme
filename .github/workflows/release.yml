@@ -69,6 +69,9 @@ jobs:
         run: pnpm lint && pnpm typecheck && pnpm test
       - name: Build (demo site + app)
         run: pnpm build
+        env:
+          # Opt-in crash reports [N-09]: without it the app never sends anything.
+          MAIN_VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       - uses: actions/download-artifact@v5
         with:
           name: release-notes

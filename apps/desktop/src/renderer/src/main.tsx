@@ -1,5 +1,6 @@
 import { createI18n } from '@renderer/i18n';
-import { queryClient } from '@renderer/lib/trpc';
+import { reportUncaughtErrors } from '@renderer/lib/report-errors';
+import { queryClient, trpcClient } from '@renderer/lib/trpc';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -10,6 +11,7 @@ import './styles.css';
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('Root element #root not found');
 
+reportUncaughtErrors(window, (e) => trpcClient.app.reportError.mutate(e));
 const i18n = createI18n();
 
 createRoot(rootEl).render(

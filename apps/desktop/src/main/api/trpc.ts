@@ -21,8 +21,15 @@ export interface ApiContext {
   desktop?: DesktopBridge;
   /** Address of the bundled sample site, started on demand [L-01]. */
   sampleSiteUrl?: () => Promise<string>;
+  /** Opt-in crash reports [N-09] (absent in tests). */
+  crashReports?: CrashReporter;
   /** Automatic updates (absent in development and tests) [N-12]. */
   updates?: UpdateService;
+}
+
+export interface CrashReporter {
+  setEnabled(enabled: boolean): void;
+  reportRendererError(error: { message: string; stack?: string | undefined }): void;
 }
 
 export interface DesktopBridge {

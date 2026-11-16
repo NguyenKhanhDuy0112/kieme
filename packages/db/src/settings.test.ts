@@ -12,6 +12,7 @@ describe('settings [S-07]', () => {
       onboardingDone: true,
       tourDone: true,
       advancedMode: false,
+      crashReports: false,
     });
   });
 
