@@ -42,10 +42,11 @@
 6. Main: đóng tunnel, dọn tiến trình. Engine crash → Run đánh dấu `error`, app vẫn chạy.
 
 ## Luồng ghi thao tác (Recorder)
-1. Renderer gọi `recorder.start({ url, envId, session })`.
-2. Main yêu cầu engine mở trình duyệt (headed) + nhúng `packages/recorder` vào mọi trang/iframe.
-3. Recorder bắt thao tác → sinh step + locator nhiều lớp + fingerprint → gửi về qua binding → main → renderer chèn vào bảng step.
-4. Thanh công cụ nổi (Thêm kiểm tra, Lưu giá trị, Dừng) chạy trong trang, gửi lệnh tương tự.
+1. Renderer gọi `recorder.start({ testCaseId, url | afterStepId, loginName?, mode })` (ADR 0013).
+2. Main (`RecorderManager`) tạo engine utility process, gửi `record`: mở trình duyệt hiện cửa sổ; nếu ghi chèn từ bước X / bắt đầu với đăng nhập đã lưu thì engine chạy các bước trước rồi giữ phiên (`stopAfterStepId` + `keepSessions`).
+3. `packages/recorder` nhúng script vào mọi trang/iframe, bắt thao tác → step + locator nhiều lớp + fingerprint → binding → worker → main → renderer chèn vào bảng step (một lần Hoàn tác bỏ cả bản ghi).
+4. Thanh công cụ nổi trong trang (Thêm kiểm tra, Lưu giá trị, Lưu đăng nhập, Dừng) và gợi ý kiểm tra (✓) đi cùng đường. Pick/Highlight từ editor dùng phiên đang ghi hoặc mở phiên chỉ-chọn (`mode: inspect`).
+5. Đăng nhập lưu từ trang/bước được main mã hóa vào DB; cookie không bao giờ tới renderer.
 
 ## Dữ liệu
 - DB: SQLite trong thư mục dữ liệu app (`app.getPath('userData')/kiemi.db`). Schema theo SPEC Phụ lục 2.
