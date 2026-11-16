@@ -21,11 +21,12 @@ Tài liệu nguồn (đọc khi cần):
 
 ## 2. Quy trình mỗi phiên (BẮT BUỘC)
 1. Đọc `docs/PROGRESS.md` → mục **"Tiếp theo"**. Đọc các mục SPEC mà task đó tham chiếu.
-2. **Mỗi phiên (chat) chỉ làm 1 task** trong ROADMAP — kể cả khi người dùng nói "làm hết". Không làm ngoài phạm vi task. Lý do: 1 thread dài tốn token/usage; mỗi task 1 chat mới.
+2. **Mỗi phiên (chat) làm trọn 1 milestone** trong ROADMAP (vd M5): code lần lượt **mọi task chưa xong** của milestone đó, rồi mới test cả milestone một lượt. Không làm sang milestone kế, không làm ngoài phạm vi ROADMAP.
    - Tiết kiệm token: không đọc cả SPEC — chỉ `grep` các ID mà task tham chiếu (vd `grep -E '^\| (A-01|A-02) ' docs/SPEC.md`). Đọc PROGRESS trước, ARCHITECTURE/ADR chỉ khi task đụng tới.
-   - Task quá lớn cho 1 phiên → dừng ở điểm ổn định, commit những gì đã pass, ghi chi tiết phần còn lại vào PROGRESS mục **"Đang làm dở"**.
-3. Trước khi code: nêu kế hoạch ngắn (file tạo/sửa, cách test).
-4. Làm xong: chạy `pnpm lint && pnpm typecheck && pnpm test` — phải pass hết.
+   - Milestone quá lớn cho 1 phiên → dừng ở điểm ổn định (sau 1 task trọn vẹn), commit, ghi chi tiết phần còn lại vào PROGRESS mục **"Đang làm dở"**.
+3. Trước mỗi task: nêu kế hoạch ngắn (file tạo/sửa, cách test).
+4. **Trong lúc code từng task**: viết kèm test (unit/e2e) của task; chỉ cần `pnpm lint && pnpm typecheck` pass rồi commit local, chưa push.
+   **Code xong cả milestone → test cả milestone**: chạy `pnpm lint && pnpm typecheck && pnpm test` (phải pass hết) + kiểm tra luồng chính trên app thật (build, `_electron.launch`) nếu milestone có UI. Sửa lỗi tìm được (commit `fix(...)`).
 5. Cập nhật:
    - `docs/ROADMAP.md`: tick `[x]` task đã xong
    - `docs/PROGRESS.md`: thêm dòng nhật ký, cập nhật "Tiếp theo", ghi vấn đề tồn đọng
@@ -33,11 +34,11 @@ Tài liệu nguồn (đọc khi cần):
 6. Commit theo Conventional Commits, kèm ID: `feat(engine): add fill action [A-02]`
    - **Tác giả commit = chủ dự án**: `Duy Nguyen Khanh <duynguyen.011202@gmail.com>` (đã đặt trong `git config` của repo). Trước khi commit, kiểm tra `git config user.email` đúng email này.
    - **Không thêm** dòng `Co-Authored-By: Claude …` hay bất kỳ attribution AI nào vào commit/PR.
-   - **Xong mỗi task/tính năng → commit rồi `git push`** lên GitHub (`origin`). Chưa có remote `origin` → nhắc người dùng cung cấp URL repo, không tự tạo repo.
+   - Mỗi task 1 commit. **Test cả milestone pass → `git push`** lên GitHub (`origin`). Chưa có remote `origin` → nhắc người dùng cung cấp URL repo, không tự tạo repo.
    - Không `push --force` lên `main`.
 7. Nếu người dùng chỉ nói "làm tiếp" / "continue" → làm task trong mục "Tiếp theo" (hoặc mục "Đang làm dở" nếu có).
-8. **Kết thúc phiên**: sau khi push, DỪNG — không tự làm task kế. Báo ngắn gọn: đã xong gì, task tiếp theo là gì, và nhắc người dùng `/clear` (hoặc mở chat mới) rồi gõ `Làm tiếp.`
-9. Chạy tự động không cần mở chat: xem `START-PROMPT.md` (vòng lặp `claude -p "Làm tiếp."`, mỗi lần = 1 phiên mới = 1 task).
+8. **Kết thúc phiên**: sau khi push, DỪNG — không tự làm milestone kế. Báo ngắn gọn: đã xong gì, kết quả test, milestone tiếp theo, và nhắc người dùng `/clear` (hoặc mở chat mới) rồi gõ `Làm tiếp.`
+9. Chạy tự động không cần mở chat: xem `START-PROMPT.md` (vòng lặp `claude -p "Làm tiếp."`, mỗi lần = 1 phiên mới = 1 milestone).
 
 ## 2b. Quy trình thay đổi yêu cầu (BẮT BUỘC)
 Khi người dùng đưa yêu cầu mới / muốn sửa / bỏ một yêu cầu (vd "thêm tính năng X", "đổi Y", "bỏ Z"):
