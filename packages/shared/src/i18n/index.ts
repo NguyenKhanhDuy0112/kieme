@@ -2,6 +2,7 @@ import { en } from './locales/en';
 import { vi } from './locales/vi';
 import type { Language, Translation } from './types';
 
+export * from './errors';
 export {
   DEFAULT_LANGUAGE,
   isSupportedLanguage,
