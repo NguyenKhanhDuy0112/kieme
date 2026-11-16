@@ -181,3 +181,42 @@ describe('RunResultSchema', () => {
     expect(RunResultSchema.safeParse({ ...run, startedAt: '16/11/2026' }).success).toBe(false);
   });
 });
+
+describe('Env proxy [G-06]', () => {
+  const base = { id: 'e', name: 'Nội bộ' };
+  it('accepts http, https and socks5 proxies with bypass list', () => {
+    for (const server of [
+      'http://proxy.local:3128',
+      'https://10.0.0.1:443',
+      'socks5://127.0.0.1:1080',
+    ]) {
+      const env = EnvSchema.parse({
+        ...base,
+        proxy: { server, bypass: ['localhost', '.corp.local'] },
+      });
+      expect(env.proxy?.server).toBe(server);
+    }
+    expect(EnvSchema.parse({ ...base, proxy: { server: 'http://p:8080' } }).proxy?.bypass).toEqual(
+      [],
+    );
+  });
+
+  it('keeps the password as a secret name', () => {
+    const env = EnvSchema.parse({
+      ...base,
+      proxy: { server: 'http://p:8080', username: 'tester', passwordSecret: 'proxyPass' },
+    });
+    expect(env.proxy).toMatchObject({ username: 'tester', passwordSecret: 'proxyPass' });
+  });
+
+  it('rejects bad servers, socks5 auth and password without username', () => {
+    const bad = [
+      { server: 'ftp://p:21' },
+      { server: 'p:8080' },
+      { server: 'socks5://p:1080', username: 'u' },
+      { server: 'http://p:8080', passwordSecret: 'x' },
+    ];
+    for (const proxy of bad)
+      expect(EnvSchema.safeParse({ ...base, proxy }).success, proxy.server).toBe(false);
+  });
+});

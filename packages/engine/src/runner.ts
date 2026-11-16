@@ -11,7 +11,7 @@ import type {
 } from '@kiemi/schema';
 import type { Browser } from 'playwright-core';
 import type { z } from 'zod';
-import { SessionPages, type ViewportSettings } from './browser';
+import { proxyFor, SessionPages, type ViewportSettings } from './browser';
 import type { ActionContext, ActionRegistry } from './define-action';
 import { EngineError, toRunError } from './errors';
 import type { EngineEvent, EngineEventListener, LogLevel, StepPhase } from './events';
@@ -53,7 +53,6 @@ export async function runTestCase(request: RunRequest, options: RunOptions): Pro
   const now = options.now ?? (() => new Date());
   const runSignal = options.signal ?? new AbortController().signal;
   const defaultTimeout = request.options?.defaultStepTimeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
-  const pages = new SessionPages(options.browser, request.options?.viewport);
 
   const emit = (event: EngineEvent) => {
     try {
@@ -141,12 +140,17 @@ export async function runTestCase(request: RunRequest, options: RunOptions): Pro
     emit({ type: 'stepEnd', runId, phase, index, result: outcome.result });
   };
 
+  let pages = new SessionPages(undefined);
   const steps: StepResult[] = [];
   const cleanup: StepResult[] = [];
   let status: RunStatus = 'passed';
   let runError: RunError | undefined;
 
   try {
+    pages = new SessionPages(options.browser, {
+      ...(request.options?.viewport ? { viewport: request.options.viewport } : {}),
+      proxy: proxyFor(request.env, request.secrets),
+    });
     let stopped = false;
     for (const [index, step] of testCase.steps.entries()) {
       if (stopped) {

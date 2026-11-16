@@ -1,16 +1,16 @@
 # PROGRESS
 
 ## Trạng thái hiện tại
-M0 — Nền móng **xong**. M1 đang làm (M1-01 xong: `@kiemi/schema`; M1-02 xong: `@kiemi/engine` runner; M1-03 xong: locator resolver; M1-04 xong: trình duyệt). Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
+M0 — Nền móng **xong**. M1 đang làm (M1-01 xong: `@kiemi/schema`; M1-02 xong: `@kiemi/engine` runner; M1-03 xong: locator resolver; M1-04/04b xong: trình duyệt + proxy). Đã có monorepo (pnpm workspaces + Turborepo + TypeScript strict + Biome + Vitest), package khung `@kiemi/shared`, và `apps/desktop` (Electron 45 + electron-vite 6 + React 19 + Tailwind 4 + shadcn/ui) mở được cửa sổ "Hello Kiemi", IPC renderer ↔ main qua electron-trpc (ADR 0002), i18n vi/en (bản dịch ở `@kiemi/shared`, hook `useT`), `apps/demo-site` (web mục tiêu cho e2e engine, cổng 5180), và CI GitHub Actions (lint + typecheck + test trên Windows & macOS).
 
 ## Đang làm dở
 (không có)
 
 ## Tiếp theo
-**M1-04b** — Proxy theo môi trường (HTTP/SOCKS5, DNS qua proxy) [G-06].
+**M1-05** — Nhiều phiên (browser context theo `session`) [F-01, A-16].
 
 ## Vấn đề tồn đọng / Câu hỏi cho người dùng
-- **Trình duyệt** (ADR 0006): `launchBrowser({ settings, browsersPath, onDownloadProgress })` → Edge/Chrome có sẵn hoặc tải Chromium vào `browsersPath`. Runner nhận `browser` đã launch; action lấy `await ctx.page()` / `ctx.context()` (mỗi session 1 context, tạo khi cần, đóng sau cleanup). Màn hình: `options.viewport = { device?, viewport? }`.
+- **Trình duyệt** (ADR 0006): `launchBrowser({ settings, browsersPath, onDownloadProgress })` → Edge/Chrome có sẵn hoặc tải Chromium vào `browsersPath`. Runner nhận `browser` đã launch; action lấy `await ctx.page()` / `ctx.context()` (mỗi session 1 context, tạo khi cần, đóng sau cleanup). Màn hình: `options.viewport = { device?, viewport? }`. Proxy lấy từ `request.env.proxy` (+ secret mật khẩu). Test có proxy HTTP/SOCKS5 giả ở `src/testing/proxies.ts`.
 - **Locator** (ADR 0005): `resolveLocator(root, locator, { timeoutMs, signal, state })` → Playwright locator đã ghim 1 phần tử. `Locator` có thêm `scope` (`within`/`row`/`near`) và `nth` (`first`/`last`/số từ 1) — vẫn schema v1 (thêm trường tùy chọn, chưa phát hành). Mã lỗi `ELEMENT_NOT_FOUND`/`ELEMENT_AMBIGUOUS`. Test engine cần Chrome/Edge (`launchTestBrowser`); e2e dùng `startDemoServer()` từ `@kiemi/demo-site/server` (chỉ trang server-render như `/webforms.aspx`, chưa có trang Vite).
 - **Engine** (`@kiemi/engine`, ADR 0004): `runTestCase(request, { registry, onEvent, signal })`. Đã có `playwright-core` 1.64.1; `ActionContext` có `page()`/`context()` (M1-04). Lỗi engine có `code` + `details`; UI phải dịch theo mã (chưa có chuỗi i18n cho lỗi). Timeout mặc định 10 giây.
 - **Schema DSL** (`@kiemi/schema`, ADR 0003): `parseTestCase(json)` = migrate + validate. `Step.params` để mở — action tự validate (M1-02). Đổi schema → làm theo mục "Hệ quả" ADR 0003; JSON Schema cập nhật bằng `pnpm --filter @kiemi/schema test -u`.
@@ -40,3 +40,4 @@ M0 — Nền móng **xong**. M1 đang làm (M1-01 xong: `@kiemi/schema`; M1-02 x
 | 2026-11-16 | M1-02 | Xong — `@kiemi/engine`: `defineAction` + `ActionRegistry` (validate params bằng Zod), `runTestCase` tuần tự, event `runStart/stepStart/log/stepEnd/runEnd`, timeout từng step + mặc định, soft/hard, bỏ step tắt, cleanup luôn chạy, hủy run | 14 unit test; ADR 0004 |
 | 2026-11-16 | M1-03 | Xong — `resolveLocator`: thử chiến lược theo thứ tự, chờ phần tử xuất hiện, bỏ qua kết quả mơ hồ, scope `within`/`row`/`near`, `nth`, ID động (`ctl00_…`, ID ngẫu nhiên → khớp phần ổn định), hỗ trợ iframe | 36 test mới (unit stable-id + trình duyệt thật + e2e WebForms demo-site); ADR 0005 |
 | 2026-11-16 | M1-04 | Xong — phát hiện Edge/Chrome theo OS, `launchBrowser` (auto/chọn trình duyệt, headless/headed, slowMo), tải Chromium có tiến trình, context riêng theo session, viewport + giả lập mobile | 23 test mới; đã thử tải Chromium thật (~150 MB) và chạy được; ADR 0006 |
+| 2026-11-16 | M1-04b | Xong — `Env.proxy` (HTTP/HTTPS/SOCKS5, bypass, mật khẩu qua secret), proxy theo context, DNS qua proxy | 9 test mới (proxy HTTP có auth + SOCKS5 thật trong Node, tên máy nội bộ chỉ proxy phân giải được) |

@@ -17,3 +17,10 @@ N-03 (không bắt cài thêm, thiếu thì tự tải Chromium có tiến trìn
 - Engine không tự launch trong `runTestCase`: utility process của desktop launch 1 lần, dùng lại cho nhiều run (nhanh hơn), tự đóng.
 - Firefox/WebKit (G-02, v1.x) thêm bằng cách mở rộng `BROWSER_KINDS` + `launch` theo loại.
 - Ngôn ngữ/múi giờ/vị trí (G-04, v1.x) sẽ thêm vào `ViewportSettings`/context options.
+
+## Bổ sung M1-04b — Proxy theo môi trường [G-06]
+- `Env.proxy = { server: http|https|socks5://host:port, username?, passwordSecret?, bypass[] }` (Env lưu ở DB, không thuộc file `.kiemi.json` → không đụng `schemaVersion`). Mật khẩu chỉ lưu **tên secret**; engine lấy giá trị từ `RunRequest.secrets` (`proxyFor`), thiếu → `PROXY_SECRET_MISSING`.
+- Proxy đặt **theo context** (`newContext({ proxy })`), mọi session của run dùng chung proxy của env.
+- DNS qua proxy: Chromium gửi tên máy cho proxy (HTTP `CONNECT`/absolute URI, SOCKS5 kiểu địa chỉ domain) — đã kiểm chứng bằng tên `kiemi-internal.test` chỉ phân giải được phía proxy.
+- Giới hạn của Chromium: **SOCKS5 không hỗ trợ user/mật khẩu** → schema chặn. SSH tunnel (G-07) sẽ mở SOCKS cục bộ không cần xác thực.
+- Chromium không bao giờ đi proxy cho `localhost`/loopback (trừ khi bypass có `<-loopback>`); Chrome cũng gửi vài request nền (vd `www.google.com`) qua proxy.

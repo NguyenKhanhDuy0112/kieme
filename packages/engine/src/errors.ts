@@ -17,6 +17,7 @@ export const ENGINE_ERROR_CODES = [
   'BROWSER_LAUNCH_FAILED',
   'UNKNOWN_DEVICE',
   'NO_BROWSER',
+  'PROXY_SECRET_MISSING',
   'ENGINE_ERROR',
 ] as const;
 export type EngineErrorCode = (typeof ENGINE_ERROR_CODES)[number];

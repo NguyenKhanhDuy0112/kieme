@@ -1,6 +1,7 @@
 import type { Browser, BrowserContext, Page } from 'playwright-core';
 import { EngineError } from '../errors';
 import { contextEmulation, type ViewportSettings } from './options';
+import type { ContextProxy } from './proxy';
 
 interface SessionState {
   context: BrowserContext;
@@ -14,11 +15,16 @@ interface SessionState {
 export class SessionPages {
   readonly #browser: Browser | undefined;
   readonly #viewport: ViewportSettings;
+  readonly #proxy: ContextProxy | undefined;
   readonly #sessions = new Map<string, Promise<SessionState>>();
 
-  constructor(browser: Browser | undefined, viewport: ViewportSettings = {}) {
+  constructor(
+    browser: Browser | undefined,
+    options: { viewport?: ViewportSettings; proxy?: ContextProxy | undefined } = {},
+  ) {
     this.#browser = browser;
-    this.#viewport = viewport;
+    this.#viewport = options.viewport ?? {};
+    this.#proxy = options.proxy;
   }
 
   /** Active page of `session`, creating its context on first use. */
@@ -49,7 +55,10 @@ export class SessionPages {
     let state = this.#sessions.get(session);
     if (!state) {
       state = (async () => {
-        const context = await browser.newContext(contextEmulation(this.#viewport));
+        const context = await browser.newContext({
+          ...contextEmulation(this.#viewport),
+          ...(this.#proxy ? { proxy: this.#proxy } : {}),
+        });
         return { context, page: await context.newPage() };
       })();
       this.#sessions.set(session, state);
