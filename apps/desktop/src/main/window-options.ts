@@ -1,0 +1,29 @@
+import type { BrowserWindowConstructorOptions } from 'electron';
+
+/**
+ * Security-hardened options for every Kiemi window (CLAUDE.md §5.7).
+ * Kept free of runtime Electron imports so it can be unit-tested.
+ */
+export function createMainWindowOptions(preloadPath: string): BrowserWindowConstructorOptions {
+  return {
+    width: 1280,
+    height: 800,
+    minWidth: 960,
+    minHeight: 600,
+    show: false,
+    title: 'Kiemi',
+    backgroundColor: '#FFFFFF',
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      nodeIntegrationInWorker: false,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      experimentalFeatures: false,
+      spellcheck: false,
+    },
+  };
+}
