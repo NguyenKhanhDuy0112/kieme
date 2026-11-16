@@ -1,3 +1,4 @@
+import { Mascot } from '@renderer/components/mascot/mascot';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -83,9 +84,12 @@ export function WelcomeDialog() {
       }}
     >
       <DialogContent className="sm:max-w-xl" data-testid="welcome-dialog">
-        <DialogHeader>
-          <DialogTitle className="text-xl">{tx('ui.onboarding.title')}</DialogTitle>
-          <DialogDescription>{tx('ui.onboarding.text')}</DialogDescription>
+        <DialogHeader className="flex-row items-center gap-4 text-left">
+          <Mascot mood="happy" size={76} className="welcome-mascot" />
+          <div className="flex flex-col gap-1.5">
+            <DialogTitle className="text-xl">{tx('ui.onboarding.title')}</DialogTitle>
+            <DialogDescription>{tx('ui.onboarding.text')}</DialogDescription>
+          </div>
         </DialogHeader>
         <section className="flex flex-col gap-3 rounded-xl border p-4">
           <div className="flex items-start gap-3">

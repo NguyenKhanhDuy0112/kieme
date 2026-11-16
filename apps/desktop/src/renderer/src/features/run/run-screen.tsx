@@ -1,6 +1,8 @@
 import type { Step, TestCase } from '@kiemi/schema';
 import { describeRunError } from '@kiemi/shared';
 import { artifactUrl } from '@main/results/artifact-url';
+import { Mascot } from '@renderer/components/mascot/mascot';
+import { moodForStatus } from '@renderer/components/mascot/mood';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@renderer/components/ui/dialog';
@@ -204,6 +206,7 @@ export function RunScreen({ runId }: { runId: string }) {
         >
           <ArrowLeft />
         </Button>
+        <Mascot mood={moodForStatus(view.status)} size={36} />
         <h1 className="min-w-0 truncate text-base font-semibold">{title}</h1>
         <RunStatusBadge status={view.status} />
         <span className="text-xs text-muted-foreground">

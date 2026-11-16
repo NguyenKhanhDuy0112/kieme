@@ -25,3 +25,15 @@ describe('Mascot [U-16]', () => {
     expect(container.innerHTML).toContain('var(--mascot-belly)');
   });
 });
+
+describe('moodForStatus [U-16]', () => {
+  it('is happy on pass, worried on failure, focused while running', async () => {
+    const { moodForStatus } = await import('./mood');
+    expect(moodForStatus('passed')).toBe('happy');
+    expect(moodForStatus('failed')).toBe('worried');
+    expect(moodForStatus('error')).toBe('worried');
+    expect(moodForStatus('running')).toBe('focused');
+    expect(moodForStatus('queued')).toBe('focused');
+    expect(moodForStatus('cancelled')).toBe('idle');
+  });
+});
