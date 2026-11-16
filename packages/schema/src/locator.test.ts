@@ -95,3 +95,49 @@ describe('element & target', () => {
     expect(TargetSchema.safeParse({ ref: 'bad ref' }).success).toBe(false);
   });
 });
+
+describe('locator scope and nth [C-03, C-04]', () => {
+  const strategies = [{ kind: 'role', role: 'button', name: 'Duyệt' }];
+
+  it('accepts within / row / near scopes and nth', () => {
+    const parsed = LocatorSchema.parse({
+      strategies,
+      scope: [
+        { kind: 'within', strategies: [{ kind: 'css', value: '#list' }], nth: 'last' },
+        { kind: 'row', text: 'Nguyễn Văn An', exact: true },
+        { kind: 'near', text: 'Họ tên', position: 'rightOf' },
+      ],
+      nth: 2,
+    });
+    expect(parsed.scope).toHaveLength(3);
+    expect(parsed.nth).toBe(2);
+  });
+
+  it('accepts first and last', () => {
+    expect(LocatorSchema.parse({ strategies, nth: 'first' }).nth).toBe('first');
+    expect(LocatorSchema.parse({ strategies, nth: 'last' }).nth).toBe('last');
+  });
+
+  it('rejects zero, negative, fractional or unknown nth', () => {
+    for (const nth of [0, -1, 1.5, 'middle']) {
+      expect(LocatorSchema.safeParse({ strategies, nth }).success).toBe(false);
+    }
+  });
+
+  it('rejects unknown near position and empty scope text', () => {
+    expect(
+      LocatorSchema.safeParse({
+        strategies,
+        scope: [{ kind: 'near', text: 'A', position: 'inside' }],
+      }).success,
+    ).toBe(false);
+    expect(
+      LocatorSchema.safeParse({ strategies, scope: [{ kind: 'row', text: '' }] }).success,
+    ).toBe(false);
+  });
+
+  it('keeps scope and nth on inline step targets', () => {
+    const target = TargetSchema.parse({ strategies, scope: [{ kind: 'row', text: 'A' }], nth: 1 });
+    expect(target).toMatchObject({ nth: 1, scope: [{ kind: 'row', text: 'A' }] });
+  });
+});

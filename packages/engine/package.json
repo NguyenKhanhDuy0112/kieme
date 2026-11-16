@@ -12,9 +12,11 @@
   },
   "dependencies": {
     "@kiemi/schema": "workspace:*",
+    "playwright-core": "1.64.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@kiemi/demo-site": "workspace:*",
     "@types/node": "^26.6.6",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"

@@ -57,9 +57,50 @@ export const FingerprintSchema = z.object({
 });
 export type Fingerprint = z.infer<typeof FingerprintSchema>;
 
+/**
+ * Which match to take when several elements match [C-04]: `first`, `last`, or a
+ * 1-based position ("thứ 3"). With a `near` scope, the order is closest first.
+ */
+export const NthSchema = z.union([
+  z.literal('first'),
+  z.literal('last'),
+  z.number().int().positive(),
+]);
+export type Nth = z.infer<typeof NthSchema>;
+
+export const NEAR_POSITIONS = ['below', 'above', 'leftOf', 'rightOf', 'near'] as const;
+export const NearPositionSchema = z.enum(NEAR_POSITIONS);
+export type NearPosition = z.infer<typeof NearPositionSchema>;
+
+/**
+ * Context that narrows where the element is searched [C-03], applied in order:
+ * - `within`: inside a region (found by its own strategies, tried in order)
+ * - `row`: inside a table/list row that contains a text ("trong dòng có…")
+ * - `near`: positioned relative to a text/label ("bên dưới/cạnh nhãn…")
+ */
+export const LocatorScopeSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('within'),
+    strategies: z.array(LocatorStrategySchema).min(1),
+    nth: NthSchema.optional(),
+  }),
+  z.object({ kind: z.literal('row'), text: nonEmpty, exact: z.boolean().optional() }),
+  z.object({
+    kind: z.literal('near'),
+    text: nonEmpty,
+    position: NearPositionSchema,
+    exact: z.boolean().optional(),
+  }),
+]);
+export type LocatorScope = z.infer<typeof LocatorScopeSchema>;
+
 /** Ordered strategies (first = preferred). Tried one by one until one matches [C-01]. */
 export const LocatorSchema = z.object({
   strategies: z.array(LocatorStrategySchema).min(1),
+  /** Context narrowing the search [C-03]. */
+  scope: z.array(LocatorScopeSchema).optional(),
+  /** Pick among several matches [C-04]. Without it, a strategy must match exactly one element. */
+  nth: NthSchema.optional(),
   fingerprint: FingerprintSchema.optional(),
 });
 export type Locator = z.infer<typeof LocatorSchema>;

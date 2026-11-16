@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "0193a5b2-7c4e-7d1a-9f3b-2c8e4a6d1f03",
+  "name": "Duyệt đơn trong dòng có tên nhân viên",
+  "elements": {
+    "el_btnDuyet": {
+      "name": "Nút Duyệt",
+      "strategies": [{ "kind": "role", "role": "button", "name": "Duyệt" }],
+      "scope": [
+        { "kind": "within", "strategies": [{ "kind": "css", "value": "#requests" }] },
+        { "kind": "row", "text": "Nguyễn Văn An" }
+      ]
+    },
+    "el_txtHoTen": {
+      "name": "Ô Họ tên",
+      "strategies": [
+        { "kind": "label", "value": "Họ tên" },
+        { "kind": "css", "value": "#ctl00_MainContent_ctl42_txtHoTen" }
+      ],
+      "scope": [{ "kind": "near", "text": "Họ tên", "position": "below" }],
+      "nth": "first"
+    }
+  },
+  "steps": [
+    { "id": "s1", "action": "click", "params": { "target": { "ref": "el_btnDuyet" } } },
+    {
+      "id": "s2",
+      "action": "click",
+      "params": { "target": { "strategies": [{ "kind": "role", "role": "link" }], "nth": 3 } }
+    }
+  ]
+}

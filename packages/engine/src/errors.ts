@@ -10,6 +10,8 @@ export const ENGINE_ERROR_CODES = [
   'STEP_TIMEOUT',
   'STEP_FAILED',
   'RUN_CANCELLED',
+  'ELEMENT_NOT_FOUND',
+  'ELEMENT_AMBIGUOUS',
   'ENGINE_ERROR',
 ] as const;
 export type EngineErrorCode = (typeof ENGINE_ERROR_CODES)[number];
