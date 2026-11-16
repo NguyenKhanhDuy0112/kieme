@@ -1,19 +1,31 @@
 # Prompt dùng với Claude Code
 
-## Lần đầu tiên (paste vào Claude Code trong VS Code, đã mở thư mục dự án)
-```
-Đây là dự án mới. Hãy đọc CLAUDE.md, docs/SPEC.md, docs/ARCHITECTURE.md, docs/ROADMAP.md, docs/PROGRESS.md.
-Khởi tạo git repo (nếu chưa có), commit bộ tài liệu này, rồi làm task trong mục "Tiếp theo" của PROGRESS.md.
-Tuân thủ đúng quy trình trong CLAUDE.md.
-```
+> Nguyên tắc: **1 chat = 1 task**. Xong task, Claude commit + push rồi dừng. Bắt đầu task mới bằng chat mới để không tốn token cho lịch sử cũ.
 
-## Mỗi phiên sau (chat mới)
+## Cách 1 — Thủ công (khuyên dùng)
+Trong VS Code (Claude Code):
 ```
+/clear
 Làm tiếp.
 ```
+`/clear` xóa lịch sử chat hiện tại (tương đương mở chat mới). Claude tự đọc `CLAUDE.md` + `docs/PROGRESS.md` để biết làm task nào.
+
+## Cách 2 — Tự động N task liên tiếp (mỗi task 1 phiên mới)
+Chạy trong terminal tại thư mục dự án:
+```bash
+# Làm tối đa 5 task, mỗi lần là 1 phiên Claude riêng; dừng nếu một lần bị lỗi
+for i in 1 2 3 4 5; do
+  claude -p "Làm tiếp." --permission-mode acceptEdits || break
+done
+```
+Lưu ý:
+- `-p` chạy không tương tác: lệnh nào cần quyền mà chưa được cho phép sẽ bị từ chối → Claude dừng và ghi lý do vào `docs/PROGRESS.md`. Muốn ít bị chặn: thêm các lệnh hay dùng (`pnpm *`, `git add/commit/push`) vào `.claude/settings.json` (gõ `/fewer-permission-prompts` để Claude gợi ý).
+- Task cần bạn quyết định (vd M7-02 chứng chỉ ký code) → Claude ghi câu hỏi vào mục "Vấn đề tồn đọng" và dừng; vòng lặp nên dừng ở đó.
+- Xem kết quả: `git log --oneline` và `docs/PROGRESS.md`.
 
 ## Làm task cụ thể
 ```
+/clear
 Làm task M1-03.
 ```
 

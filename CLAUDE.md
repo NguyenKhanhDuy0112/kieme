@@ -21,7 +21,9 @@ Tài liệu nguồn (đọc khi cần):
 
 ## 2. Quy trình mỗi phiên (BẮT BUỘC)
 1. Đọc `docs/PROGRESS.md` → mục **"Tiếp theo"**. Đọc các mục SPEC mà task đó tham chiếu.
-2. Mỗi lần chỉ làm **1 task** trong ROADMAP (trừ khi người dùng yêu cầu khác). Không làm ngoài phạm vi task.
+2. **Mỗi phiên (chat) chỉ làm 1 task** trong ROADMAP — kể cả khi người dùng nói "làm hết". Không làm ngoài phạm vi task. Lý do: 1 thread dài tốn token/usage; mỗi task 1 chat mới.
+   - Tiết kiệm token: không đọc cả SPEC — chỉ `grep` các ID mà task tham chiếu (vd `grep -E '^\| (A-01|A-02) ' docs/SPEC.md`). Đọc PROGRESS trước, ARCHITECTURE/ADR chỉ khi task đụng tới.
+   - Task quá lớn cho 1 phiên → dừng ở điểm ổn định, commit những gì đã pass, ghi chi tiết phần còn lại vào PROGRESS mục **"Đang làm dở"**.
 3. Trước khi code: nêu kế hoạch ngắn (file tạo/sửa, cách test).
 4. Làm xong: chạy `pnpm lint && pnpm typecheck && pnpm test` — phải pass hết.
 5. Cập nhật:
@@ -33,7 +35,9 @@ Tài liệu nguồn (đọc khi cần):
    - **Không thêm** dòng `Co-Authored-By: Claude …` hay bất kỳ attribution AI nào vào commit/PR.
    - **Xong mỗi task/tính năng → commit rồi `git push`** lên GitHub (`origin`). Chưa có remote `origin` → nhắc người dùng cung cấp URL repo, không tự tạo repo.
    - Không `push --force` lên `main`.
-7. Nếu người dùng chỉ nói "làm tiếp" / "continue" → làm task trong mục "Tiếp theo".
+7. Nếu người dùng chỉ nói "làm tiếp" / "continue" → làm task trong mục "Tiếp theo" (hoặc mục "Đang làm dở" nếu có).
+8. **Kết thúc phiên**: sau khi push, DỪNG — không tự làm task kế. Báo ngắn gọn: đã xong gì, task tiếp theo là gì, và nhắc người dùng `/clear` (hoặc mở chat mới) rồi gõ `Làm tiếp.`
+9. Chạy tự động không cần mở chat: xem `START-PROMPT.md` (vòng lặp `claude -p "Làm tiếp."`, mỗi lần = 1 phiên mới = 1 task).
 
 ## 2b. Quy trình thay đổi yêu cầu (BẮT BUỘC)
 Khi người dùng đưa yêu cầu mới / muốn sửa / bỏ một yêu cầu (vd "thêm tính năng X", "đổi Y", "bỏ Z"):
@@ -98,6 +102,12 @@ docs/
 6. **DB**: mọi bảng có `id` (UUIDv7), `workspaceId`, `createdAt`, `updatedAt`, `deletedAt` (soft delete), `version`.
 7. **Bảo mật Electron**: `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`. Renderer chỉ gọi main qua electron-trpc. Secret lưu bằng `safeStorage`. Che secret trong log, kết quả, ảnh chụp.
 8. **UI đẹp, đơn giản, dễ dùng**: mọi màn hình tuân thủ mục **U** trong `docs/SPEC.md` (U-01 → U-15). Trước khi làm UI, đọc lại mục U.
+   **Làm UI nhanh — dùng đồ có sẵn, không tự thiết kế từ đầu**:
+   - Component: lấy từ **shadcn/ui** bằng `pnpm dlx shadcn@latest add <tên>` trong `apps/desktop` (button, input, dialog, dropdown-menu, command, table, tabs, sonner, tooltip, sheet…).
+   - Bố cục màn hình: dùng **shadcn Blocks** (vd `sidebar-07` cho layout 3 vùng U-01, `dashboard-01`, `login-0x`) rồi chỉnh màu/chữ theo token sẵn có trong `styles.css`.
+   - Bảng: TanStack Table theo mẫu "Data Table" của shadcn. Icon: Lucide. Toast: sonner. Command palette: `command` (cmdk).
+   - Chỉ tự viết component khi shadcn không có; không thêm UI kit khác (MUI, Ant…).
+   - Demo-site (`apps/demo-site`) là web mục tiêu để test, không cần đẹp — HTML/CSS thuần.
    **UI cho người không biết code**: không hardcode chuỗi (dùng i18n). Không hiện thuật ngữ kỹ thuật (selector, CSS, Playwright) trừ chế độ "Nâng cao". Lỗi phải nói bằng tiếng Việt dễ hiểu: *"Bước 5: Không tìm thấy nút 'Lưu' sau 10 giây"*.
 9. **Không thêm dependency lớn** khi chưa ghi lý do vào ADR.
 
