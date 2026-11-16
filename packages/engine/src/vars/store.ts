@@ -107,7 +107,9 @@ export class VariableStore {
   #renderValue(template: string): unknown {
     if (++this.#depth > MAX_DEPTH) {
       this.#depth = 0;
-      throw new EngineError('INVALID_EXPRESSION', 'Variables reference each other in a loop', { template });
+      throw new EngineError('INVALID_EXPRESSION', 'Variables reference each other in a loop', {
+        template,
+      });
     }
     try {
       const single = /^\{\{([\s\S]+?)\}\}$/.exec(template);
@@ -115,7 +117,9 @@ export class VariableStore {
         const v = evaluateExpression(single[1], this.#env());
         return v instanceof Date ? stringify(v) : v;
       }
-      return template.replace(TEMPLATE, (_m, expr: string) => stringify(evaluateExpression(expr, this.#env())));
+      return template.replace(TEMPLATE, (_m, expr: string) =>
+        stringify(evaluateExpression(expr, this.#env())),
+      );
     } finally {
       this.#depth--;
     }
@@ -135,8 +139,11 @@ export class VariableStore {
     const ok = (value: unknown) => ({ found: true as const, value });
     switch (name) {
       case 'env': {
+        // Getters: a variable is expanded only when used (no self-recursion).
         const vars: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(s.env?.variables ?? {})) vars[k] = this.#expand(v);
+        for (const [k, v] of Object.entries(s.env?.variables ?? {})) {
+          Object.defineProperty(vars, k, { enumerable: true, get: () => this.#expand(v) });
+        }
         if (s.env?.baseUrl !== undefined) vars.baseUrl = s.env.baseUrl;
         if (s.env?.name !== undefined) vars.name = s.env.name;
         return ok(vars);

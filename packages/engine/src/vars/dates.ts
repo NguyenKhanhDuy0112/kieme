@@ -50,7 +50,11 @@ export const DATE_INPUT_FORMATS = [
 ];
 
 /** Parses a date in common Vietnamese / ISO formats; `undefined` if none fits. */
-export function parseDate(text: string, pattern?: string, reference = new Date()): Date | undefined {
+export function parseDate(
+  text: string,
+  pattern?: string,
+  reference = new Date(),
+): Date | undefined {
   const s = text.trim().replace(/^ngày\s+/i, '');
   const patterns = pattern ? [pattern] : DATE_INPUT_FORMATS;
   for (const p of patterns) {

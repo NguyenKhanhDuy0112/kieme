@@ -37,8 +37,16 @@ export const FAKE: Record<string, () => string> = {
   firstName: () => fakerVI.person.firstName(),
   lastName: () => fakerVI.person.lastName(),
   phone: () => `0${randomString(1, '35789')}${randomString(8, '0123456789')}`,
-  email: () =>
-    `${fakerVI.person.firstName().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase()}.${randomString(6)}@example.com`,
+  email: () => {
+    const base = fakerVI.person
+      .firstName()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/gi, 'd')
+      .toLowerCase()
+      .replace(/[^a-z]/g, '');
+    return `${base || 'user'}.${randomString(6)}@example.com`;
+  },
   address: () => `${fakerVI.location.streetAddress()}, ${fakerVI.location.city()}`,
   city: () => fakerVI.location.city(),
   company: () => fakerVI.company.name(),

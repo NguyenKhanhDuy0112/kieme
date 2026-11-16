@@ -30,7 +30,16 @@ type Tok =
   | { k: 'id'; v: string }
   | { k: 'op'; v: string };
 
-const UNITS: Record<string, Unit> = { y: 'y', M: 'M', w: 'w', d: 'd', h: 'h', min: 'min', m: 'min', s: 's' };
+const UNITS: Record<string, Unit> = {
+  y: 'y',
+  M: 'M',
+  w: 'w',
+  d: 'd',
+  h: 'h',
+  min: 'min',
+  m: 'min',
+  s: 's',
+};
 
 function syntax(source: string, message: string): EngineError {
   return new EngineError('INVALID_EXPRESSION', `Invalid expression "${source}": ${message}`, {
@@ -55,7 +64,14 @@ function tokenize(src: string): Tok[] {
       // A unit must not be followed by more identifier letters (e.g. `3days`).
       const next = src[i + text.length] ?? '';
       if (unit && !/[A-Za-z_]/.test(next)) {
-        out.push({ k: 'dur', v: { kind: 'duration', amount: Number(text.slice(0, -unit.length)), unit: UNITS[unit] as Unit } });
+        out.push({
+          k: 'dur',
+          v: {
+            kind: 'duration',
+            amount: Number(text.slice(0, -unit.length)),
+            unit: UNITS[unit] as Unit,
+          },
+        });
       } else {
         const num = /^[0-9]*\.?[0-9]+/.exec(text)?.[0] ?? text;
         out.push({ k: 'num', v: Number(num) });

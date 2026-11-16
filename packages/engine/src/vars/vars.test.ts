@@ -11,7 +11,11 @@ const env = EnvSchema.parse({
   id: 'e',
   name: 'Staging',
   baseUrl: 'https://staging.example.com',
-  variables: { portalUrl: 'https://portal.example.com', apiUrl: '{{env.portalUrl}}/api', who: 'env' },
+  variables: {
+    portalUrl: 'https://portal.example.com',
+    apiUrl: '{{env.portalUrl}}/api',
+    who: 'env',
+  },
 });
 const store = () =>
   new VariableStore(
@@ -56,7 +60,12 @@ describe('templates & scopes [E-01, E-02]', () => {
   it('keeps types for a single expression and walks objects', () => {
     const s = store();
     s.set('resp', { body: { items: [{ id: 42 }] } });
-    expect(s.interpolate({ a: '{{resp.body.items[0].id}}', b: ['{{row.ten}}'], steps: [{ x: '{{nope}}' }] }, ['steps'])).toEqual({
+    expect(
+      s.interpolate(
+        { a: '{{resp.body.items[0].id}}', b: ['{{row.ten}}'], steps: [{ x: '{{nope}}' }] },
+        ['steps'],
+      ),
+    ).toEqual({
       a: 42,
       b: ['An'],
       steps: [{ x: '{{nope}}' }],
@@ -116,7 +125,14 @@ describe('dates [E-06]', () => {
   });
 
   it('parses common date formats', () => {
-    for (const t of ['05/03/2026', '5/3/2026', '2026-03-05', '05-03-2026', '05.03.2026', 'Ngày 05 tháng 03 năm 2026']) {
+    for (const t of [
+      '05/03/2026',
+      '5/3/2026',
+      '2026-03-05',
+      '05-03-2026',
+      '05.03.2026',
+      'Ngày 05 tháng 03 năm 2026',
+    ]) {
       expect(parseDate(t)?.toDateString(), t).toBe(new Date(2026, 2, 5).toDateString());
     }
     expect(parseDate('hello')).toBeUndefined();

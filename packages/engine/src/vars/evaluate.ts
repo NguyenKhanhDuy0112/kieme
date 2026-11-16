@@ -49,13 +49,21 @@ export function stringify(v: unknown): string {
   return JSON.stringify(v);
 }
 
-function fail(code: 'UNKNOWN_VARIABLE' | 'INVALID_EXPRESSION', message: string, details: Record<string, unknown>) {
+function fail(
+  code: 'UNKNOWN_VARIABLE' | 'INVALID_EXPRESSION',
+  message: string,
+  details: Record<string, unknown>,
+) {
   return new EngineError(code, message, details);
 }
 
 function num(v: unknown, op: string): number {
   const n = toNumber(v);
-  if (n === undefined) throw fail('INVALID_EXPRESSION', `"${stringify(v)}" is not a number (${op})`, { value: stringify(v), op });
+  if (n === undefined)
+    throw fail('INVALID_EXPRESSION', `"${stringify(v)}" is not a number (${op})`, {
+      value: stringify(v),
+      op,
+    });
   return n;
 }
 
@@ -71,7 +79,11 @@ const FUNCTIONS: Record<string, (args: unknown[], env: EvalEnv) => unknown> = {
   max: (a) => Math.max(...a.map((x) => num(x, 'max'))),
   number: ([x]) => num(x, 'number'),
   random: ([a, b]) =>
-    a === undefined ? randomInt(100000, 999999) : b === undefined ? randomInt(0, num(a, 'random')) : randomInt(num(a, 'random'), num(b, 'random')),
+    a === undefined
+      ? randomInt(100000, 999999)
+      : b === undefined
+        ? randomInt(0, num(a, 'random'))
+        : randomInt(num(a, 'random'), num(b, 'random')),
   randomString: ([n]) => randomString(n === undefined ? 8 : num(n, 'randomString')),
   randomDigits: ([n]) => randomString(n === undefined ? 6 : num(n, 'randomDigits'), '0123456789'),
   upper: ([s]) => stringify(s).toUpperCase(),
@@ -81,12 +93,14 @@ const FUNCTIONS: Record<string, (args: unknown[], env: EvalEnv) => unknown> = {
   concat: (a) => a.map(stringify).join(''),
   format: ([d, p]) => {
     const date = d instanceof Date ? d : parseDate(stringify(d));
-    if (!date) throw fail('INVALID_EXPRESSION', `"${stringify(d)}" is not a date`, { value: stringify(d) });
+    if (!date)
+      throw fail('INVALID_EXPRESSION', `"${stringify(d)}" is not a date`, { value: stringify(d) });
     return formatDate(date, p === undefined ? undefined : stringify(p));
   },
   date: ([s, p]) => {
     const d = parseDate(stringify(s), p === undefined ? undefined : stringify(p));
-    if (!d) throw fail('INVALID_EXPRESSION', `"${stringify(s)}" is not a date`, { value: stringify(s) });
+    if (!d)
+      throw fail('INVALID_EXPRESSION', `"${stringify(s)}" is not a date`, { value: stringify(s) });
     return d;
   },
 };
@@ -102,7 +116,9 @@ export function evaluate(node: Node, env: EvalEnv): unknown {
     case 'call': {
       const fn = FUNCTIONS[node.name];
       if (!fn) {
-        throw fail('INVALID_EXPRESSION', `Unknown function "${node.name}"`, { function: node.name });
+        throw fail('INVALID_EXPRESSION', `Unknown function "${node.name}"`, {
+          function: node.name,
+        });
       }
       return fn(
         node.args.map((a) => evaluate(a, env)),
@@ -115,7 +131,10 @@ export function evaluate(node: Node, env: EvalEnv): unknown {
       if (node.root === 'fake') {
         const kind = parts.shift();
         const gen = typeof kind === 'string' ? FAKE[kind] : undefined;
-        if (!gen) throw fail('UNKNOWN_VARIABLE', `Unknown generator "fake.${String(kind)}"`, { name: `fake.${String(kind)}` });
+        if (!gen)
+          throw fail('UNKNOWN_VARIABLE', `Unknown generator "fake.${String(kind)}"`, {
+            name: `fake.${String(kind)}`,
+          });
         value = gen();
       } else {
         const hit = env.lookup(node.root);
@@ -176,6 +195,7 @@ export function evaluateExpression(source: string, env: EvalEnv): unknown {
   const pattern = source.slice(pipe + 1).trim();
   if (value instanceof Date) return formatDate(value, pattern);
   const n = toNumber(value);
-  if (n !== undefined && /^0(\.0+)?$/.test(pattern)) return n.toFixed(pattern.split('.')[1]?.length ?? 0);
+  if (n !== undefined && /^0(\.0+)?$/.test(pattern))
+    return n.toFixed(pattern.split('.')[1]?.length ?? 0);
   return formatDate(FUNCTIONS.date?.([value], env) as Date, pattern);
 }
