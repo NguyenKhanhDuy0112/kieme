@@ -11,7 +11,7 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 - [x] **M0-06** GitHub Actions: lint + typecheck + test trên Windows & macOS
 
 ## M1 — Schema & Engine lõi
-- [ ] **M1-01** `packages/schema`: Locator, Step, TestCase, Env, Dataset, RunResult (Zod) + `schemaVersion: 1` + framework migration + xuất JSON Schema [N-08, C-01, C-02]
+- [x] **M1-01** `packages/schema`: Locator, Step, TestCase, Env, Dataset, RunResult (Zod) + `schemaVersion: 1` + framework migration + xuất JSON Schema [N-08, C-01, C-02]
 - [ ] **M1-02** `packages/engine`: `defineAction` registry, runner chạy tuần tự, stream event (stepStart/stepEnd/log), timeout từng step [D-07]
 - [ ] **M1-03** Locator resolver nhiều lớp + ngữ cảnh + thứ N + ID động [C-01, C-03, C-04, C-05]
 - [ ] **M1-04** Trình duyệt: phát hiện Edge/Chrome, fallback tải Chromium; headed/headless; viewport/mobile [N-03, G-01, G-03, G-05]
