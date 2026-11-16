@@ -10,6 +10,6 @@ export default defineProject({
   },
   test: {
     name: 'desktop',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 });
