@@ -65,10 +65,10 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 - [x] **M5-09** Sinh biến thể negative/biên từ form đã ghi [M-03]
 
 ## M6 — Hoàn thiện sản phẩm
-- [ ] **M6-01** Onboarding lần đầu + test mẫu [S-08, L-01, L-02, N-01]
-- [ ] **M6-02** Chế độ Nâng cao (sửa selector) [C-07]
-- [ ] **M6-03** Rà soát toàn bộ i18n, thông báo lỗi, accessibility cơ bản
-- [ ] **M6-04** Hiệu năng: mở app ≤ 3s, test 200 step không giật UI [N-05]
+- [x] **M6-01** Onboarding lần đầu + test mẫu [S-08, L-01, L-02, N-01]
+- [x] **M6-02** Chế độ Nâng cao (sửa selector) [C-07]
+- [x] **M6-03** Rà soát toàn bộ i18n, thông báo lỗi, accessibility cơ bản
+- [x] **M6-04** Hiệu năng: mở app ≤ 3s, test 200 step không giật UI [N-05]
 
 ## M7 — Đóng gói & Phát hành
 - [ ] **M7-01** electron-builder: `.exe` (NSIS) + `.dmg` + **Windows portable `.exe`** [N-10]

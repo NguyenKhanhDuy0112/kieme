@@ -1,0 +1,15 @@
+# ADR 0014 — Onboarding + trang mẫu đi kèm, chế độ Nâng cao, token tiếp cận, hiệu năng editor
+
+**Trạng thái:** Đã chốt · **Ngày:** 2026-11-16 · **Task:** M6-01 → M6-04
+
+## Quyết định
+1. **Trang mẫu đi kèm app** (L-01, N-01): test mẫu phải chạy được ngay, không mạng. App phục vụ bản build của `apps/demo-site` (`dist/`) + API trong bộ nhớ bằng `startSampleSite` (`@kiemi/demo-site/sample`) trên `127.0.0.1`, ưu tiên cổng cố định **47180**, bận thì lấy cổng ngẫu nhiên. Đường dẫn: dev = `apps/demo-site/dist` (turbo `^build` build demo-site trước desktop), bản đóng gói = `resources/sample-site` (**M7-01 phải thêm vào `extraResources`**). Site chỉ khởi động khi cài test mẫu hoặc khi DB đã có "Dự án mẫu" (chạy nền sau khi mở cửa sổ, không làm chậm khởi động).
+2. **Dự án mẫu** tạo một lần bằng `installSamples(services, baseUrl)` (tRPC `samples.install`): môi trường "Trang mẫu Kiemi" (biến + bí mật mật khẩu), bước dùng chung "Đăng nhập", bộ dữ liệu **nhập từ file Excel tạo trong bộ nhớ** (đi qua đúng đường nhập Excel thật), 4 test + bộ test "Tất cả test mẫu". Mỗi lần site đổi địa chỉ, `syncSampleEnvironment` cập nhật địa chỉ gốc. Nhận diện theo tên dự án (đổi tên thì app coi như chưa cài).
+3. **Onboarding** lưu ở Cài đặt (`onboardingDone`, `tourDone`). Hộp thoại chào mừng: nhập URL → tạo "Test đầu tiên", mở editor, tự bắt đầu ghi (`pendingRecord` trong store, `RecordButton` thực hiện); hoặc mở test mẫu. Tour 3 bước gắn vào phần tử có `data-tour`, tự canh vị trí, Esc để bỏ.
+4. **Chế độ Nâng cao** (C-07) = cài đặt `advancedMode`, truyền xuống form qua `AdvancedModeContext` (form không gọi IPC). Thường: không hiện CSS/XPath/testId. Nâng cao: thêm "Mã kiểm thử", "CSS", "Nhiều cách tìm" và trình sửa danh sách chiến lược (đổi loại, sắp thứ tự, thêm/xóa, cảnh báo cú pháp CSS/XPath); với phần tử đã lưu, sửa áp vào `elements` của test (mọi bước dùng nó).
+5. **Token tiếp cận** (U-07, U-13): màu thương hiệu pass/fail/warning giữ cho nền/viền; chữ & icon trạng thái dùng `*-text` đậm hơn (đạt ≥ 4,5:1); `--destructive` sáng = `#c8282e`. Thang chữ đặt bằng px, nhỏ nhất 13px. Test `a11y-tokens.test.ts` tự kiểm tương phản từ `styles.css`; `no-hardcoded-strings.test.ts` chặn chuỗi UI viết cứng; `error-messages.test.ts` đối chiếu mã lỗi engine/DB với bản dịch.
+6. **Hiệu năng** (N-05): renderer được minify và tách màn phụ bằng `React.lazy` (bundle đầu ~0,8 MB thay vì 2 MB không minify). Editor: `updateStep` sao chép theo đường dẫn (các bước khác giữ nguyên object), `StepRow`/`StepTable` được `memo`, option của sensor dnd-kit là hằng số (option mới mỗi lần render làm đổi context kéo-thả → vẽ lại mọi dòng). Đo trên máy dev, test 200 bước: mở editor ~0,15 s, mỗi phím ~4 ms việc đồng bộ (trước 31 ms), không long task.
+
+## Hệ quả
+- Các thao tác cấu trúc (thêm/xóa/kéo/nhân bản bước) vẫn `structuredClone` cả tài liệu — chấp nhận vì hiếm; lịch sử hoàn tác dùng chung object các bước không đổi nên **không được sửa doc tại chỗ**.
+- Schema patch Cài đặt (`AppSettingsPatchSchema`) không có giá trị mặc định: Zod 4 vẫn điền mặc định trong `.partial()`, từng làm lưu một cài đặt reset các cài đặt khác.
