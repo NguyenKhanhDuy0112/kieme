@@ -1,0 +1,111 @@
+# CLAUDE.md — Kiemi (No-code UI Test Automation)
+
+## Thương hiệu
+- Tên sản phẩm: **Kiemi** (từ "kiểm"). Package scope: `@kiemi/*`. File test: `.kiemi.json`. App ID: `app.kiemi.desktop`.
+- Slogan: *"Kiemi — Bấm một lần, kiểm mãi mãi."*
+- Màu: chàm đậm `#1F2A5C` (chủ đạo), xanh lá pass `#3DDC84`, đỏ fail `#E5484D`, trắng.
+- Icon: ô vuông bo góc nền chàm, chữ **K** trắng có chân dưới là **dấu tick xanh lá**. Phải nhận diện được ở 16px.
+
+> File này được Claude Code tự đọc mỗi phiên. Đây là luật của dự án — tuân thủ tuyệt đối.
+
+## 1. Sản phẩm
+Desktop app (Windows + macOS) cho **tester không biết code**: ghi thao tác hoặc soạn bảng step → bấm Chạy → xem kết quả.
+Cài là dùng: offline, không cần tài khoản, không cài thêm gì (dùng Edge/Chrome có sẵn trên máy).
+
+Tài liệu nguồn (đọc khi cần):
+- `docs/SPEC.md` — toàn bộ yêu cầu, mỗi yêu cầu có ID (vd `B-03`)
+- `docs/ROADMAP.md` — danh sách task theo milestone, có checkbox
+- `docs/PROGRESS.md` — tiến độ, nhật ký, **task tiếp theo**
+- `docs/ARCHITECTURE.md` — kiến trúc, luồng chạy, ranh giới giữa các khối
+- `docs/adr/` — các quyết định kiến trúc
+
+## 2. Quy trình mỗi phiên (BẮT BUỘC)
+1. Đọc `docs/PROGRESS.md` → mục **"Tiếp theo"**. Đọc các mục SPEC mà task đó tham chiếu.
+2. Mỗi lần chỉ làm **1 task** trong ROADMAP (trừ khi người dùng yêu cầu khác). Không làm ngoài phạm vi task.
+3. Trước khi code: nêu kế hoạch ngắn (file tạo/sửa, cách test).
+4. Làm xong: chạy `pnpm lint && pnpm typecheck && pnpm test` — phải pass hết.
+5. Cập nhật:
+   - `docs/ROADMAP.md`: tick `[x]` task đã xong
+   - `docs/PROGRESS.md`: thêm dòng nhật ký, cập nhật "Tiếp theo", ghi vấn đề tồn đọng
+   - Có quyết định kiến trúc mới → thêm file `docs/adr/NNNN-ten.md`
+6. Commit theo Conventional Commits, kèm ID: `feat(engine): add fill action [A-02]`
+7. Nếu người dùng chỉ nói "làm tiếp" / "continue" → làm task trong mục "Tiếp theo".
+
+## 2b. Quy trình thay đổi yêu cầu (BẮT BUỘC)
+Khi người dùng đưa yêu cầu mới / muốn sửa / bỏ một yêu cầu (vd "thêm tính năng X", "đổi Y", "bỏ Z"):
+
+1. **Đề xuất, chưa sửa gì**. Trình bày ngắn gọn:
+   - Yêu cầu viết lại rõ ràng + **ID mới** (theo mục phù hợp trong SPEC, vd `B-15`) hoặc ID bị sửa/bỏ
+   - Ưu tiên đề xuất (v1 / v1.x) + **tiêu chí chấp nhận** (kiểm tra được)
+   - **Ảnh hưởng**: yêu cầu nào liên quan/xung đột, task ROADMAP thêm/sửa, có đụng schema DSL (cần migration) hay DB không, có cần ADR không
+   - Ước lượng độ lớn: S / M / L
+2. **Chờ người dùng chốt** ("chốt", "ok", "đồng ý"). Nếu người dùng sửa → đề xuất lại.
+   - Ngoại lệ: người dùng nói rõ "chốt luôn" / "làm luôn" ngay trong yêu cầu → bỏ qua bước chờ.
+3. **Sau khi chốt**, cập nhật tài liệu trước, code sau:
+   - `docs/SPEC.md`: thêm/sửa/bỏ dòng yêu cầu (bỏ thì gạch ngang `~~…~~` + ghi "Bỏ ngày …", không xóa ID — ID không bao giờ dùng lại)
+   - `docs/SPEC.md` mục **Lịch sử thay đổi**: thêm 1 dòng
+   - `docs/ROADMAP.md`: thêm/sửa task, đặt đúng milestone theo phụ thuộc
+   - `docs/ARCHITECTURE.md` / `docs/adr/` nếu kiến trúc thay đổi
+   - `docs/PROGRESS.md`: cập nhật "Tiếp theo" nếu thứ tự ưu tiên đổi
+   - Commit riêng: `docs(spec): add B-15 <mô tả>`
+4. **Hỏi làm ngay hay xếp hàng**: nếu người dùng muốn làm ngay → làm theo Quy trình mỗi phiên (mục 2) với task mới. Nếu không → để trong ROADMAP.
+5. Không bao giờ code một tính năng **chưa có trong SPEC**. Nếu trong lúc code phát hiện cần thêm yêu cầu → dừng, đề xuất theo bước 1.
+
+## 3. Stack (đã chốt — không tự ý thay)
+| Phần | Công nghệ |
+|---|---|
+| Monorepo | pnpm workspaces + Turborepo |
+| Ngôn ngữ | TypeScript `strict: true` |
+| Lint/format | Biome |
+| Desktop | Electron + electron-vite |
+| UI | React 19, Tailwind CSS, shadcn/ui, TanStack Table, dnd-kit, Zustand |
+| IPC | electron-trpc (type-safe, input validate bằng Zod) |
+| DB | SQLite (better-sqlite3) + Drizzle ORM |
+| Engine | playwright-core (channel `msedge` / `chrome`, fallback tải Chromium) |
+| Schema | Zod (xuất JSON Schema) |
+| Excel | exceljs |
+| Dữ liệu giả | @faker-js/faker (locale vi) |
+| Ngày giờ | date-fns |
+| ID | UUIDv7 (`uuid` package) |
+| i18n | i18next (vi mặc định, en) |
+| Test | Vitest (unit), Playwright Test (e2e engine trên demo-site) |
+| Đóng gói | electron-builder + electron-updater |
+| Crash report | Sentry (opt-in) |
+
+## 4. Cấu trúc thư mục
+```
+apps/
+  desktop/        # Electron: main/, preload/, renderer/ (React)
+  demo-site/      # Web mô phỏng ca khó để test engine (iframe, WebForms postback, popup, bảng, đồng bộ trễ, nhiều vai trò)
+packages/
+  schema/         # Zod: TestCase, Step, Locator, Dataset, Env, RunResult + migrations DSL
+  engine/         # Dịch step → Playwright. KHÔNG import electron/DB/React
+  recorder/       # Script bắt thao tác + Pick phần tử
+  shared/         # util dùng chung (i18n keys, error codes)
+docs/
+```
+
+## 5. Nguyên tắc bất biến
+1. **Step DSL có version**: định nghĩa trong `packages/schema`. Mọi test file có `schemaVersion`. Đổi schema = tăng version + viết migration + test migration với fixture của mọi version cũ.
+2. **Engine độc lập**: input `TestCase + Dataset + Env + Secrets` → output `RunResult` + stream event. Chạy trong Electron utility process (crash không kéo sập app). Dùng chung cho desktop và CLI sau này.
+3. **Action = plugin**: `defineAction({ type, params: zodSchema, ui: { label, icon, group }, execute })`. UI tự sinh form từ `params` + `ui`. Thêm action = 1 file + unit test + e2e trên demo-site.
+4. **Locator nhiều lớp**: mỗi phần tử lưu mảng `strategies` theo ưu tiên (role+name → label → placeholder → text → testId → css → xpath) + `fingerprint` (text, tag, attributes, vị trí) để self-heal sau này.
+5. **Nhiều phiên từ đầu**: mỗi step có `session` (mặc định `"default"`); mỗi session = 1 browser context riêng.
+6. **DB**: mọi bảng có `id` (UUIDv7), `workspaceId`, `createdAt`, `updatedAt`, `deletedAt` (soft delete), `version`.
+7. **Bảo mật Electron**: `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`. Renderer chỉ gọi main qua electron-trpc. Secret lưu bằng `safeStorage`. Che secret trong log, kết quả, ảnh chụp.
+8. **UI đẹp, đơn giản, dễ dùng**: mọi màn hình tuân thủ mục **U** trong `docs/SPEC.md` (U-01 → U-15). Trước khi làm UI, đọc lại mục U.
+   **UI cho người không biết code**: không hardcode chuỗi (dùng i18n). Không hiện thuật ngữ kỹ thuật (selector, CSS, Playwright) trừ chế độ "Nâng cao". Lỗi phải nói bằng tiếng Việt dễ hiểu: *"Bước 5: Không tìm thấy nút 'Lưu' sau 10 giây"*.
+9. **Không thêm dependency lớn** khi chưa ghi lý do vào ADR.
+
+## 6. Definition of Done
+- Đáp ứng tiêu chí chấp nhận của các ID SPEC liên quan
+- Có test: unit cho schema/engine; e2e trên demo-site cho mỗi action/assertion mới
+- `lint`, `typecheck`, `test` pass
+- Chuỗi UI có đủ `vi` + `en`
+- ROADMAP + PROGRESS đã cập nhật, đã commit
+
+## 7. Quy ước
+- Code, tên biến, commit message: **tiếng Anh**. UI, docs: **tiếng Việt**.
+- Tên file: kebab-case. Component React: PascalCase.
+- Không để `any`, không `// @ts-ignore` khi chưa ghi lý do.
+- Mỗi action engine nằm ở `packages/engine/src/actions/<type>.ts`.
