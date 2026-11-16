@@ -21,6 +21,11 @@ module.exports = {
     // better-sqlite3 ships prebuilds for every OS; keep only what we package.
     '!node_modules/better-sqlite3/{deps,src}/**',
     '!node_modules/better-sqlite3/prebuilds/linux*',
+    // Build-time Sentry bundler plugins (webpack/vite) pulled in by @sentry/node; never loaded
+    // at run time, and their per-CPU native parser breaks the universal macOS merge.
+    '!node_modules/@sentry/bundler-plugins/**',
+    '!node_modules/oxc-parser/**',
+    '!node_modules/@oxc-parser/**',
   ],
   // Runtime deps that Electron's asar cannot serve: Playwright forks Node scripts
   // (Chromium download) and reads its own files from disk.
@@ -64,6 +69,11 @@ module.exports = {
     hardenedRuntime: true,
     entitlements: 'build/entitlements.mac.plist',
     entitlementsInherit: 'build/entitlements.mac.plist',
+    // better-sqlite3 ships every OS/arch prebuild in one package, so its .node files are
+    // identical in the x64 and arm64 halves: let the universal merge keep them as they are
+    // (at run time it loads darwin-<arch>.node for the current CPU).
+    x64ArchFiles:
+      'Contents/Resources/app.asar.unpacked/node_modules/better-sqlite3/prebuilds/*.node',
     // Notarizes only when the APPLE_* variables are set.
     notarize: Boolean(process.env.APPLE_API_KEY || process.env.APPLE_ID),
   },

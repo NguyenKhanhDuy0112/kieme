@@ -14,7 +14,8 @@ interface BuilderConfig {
   nsis: { oneClick: boolean; perMachine: boolean; allowElevation: boolean; artifactName: string };
   portable: { requestExecutionLevel: string; artifactName: string };
   dmg: { artifactName: string };
-  mac: { target: Target[]; notarize: boolean };
+  mac: { target: Target[]; notarize: boolean; x64ArchFiles: string };
+  files: string[];
   publish: { provider: string; owner: string; repo: string }[];
   dependencies?: unknown;
 }
@@ -52,6 +53,17 @@ describe('electron-builder config [N-10, N-11, N-13]', () => {
       { target: 'dmg', arch: ['universal'] },
       { target: 'zip', arch: ['universal'] },
     ]);
+  });
+
+  it('can merge the universal macOS app (no per-CPU native files besides better-sqlite3)', () => {
+    expect(config.mac.x64ArchFiles).toContain('better-sqlite3/prebuilds/*.node');
+    // Sentry's build-time bundler plugins carry a per-CPU native parser.
+    expect(config.files).toEqual(
+      expect.arrayContaining([
+        '!node_modules/@sentry/bundler-plugins/**',
+        '!node_modules/@oxc-parser/**',
+      ]),
+    );
   });
 
   it('ships the sample site where the main process looks for it (ADR 0014)', () => {

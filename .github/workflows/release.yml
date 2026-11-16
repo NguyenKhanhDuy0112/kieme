@@ -35,12 +35,19 @@ jobs:
           package-manager-cache: false
       - name: Release notes (fails if the tag ≠ app version)
         run: node apps/desktop/scripts/release-notes.mts "${{ github.ref_name }}" release-notes.md
-      - name: Create draft
+      - name: Create draft (replaces a draft left by a failed run; never touches a published release)
         run: |
           REPO="${KIEMI_RELEASE_OWNER:-${{ github.repository_owner }}}/${KIEMI_RELEASE_REPO:-${{ github.event.repository.name }}}"
-          gh release view "${{ github.ref_name }}" --repo "$REPO" >/dev/null 2>&1 \
-            || gh release create "${{ github.ref_name }}" --repo "$REPO" --draft \
-                 --title "Kiemi ${{ github.ref_name }}" --notes-file release-notes.md
+          TAG="${{ github.ref_name }}"
+          if IS_DRAFT=$(gh release view "$TAG" --repo "$REPO" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [ "$IS_DRAFT" != "true" ]; then
+              echo "::error::Release $TAG is already published. Bump the version instead of re-tagging."
+              exit 1
+            fi
+            gh release delete "$TAG" --repo "$REPO" --yes
+          fi
+          gh release create "$TAG" --repo "$REPO" --draft --verify-tag \
+            --title "Kiemi $TAG" --notes-file release-notes.md
       - uses: actions/upload-artifact@v5
         with:
           name: release-notes
