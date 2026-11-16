@@ -289,7 +289,8 @@ describe('variables & flow [E-04, D-01 → D-04, D-06]', () => {
       [
         step('if', {
           condition: { variable: 'x', op: 'empty' },
-          steps: [{ id: 'n1', action: 'assertTitle', params: { value: 'sai' }, timeoutMs: 1500 }],
+          // ≥ a few seconds: opening the first blank tab alone can take 1.5 s on CI runners.
+          steps: [{ id: 'n1', action: 'assertTitle', params: { value: 'sai' }, timeoutMs: 5000 }],
         }),
       ],
       { variables: { x: '' } },

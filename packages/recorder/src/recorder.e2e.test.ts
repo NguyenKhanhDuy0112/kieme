@@ -172,9 +172,13 @@ describe('recorder [K-01, K-02]', () => {
     const rec = await record('/dialogs.html');
     const page = rec.page;
     if (!page) throw new Error('no page');
+    // A real (trusted) mouse click, without Playwright waiting for the opener's navigations
+    // (that wait hangs on slow macOS CI runners).
+    const box = await page.locator('#link-new-tab').boundingBox();
+    if (!box) throw new Error('link not visible');
     const [popup] = await Promise.all([
       page.context().waitForEvent('page'),
-      page.locator('#link-new-tab').click(),
+      page.mouse.click(box.x + box.width / 2, box.y + box.height / 2),
     ]);
     await popup.waitForLoadState();
     await popup.locator('#popup-note').pressSequentially('ghi chú');
