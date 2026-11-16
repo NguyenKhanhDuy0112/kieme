@@ -53,7 +53,7 @@ export function StrategiesEditor({
                 >
                   <SelectTrigger
                     size="sm"
-                    className="w-32 shrink-0"
+                    className="min-w-0 flex-1"
                     aria-label={tx('ui.advanced.kind')}
                   >
                     <SelectValue />
@@ -66,6 +66,45 @@ export function StrategiesEditor({
                     ))}
                   </SelectContent>
                 </Select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  aria-label={tx('ui.advanced.up')}
+                  disabled={i === 0}
+                  onClick={() => onChange(moveItem(value, i, -1))}
+                >
+                  <ArrowUp />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  aria-label={tx('ui.advanced.down')}
+                  disabled={i === value.length - 1}
+                  onClick={() => onChange(moveItem(value, i, 1))}
+                >
+                  <ArrowDown />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  aria-label={
+                    value.length > 1 ? tx('ui.advanced.remove') : tx('ui.advanced.lastOne')
+                  }
+                  title={value.length > 1 ? undefined : tx('ui.advanced.lastOne')}
+                  disabled={value.length <= 1}
+                  onClick={() => onChange(value.filter((_, j) => j !== i))}
+                >
+                  <Trash2 />
+                </Button>
+              </div>
+              {/* Value on its own line: the side panel is narrow. */}
+              <div className="flex items-center gap-1 pl-5">
                 {s.kind === 'role' ? (
                   <>
                     <Select value={s.role} onValueChange={(role) => set(i, { ...s, role })}>
@@ -106,42 +145,6 @@ export function StrategiesEditor({
                     onChange={(v) => set(i, { ...s, value: v })}
                   />
                 )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  aria-label={tx('ui.advanced.up')}
-                  disabled={i === 0}
-                  onClick={() => onChange(moveItem(value, i, -1))}
-                >
-                  <ArrowUp />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  aria-label={tx('ui.advanced.down')}
-                  disabled={i === value.length - 1}
-                  onClick={() => onChange(moveItem(value, i, 1))}
-                >
-                  <ArrowDown />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  aria-label={
-                    value.length > 1 ? tx('ui.advanced.remove') : tx('ui.advanced.lastOne')
-                  }
-                  title={value.length > 1 ? undefined : tx('ui.advanced.lastOne')}
-                  disabled={value.length <= 1}
-                  onClick={() => onChange(value.filter((_, j) => j !== i))}
-                >
-                  <Trash2 />
-                </Button>
               </div>
               {problem && (
                 <p id={problemId} className="pl-5 text-xs text-warning-text">
