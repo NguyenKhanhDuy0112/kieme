@@ -55,7 +55,7 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 
 ## M5 — Recorder & Pick
 - [x] **M5-01** `packages/recorder`: bắt thao tác → step, gộp thao tác thừa [K-01, K-02]
-- [ ] **M5-02** Sinh locator nhiều lớp + fingerprint khi ghi [C-01, C-02]
+- [x] **M5-02** Sinh locator nhiều lớp + fingerprint khi ghi [C-01, C-02]
 - [ ] **M5-03** Thanh công cụ nổi: Thêm kiểm tra, Lưu giá trị, Dừng [K-03]
 - [ ] **M5-04** Pick + Highlight phần tử [C-06]
 - [ ] **M5-05** Ghi chèn từ step X; nhận ô password → Secret [K-04, K-05]

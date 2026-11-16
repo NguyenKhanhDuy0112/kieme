@@ -9,11 +9,6 @@
 /** Name of the binding the injected script calls. */
 export const RECORDER_BINDING = '__kiemiRecord';
 
-type Strategy =
-  | { kind: 'text'; value: string; exact: boolean }
-  | { kind: 'testId'; value: string }
-  | { kind: 'css'; value: string };
-
 export function installRecorder(binding: string): void {
   const w = window as unknown as Record<string, unknown>;
   if (w.__kiemiRecorderInstalled) return;
@@ -87,12 +82,116 @@ export function installRecorder(binding: string): void {
     return t;
   };
 
-  // ---- locator (basic; M5-02 adds role/label/placeholder + fingerprint) -----
+  // ---- locator: several strategies + fingerprint [C-01, C-02] ------------------
+  const MAX_TEXT = 80;
+  const clean = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();
   const cssEscape = (s: string): string => (window.CSS?.escape ? window.CSS.escape(s) : s);
   const attrValue = (s: string): string => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const visibleText = (el: Element): string =>
     // biome-ignore lint/performance/useDomNodeTextContent: the rendered text is what testers see
-    ((el as HTMLElement).innerText ?? el.textContent ?? '').replace(/\s+/g, ' ').trim();
+    clean((el as HTMLElement).innerText ?? el.textContent);
+
+  const INPUT_ROLES: Record<string, string> = {
+    button: 'button',
+    submit: 'button',
+    reset: 'button',
+    image: 'button',
+    checkbox: 'checkbox',
+    radio: 'radio',
+    range: 'slider',
+    number: 'spinbutton',
+    search: 'searchbox',
+    email: 'textbox',
+    tel: 'textbox',
+    text: 'textbox',
+    url: 'textbox',
+  };
+  /** ARIA role the way Playwright's `getByRole` sees it (explicit, else implicit). */
+  const roleOf = (el: Element): string | undefined => {
+    const explicit = clean(el.getAttribute('role')).split(' ')[0];
+    if (explicit) return explicit;
+    const tag = el.tagName;
+    if (isInput(el)) {
+      if (el.hasAttribute('list')) return 'combobox';
+      return INPUT_ROLES[el.type || 'text'];
+    }
+    if (isSelect(el)) return el.multiple || el.size > 1 ? 'listbox' : 'combobox';
+    if (tag === 'BUTTON') return 'button';
+    if (tag === 'A' && el.hasAttribute('href')) return 'link';
+    if (tag === 'TEXTAREA') return 'textbox';
+    if (/^H[1-6]$/.test(tag)) return 'heading';
+    if (tag === 'IMG' && el.getAttribute('alt')) return 'img';
+    if (tag === 'OPTION') return 'option';
+    if (tag === 'LI') return 'listitem';
+    if (tag === 'SUMMARY') return undefined;
+    return undefined;
+  };
+
+  /** Text of the `<label>`s of a form control, without the control's own text. */
+  const labelText = (el: Element): string => {
+    const labels = (el as HTMLInputElement).labels;
+    if (!labels?.length) return '';
+    return clean(
+      Array.from(labels)
+        .map((l) => {
+          const copy = l.cloneNode(true) as HTMLElement;
+          for (const c of Array.from(copy.querySelectorAll('input, select, textarea, button')))
+            c.remove();
+          return copy.textContent ?? '';
+        })
+        .join(' '),
+    );
+  };
+
+  /** Accessible name, close to what Playwright computes for the common cases. */
+  const nameOf = (el: Element, role: string | undefined): string => {
+    const labelledBy = clean(el.getAttribute('aria-labelledby'));
+    if (labelledBy) {
+      const text = clean(
+        labelledBy
+          .split(' ')
+          .map((id) => {
+            const ref = el.ownerDocument.getElementById(id);
+            return ref ? visibleText(ref) : '';
+          })
+          .join(' '),
+      );
+      if (text) return text;
+    }
+    const aria = clean(el.getAttribute('aria-label'));
+    if (aria) return aria;
+    if (isInput(el) || isSelect(el) || el.tagName === 'TEXTAREA') {
+      if (isInput(el) && ['button', 'submit', 'reset'].includes(el.type))
+        return (
+          clean(el.value) || (el.type === 'submit' ? 'Submit' : el.type === 'reset' ? 'Reset' : '')
+        );
+      if (isInput(el) && el.type === 'image') return clean(el.alt);
+      return (
+        labelText(el) || clean(el.getAttribute('title')) || clean(el.getAttribute('placeholder'))
+      );
+    }
+    if (el.tagName === 'IMG') return clean(el.getAttribute('alt'));
+    if (
+      role &&
+      [
+        'button',
+        'link',
+        'heading',
+        'tab',
+        'menuitem',
+        'option',
+        'checkbox',
+        'radio',
+        'switch',
+        'treeitem',
+        'listitem',
+        'cell',
+        'columnheader',
+      ].includes(role)
+    )
+      return visibleText(el) || clean(el.getAttribute('title'));
+    return clean(el.getAttribute('title'));
+  };
 
   const cssPath = (el: Element): string => {
     const parts: string[] = [];
@@ -115,27 +214,131 @@ export function installRecorder(binding: string): void {
     return parts.join(' > ');
   };
 
-  const locatorOf = (el: Element): { strategies: Strategy[] } => {
+  const xpathOf = (el: Element): string => {
+    const parts: string[] = [];
+    let cur: Element | null = el;
+    while (cur && cur.nodeType === 1) {
+      if (cur.id && !cur.id.includes('"')) {
+        parts.unshift(`//*[@id="${cur.id}"]`);
+        return parts.join('/');
+      }
+      const tag = cur.tagName.toLowerCase();
+      const parent: Element | null = cur.parentElement;
+      if (!parent) {
+        parts.unshift(`/${tag}`);
+        break;
+      }
+      const same = Array.from(parent.children).filter((c) => c.tagName === cur?.tagName);
+      parts.unshift(same.length > 1 ? `${tag}[${same.indexOf(cur) + 1}]` : tag);
+      cur = parent;
+    }
+    return `/${parts.join('/')}`.replace(/^\/+/, '/');
+  };
+
+  const FINGERPRINT_ATTRS = [
+    'id',
+    'name',
+    'class',
+    'type',
+    'role',
+    'aria-label',
+    'placeholder',
+    'title',
+    'href',
+    'alt',
+    'required',
+    'maxlength',
+    'minlength',
+    'min',
+    'max',
+    'pattern',
+    'inputmode',
+    'autocomplete',
+  ];
+  /** What the element looked like when recorded — for self-healing later [C-02]. */
+  const fingerprintOf = (el: Element) => {
+    const attributes: Record<string, string> = {};
+    for (const a of FINGERPRINT_ATTRS) {
+      const v = el.getAttribute(a);
+      if (v !== null) attributes[a] = v.slice(0, 200);
+    }
+    for (const a of Array.from(el.attributes)) {
+      if (a.name.startsWith('data-') && Object.keys(attributes).length < 30)
+        attributes[a.name] = a.value.slice(0, 200);
+    }
+    if (isInput(el) && el.type !== 'password' && el.getAttribute('value') !== null)
+      attributes.value = (el.getAttribute('value') ?? '').slice(0, 200);
+    const neighbors: string[] = [];
+    const push = (t: string) => {
+      const v = t.slice(0, MAX_TEXT);
+      if (v && !neighbors.includes(v) && neighbors.length < 5) neighbors.push(v);
+    };
+    push(labelText(el));
+    const prev = el.previousElementSibling;
+    if (prev) push(visibleText(prev));
+    const group = el.closest('fieldset, section, form, [role=dialog], [role=region], table, nav');
+    const heading = group?.querySelector('legend, h1, h2, h3, h4, caption, [role=heading]');
+    if (heading) push(visibleText(heading));
+    const row = el.closest('tr, li, [role=row]');
+    if (row && row !== el) push(visibleText(row));
+    const r = el.getBoundingClientRect();
+    const text = isTextField(el) || isSelect(el) ? '' : visibleText(el).slice(0, 200);
+    return {
+      tag: el.tagName.toLowerCase(),
+      ...(text ? { text } : {}),
+      attributes,
+      neighbors,
+      box: {
+        x: Math.round(r.x),
+        y: Math.round(r.y),
+        width: Math.round(r.width),
+        height: Math.round(r.height),
+      },
+    };
+  };
+
+  type Strategy = Record<string, unknown> & { kind: string };
+  /** Strategies in priority order: role+name → label → placeholder → text → testId → css → xpath [C-01]. */
+  const locatorOf = (el: Element) => {
     const strategies: Strategy[] = [];
+    const add = (s: Strategy) => {
+      const key = JSON.stringify(s);
+      if (!strategies.some((x) => JSON.stringify(x) === key)) strategies.push(s);
+    };
     const tag = el.tagName.toLowerCase();
-    if (!isTextField(el) && !isSelect(el)) {
+    const field = isTextField(el) || isSelect(el) || isCheckable(el);
+    const role = roleOf(el);
+    const name = nameOf(el, role);
+    if (role && name && name.length <= MAX_TEXT) add({ kind: 'role', role, name, exact: true });
+    const label = labelText(el) || (field ? clean(el.getAttribute('aria-label')) : '');
+    if (field && label && label.length <= MAX_TEXT)
+      add({ kind: 'label', value: label, exact: true });
+    const placeholder = clean(el.getAttribute('placeholder'));
+    if (placeholder && placeholder.length <= MAX_TEXT)
+      add({ kind: 'placeholder', value: placeholder, exact: true });
+    if (!field) {
       const text = visibleText(el);
-      if (text && text.length <= 60) strategies.push({ kind: 'text', value: text, exact: true });
+      if (text && text.length <= MAX_TEXT) add({ kind: 'text', value: text, exact: true });
     }
     const testId = el.getAttribute('data-testid');
-    if (testId) strategies.push({ kind: 'testId', value: testId });
-    for (const attr of ['data-test', 'data-test-id', 'data-qa']) {
+    if (testId) add({ kind: 'testId', value: testId });
+    for (const attr of ['data-test', 'data-test-id', 'data-qa', 'data-cy']) {
       const v = el.getAttribute(attr);
-      if (v) strategies.push({ kind: 'css', value: `[${attr}="${attrValue(v)}"]` });
+      if (v) add({ kind: 'css', value: `[${attr}="${attrValue(v)}"]` });
     }
-    if (el.id) strategies.push({ kind: 'css', value: `#${cssEscape(el.id)}` });
-    const name = el.getAttribute('name');
-    if (name && (isInput(el) || isSelect(el) || tag === 'textarea' || tag === 'button')) {
-      strategies.push({ kind: 'css', value: `${tag}[name="${attrValue(name)}"]` });
+    if (el.id) add({ kind: 'css', value: `#${cssEscape(el.id)}` });
+    const nameAttr = el.getAttribute('name');
+    if (nameAttr && (field || tag === 'button')) {
+      const value = isCheckable(el) ? el.getAttribute('value') : null;
+      add({
+        kind: 'css',
+        value: `${tag}[name="${attrValue(nameAttr)}"]${value !== null ? `[value="${attrValue(value)}"]` : ''}`,
+      });
     }
     const path = cssPath(el);
-    if (path) strategies.push({ kind: 'css', value: path });
-    return { strategies };
+    if (path) add({ kind: 'css', value: path });
+    add({ kind: 'xpath', value: xpathOf(el) });
+    return { strategies, fingerprint: fingerprintOf(el) };
   };
 
   const target = (el: Element) => ({ key: keyOf(el), locator: locatorOf(el) });

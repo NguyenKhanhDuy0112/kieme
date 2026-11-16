@@ -1,6 +1,6 @@
 import { type DemoSite, startDemoSite } from '@kiemi/demo-site/server';
-import { createDefaultRegistry, runTestCase } from '@kiemi/engine';
-import { type Step, type StepInput, TestCaseSchema } from '@kiemi/schema';
+import { createDefaultRegistry, resolveLocator, runTestCase } from '@kiemi/engine';
+import { type Locator, type Step, type StepInput, TestCaseSchema } from '@kiemi/schema';
 import { type Browser, type BrowserContext, chromium } from 'playwright-core';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { type Recorder, startRecorder } from './recorder';
@@ -32,9 +32,18 @@ afterEach(async () => {
   context = undefined;
 });
 
-async function record(path: string, grace?: number): Promise<Recorder> {
+async function record(
+  path: string,
+  grace?: number,
+  html?: Record<string, string>,
+): Promise<Recorder> {
   await fetch(`${site.url}/api/reset`, { method: 'POST' });
   context = await browser.newContext();
+  for (const [route, body] of Object.entries(html ?? {})) {
+    await context.route(`${site.url}${route}`, (r) =>
+      r.fulfill({ contentType: 'text/html; charset=utf-8', body }),
+    );
+  }
   return startRecorder(context, {
     startUrl: `${site.url}${path}`,
     baseUrl: site.url,
@@ -224,5 +233,64 @@ describe('recorder [K-01, K-02]', () => {
     await rec.page?.locator('#username').pressSequentially('x');
     await new Promise((r) => setTimeout(r, 300));
     expect(rec.steps).toHaveLength(1);
+  });
+});
+
+describe('recorded locators [C-01, C-02]', () => {
+  it('stores several strategies (role+name first) and a fingerprint, and each resolves', async () => {
+    const rec = await record('/login.html');
+    const page = rec.page;
+    if (!page) throw new Error('no page');
+    await page.locator('#username').pressSequentially('nhanvien');
+    await page.locator('#password').pressSequentially('1');
+    await page.getByRole('button', { name: 'Đăng nhập' }).click({ modifiers: ['Alt'] });
+
+    const list = await steps(rec, 4);
+    const targets = list.slice(1).map((s) => s.params.target as Locator);
+    const kinds = targets.map((t) => t.strategies.map((s) => s.kind).join(','));
+    expect(kinds).toEqual([
+      'role,label,placeholder,css,css,css,xpath',
+      'label,css,css,css,xpath',
+      'role,text,css,xpath',
+    ]);
+    expect(targets[0]?.strategies[0]).toEqual({
+      kind: 'role',
+      role: 'textbox',
+      name: 'Tên đăng nhập',
+      exact: true,
+    });
+    expect(targets[0]?.fingerprint).toMatchObject({
+      tag: 'input',
+      attributes: { id: 'username', name: 'username', type: 'text' },
+      neighbors: expect.arrayContaining(['Tên đăng nhập']),
+    });
+    // Password value never lands in the fingerprint.
+    expect(JSON.stringify(targets[1]?.fingerprint)).not.toContain('"value"');
+
+    // The preferred strategy finds the element; css / xpath fallbacks each pin it too.
+    for (const t of targets) {
+      const r = await resolveLocator(page, t, { timeoutMs: 1000 });
+      expect(r.strategyIndex).toBe(0);
+      for (const strategy of t.strategies.filter((x) => x.kind === 'css' || x.kind === 'xpath')) {
+        const one = await resolveLocator(page, { strategies: [strategy] }, { timeoutMs: 1000 });
+        expect(one.matchCount, JSON.stringify(strategy)).toBe(1);
+      }
+    }
+  });
+
+  it('names checkboxes / radios by their label and keeps the radio value in css', async () => {
+    const rec = await record('/radio.html', undefined, {
+      '/radio.html':
+        '<fieldset><legend>Thông báo</legend><label><input type="radio" name="n" value="email"> Email</label>' +
+        '<label><input type="radio" name="n" value="sms"> SMS</label></fieldset>',
+    });
+    const page = rec.page;
+    if (!page) throw new Error('no page');
+    await page.getByText('SMS').click();
+    const list = await steps(rec, 2);
+    const t = list[1]?.params.target as Locator;
+    expect(t.strategies[0]).toEqual({ kind: 'role', role: 'radio', name: 'SMS', exact: true });
+    expect(t.strategies).toContainEqual({ kind: 'css', value: 'input[name="n"][value="sms"]' });
+    expect(t.fingerprint?.neighbors).toContain('Thông báo');
   });
 });
