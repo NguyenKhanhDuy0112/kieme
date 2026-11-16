@@ -1,7 +1,10 @@
 import type { Translation } from '../types';
 
 /** English. Must have exactly the same keys as `vi.ts` (enforced by the type). */
+import { enUi } from './en-ui';
+
 export const en = {
+  ui: enUi,
   app: {
     name: 'Kiemi',
     slogan: 'Click once, test forever.',

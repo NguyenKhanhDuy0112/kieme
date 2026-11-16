@@ -3,7 +3,10 @@
  * Add keys here first; `en.ts` is type-checked to have exactly the same keys.
  * Keep wording friendly for non-coders (CLAUDE.md §5.8, SPEC U-05).
  */
+import { viUi } from './vi-ui';
+
 export const vi = {
+  ui: viUi,
   app: {
     name: 'Kiemi',
     slogan: 'Bấm một lần, kiểm mãi mãi.',

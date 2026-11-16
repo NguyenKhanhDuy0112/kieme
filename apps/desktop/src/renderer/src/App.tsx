@@ -1,43 +1,86 @@
-import { SUPPORTED_LANGUAGES } from '@kiemi/shared';
+import { AppSidebar } from '@renderer/components/app-sidebar';
+import { CommandPalette } from '@renderer/components/command-palette';
+import { EmptyState } from '@renderer/components/empty-state';
 import { Button } from '@renderer/components/ui/button';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@renderer/components/ui/sidebar';
+import { Toaster } from '@renderer/components/ui/sonner';
+import { TooltipProvider } from '@renderer/components/ui/tooltip';
+import { ElementsScreen } from '@renderer/features/elements/elements-screen';
+import { EnvironmentsScreen } from '@renderer/features/environments/environments-screen';
+import { SettingsScreen } from '@renderer/features/settings/settings-screen';
+import { TestsScreen } from '@renderer/features/tests/tests-screen';
 import { useT } from '@renderer/i18n/use-t';
+import { useAppStore, watchSystemTheme } from '@renderer/lib/store';
 import { trpc } from '@renderer/lib/trpc';
+import { useTx } from '@renderer/lib/tx';
 import { useQuery } from '@tanstack/react-query';
-import { Play } from 'lucide-react';
+import { History, PanelRight } from 'lucide-react';
+import { useEffect } from 'react';
 
-// Placeholder home screen until the real layout (M3-01).
+/** App shell (U-01): sidebar · main area · detail panel (inside screens). */
 export function App() {
-  const { t, language, setLanguage } = useT();
+  const tx = useTx();
+  const { language, setLanguage } = useT();
   const info = useQuery(trpc.app.info.queryOptions());
+  const settings = useQuery(trpc.system.settings.queryOptions());
+  const view = useAppStore((s) => s.view);
+  const projectId = useAppStore((s) => s.projectId);
+  const setProject = useAppStore((s) => s.setProject);
+  const toggleDetail = useAppStore((s) => s.toggleDetail);
+
+  useEffect(() => watchSystemTheme(), []);
+  // First load: the default project, and the saved language/theme (S-07).
+  useEffect(() => {
+    if (!projectId && info.data?.defaultProjectId) setProject(info.data.defaultProjectId);
+  }, [info.data, projectId, setProject]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: apply stored settings only when they change, not on every language switch.
+  useEffect(() => {
+    if (!settings.data) return;
+    useAppStore.getState().setThemeChoice(settings.data.theme);
+    if (settings.data.language !== language) void setLanguage(settings.data.language);
+  }, [settings.data?.theme, settings.data?.language]);
 
   return (
-    <main className="flex h-screen flex-col items-center justify-center gap-6">
-      <div className="flex size-16 items-center justify-center rounded-lg bg-primary text-3xl font-bold text-primary-foreground">
-        K
-      </div>
-      <h1 className="text-2xl font-semibold">{t('app.name')}</h1>
-      <p className="text-muted-foreground">{t('app.slogan')}</p>
-      <Button>
-        <Play />
-        {t('common.run')}
-      </Button>
-      <p data-testid="app-version" className="text-xs text-muted-foreground">
-        {info.data ? t('app.version', { version: info.data.version }) : t('common.loading')}
-      </p>
-      <fieldset className="flex items-center gap-2 text-sm">
-        <legend className="sr-only">{t('settings.language')}</legend>
-        {SUPPORTED_LANGUAGES.map((lng) => (
-          <Button
-            key={lng}
-            size="sm"
-            variant={lng === language ? 'secondary' : 'ghost'}
-            aria-pressed={lng === language}
-            onClick={() => void setLanguage(lng)}
-          >
-            {t(`settings.languages.${lng}`)}
-          </Button>
-        ))}
-      </fieldset>
-    </main>
+    <TooltipProvider delayDuration={300}>
+      <SidebarProvider className="h-screen">
+        <AppSidebar />
+        <SidebarInset className="flex min-h-0 flex-col">
+          <div className="flex items-center gap-1 border-b px-2 py-1">
+            <SidebarTrigger />
+            <span className="text-sm font-medium">{tx(`ui.nav.${view}`)}</span>
+            <span data-testid="app-version" className="ml-auto text-xs text-muted-foreground">
+              {info.data ? tx('app.version', { version: info.data.version }) : tx('common.loading')}
+            </span>
+            {view === 'tests' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={tx('ui.nav.toggleDetail')}
+                onClick={toggleDetail}
+              >
+                <PanelRight />
+              </Button>
+            )}
+          </div>
+          {projectId ? (
+            <main className="flex min-h-0 flex-1 flex-col">
+              {view === 'tests' && <TestsScreen />}
+              {view === 'environments' && <EnvironmentsScreen />}
+              {view === 'elements' && <ElementsScreen />}
+              {view === 'settings' && <SettingsScreen />}
+              {view === 'history' && (
+                <EmptyState
+                  icon={History}
+                  title={tx('ui.nav.history')}
+                  text={tx('ui.nav.comingSoon')}
+                />
+              )}
+            </main>
+          ) : null}
+        </SidebarInset>
+        <CommandPalette />
+        <Toaster position="bottom-right" />
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }

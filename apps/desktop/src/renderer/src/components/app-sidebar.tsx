@@ -1,0 +1,147 @@
+import { NameDialog, type NameDialogState } from '@renderer/components/name-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@renderer/components/ui/dropdown-menu';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@renderer/components/ui/sidebar';
+import { errorMessage } from '@renderer/lib/errors';
+import { useAppStore, type View } from '@renderer/lib/store';
+import { trpc, trpcClient } from '@renderer/lib/trpc';
+import { useTx } from '@renderer/lib/tx';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ChevronsUpDown,
+  Crosshair,
+  FileText,
+  Globe,
+  History,
+  Plus,
+  Search,
+  Settings,
+} from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+
+const NAV: { view: View; icon: typeof FileText }[] = [
+  { view: 'tests', icon: FileText },
+  { view: 'history', icon: History },
+  { view: 'environments', icon: Globe },
+  { view: 'elements', icon: Crosshair },
+  { view: 'settings', icon: Settings },
+];
+
+/** Left sidebar (U-01): project switcher + main sections. */
+export function AppSidebar() {
+  const tx = useTx();
+  const qc = useQueryClient();
+  const view = useAppStore((s) => s.view);
+  const setView = useAppStore((s) => s.setView);
+  const projectId = useAppStore((s) => s.projectId);
+  const setProject = useAppStore((s) => s.setProject);
+  const setPaletteOpen = useAppStore((s) => s.setPaletteOpen);
+  const projects = useQuery(trpc.projects.list.queryOptions());
+  const [dialog, setDialog] = useState<NameDialogState | null>(null);
+  const current = projects.data?.find((p) => p.id === projectId);
+
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton size="lg" aria-label={tx('ui.nav.switchProject')}>
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
+                    K
+                  </div>
+                  <div className="grid flex-1 text-left leading-tight">
+                    <span className="truncate text-xs text-muted-foreground">
+                      {tx('ui.nav.project')}
+                    </span>
+                    <span className="truncate font-semibold">{current?.name ?? '…'}</span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-60">
+                {(projects.data ?? []).map((p) => (
+                  <DropdownMenuItem key={p.id} onSelect={() => setProject(p.id)}>
+                    {p.name}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() =>
+                    setDialog({
+                      title: tx('ui.nav.newProject'),
+                      initial: tx('ui.nav.newProject'),
+                      onSubmit: async (name) => {
+                        try {
+                          const p = await trpcClient.projects.create.mutate({ name });
+                          await qc.invalidateQueries({ queryKey: trpc.projects.list.queryKey() });
+                          setProject(p.id);
+                        } catch (err) {
+                          toast.error(errorMessage(err, tx));
+                        }
+                      },
+                    })
+                  }
+                >
+                  <Plus /> {tx('ui.nav.newProject')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip={tx('ui.palette.hint')}
+                onClick={() => setPaletteOpen(true)}
+              >
+                <Search />
+                <span>{tx('ui.actions.search')}</span>
+                <kbd className="ml-auto rounded border px-1 text-[10px] text-muted-foreground">
+                  ⌘K
+                </kbd>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            {NAV.map(({ view: v, icon: Icon }) => (
+              <SidebarMenuItem key={v}>
+                <SidebarMenuButton
+                  isActive={view === v}
+                  tooltip={tx(`ui.nav.${v}`)}
+                  onClick={() => setView(v)}
+                >
+                  <Icon />
+                  <span>{tx(`ui.nav.${v}`)}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <p className="truncate px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+          {tx('app.slogan')}
+        </p>
+      </SidebarFooter>
+      <NameDialog state={dialog} onClose={() => setDialog(null)} />
+    </Sidebar>
+  );
+}

@@ -10,10 +10,12 @@ import {
   suitesRouter,
   testCasesRouter,
 } from './routers/data';
+import { systemRouter } from './routers/system';
 import { createCallerFactory, router } from './trpc';
 
 export const rootRouter = router({
   app: appRouter,
+  system: systemRouter,
   projects: projectsRouter,
   folders: foldersRouter,
   testCases: testCasesRouter,
