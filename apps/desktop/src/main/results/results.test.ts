@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { artifactUrl, parseArtifactUrl, resolveInside } from './artifact-path';
 import { TraceServer } from './trace-server';
@@ -16,7 +16,8 @@ describe('artifact URLs [S-04]', () => {
   });
 
   it('never resolves outside the run folder', () => {
-    expect(resolveInside('/runs/r1', 'shot.png')).toBe('/runs/r1/shot.png');
+    // Absolute per OS: `D:\\runs\\r1\\shot.png` on Windows.
+    expect(resolveInside('/runs/r1', 'shot.png')).toBe(resolve('/runs/r1', 'shot.png'));
     expect(resolveInside('/runs/r1', '../r2/shot.png')).toBeUndefined();
     expect(resolveInside('/runs/r1', '/etc/passwd')).toBeUndefined();
     expect(resolveInside('', 'shot.png')).toBeUndefined();

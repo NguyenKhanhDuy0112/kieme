@@ -31,6 +31,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
+          # No pnpm in this job: do not let "packageManager" turn on the pnpm cache.
+          package-manager-cache: false
       - name: Release notes (fails if the tag ≠ app version)
         run: node apps/desktop/scripts/release-notes.mts "${{ github.ref_name }}" release-notes.md
       - name: Create draft

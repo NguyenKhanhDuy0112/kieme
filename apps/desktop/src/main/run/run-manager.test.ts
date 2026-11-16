@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { join } from 'node:path';
 import { createMemoryServices } from '@kiemi/db';
 import { ActionRegistry, defineAction } from '@kiemi/engine';
 import type { StepInput } from '@kiemi/schema';
@@ -119,7 +120,7 @@ describe('RunManager [M4-01, N-05]', () => {
 
     const run = await caller.runs.get({ runId });
     expect(run).toMatchObject({ status: 'passed', running: false });
-    expect(run.artifactDir).toBe(`/tmp/kiemi-test-runs/${runId}`);
+    expect(run.artifactDir).toBe(join('/tmp/kiemi-test-runs', runId));
     expect(run.cases).toMatchObject([{ testCaseId: testId, status: 'passed', rowIndex: null }]);
     const steps = services.runs.listSteps(run.cases[0]?.id as string);
     expect(steps.map((s) => [s.stepId, s.stepNo, s.status])).toEqual([

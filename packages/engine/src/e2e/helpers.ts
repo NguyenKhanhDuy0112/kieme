@@ -29,6 +29,8 @@ export interface E2E {
   close(): Promise<void>;
 }
 
+const CI_STEP_TIMEOUT_MS = process.env.CI ? 30_000 : 10_000;
+
 export async function startE2E(syncDelayMs = 0): Promise<E2E> {
   const [browser, site] = await Promise.all([launchTestBrowser(), startDemoSite({ syncDelayMs })]);
   const registry = createDefaultRegistry();
@@ -53,6 +55,8 @@ export async function startE2E(syncDelayMs = 0): Promise<E2E> {
           env: { id: 'demo', name: 'Demo', baseUrl: site.url, variables: {}, secretNames: [] },
           ...(sharedSteps ? { sharedSteps } : {}),
           ...request,
+          // Cold browsers on CI runners (macOS especially) can need > 10 s for the first page.
+          options: { defaultStepTimeoutMs: CI_STEP_TIMEOUT_MS, ...request?.options },
         },
         { registry, browser, ...(events ? { onEvent: (e) => events.push(e) } : {}) },
       );
