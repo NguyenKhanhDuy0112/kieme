@@ -1,0 +1,162 @@
+{
+  "$schema": "../../../../schema/json-schema/test-case.schema.json",
+  "schemaVersion": 1,
+  "id": "0193a5b2-7c4e-7d1a-9f3b-2c8e4a6d1f20",
+  "name": "Nhân viên tạo đơn nghỉ → quản lý thấy, kiểm tra và duyệt",
+  "tags": ["e2e", "nhiều phiên"],
+  "sessions": ["nhanvien", "quanly"],
+  "variables": { "lyDo": "Đưa con đi khám {{row.ma}}" },
+  "elements": {
+    "el_loaiNghi": {
+      "name": "Danh sách Loại nghỉ",
+      "strategies": [
+        { "kind": "role", "role": "button", "name": "Loại nghỉ" },
+        { "kind": "css", "value": "#type-trigger" }
+      ]
+    },
+    "el_soNgay": { "name": "Ô Số ngày", "strategies": [{ "kind": "label", "value": "Số ngày" }] },
+    "el_btnGui": {
+      "name": "Nút Gửi đơn",
+      "strategies": [{ "kind": "role", "role": "button", "name": "Gửi đơn" }]
+    },
+    "el_maDon": { "name": "Mã đơn", "strategies": [{ "kind": "css", "value": "#ma-don" }] },
+    "el_bangDon": {
+      "name": "Bảng đơn nghỉ",
+      "strategies": [
+        { "kind": "role", "role": "table" },
+        { "kind": "css", "value": "#requests-table" }
+      ]
+    },
+    "el_btnDuyet": {
+      "name": "Nút Duyệt của đơn",
+      "strategies": [{ "kind": "role", "role": "button", "name": "Duyệt" }],
+      "scope": [{ "kind": "row", "text": "{{maDon}}" }]
+    }
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "session": "nhanvien",
+      "action": "call",
+      "params": {
+        "shared": "login",
+        "args": { "user": "{{secret.nvUser}}", "pass": "{{secret.nvPass}}" }
+      }
+    },
+    {
+      "id": "s2",
+      "session": "nhanvien",
+      "action": "assertUrl",
+      "params": { "op": "contains", "value": "/form.html" }
+    },
+    {
+      "id": "s3",
+      "session": "nhanvien",
+      "action": "select",
+      "params": { "target": { "ref": "el_loaiNghi" }, "option": "{{row.loai}}" }
+    },
+    {
+      "id": "s4",
+      "session": "nhanvien",
+      "action": "pickDate",
+      "params": { "target": { "label": "Từ ngày" }, "value": "{{today + 7d}}" }
+    },
+    {
+      "id": "s5",
+      "session": "nhanvien",
+      "action": "fill",
+      "params": { "target": { "ref": "el_soNgay" }, "value": "{{row.soNgay}}" }
+    },
+    {
+      "id": "s6",
+      "session": "nhanvien",
+      "action": "fill",
+      "params": { "target": { "label": "Lý do" }, "value": "{{lyDo}}" }
+    },
+    {
+      "id": "s7",
+      "session": "nhanvien",
+      "action": "click",
+      "params": { "target": { "ref": "el_btnGui" } }
+    },
+    {
+      "id": "s8",
+      "session": "nhanvien",
+      "action": "extract",
+      "params": { "target": { "ref": "el_maDon" }, "into": "maDon" }
+    },
+    { "id": "s9", "session": "quanly", "action": "switchSession", "params": {} },
+    {
+      "id": "s10",
+      "session": "quanly",
+      "action": "call",
+      "params": { "shared": "login", "args": { "user": "quanly", "pass": "{{secret.nvPass}}" } }
+    },
+    {
+      "id": "s11",
+      "session": "quanly",
+      "action": "waitUntil",
+      "params": {
+        "condition": { "assert": "visible", "target": { "text": "{{maDon}}" } },
+        "timeoutSec": 30,
+        "intervalSec": 0.5,
+        "reloadEverySec": 1
+      }
+    },
+    {
+      "id": "s12",
+      "session": "quanly",
+      "action": "assertTable",
+      "params": {
+        "target": { "ref": "el_bangDon" },
+        "where": { "column": "Mã đơn", "value": "{{maDon}}" },
+        "column": "Lý do",
+        "value": "{{lyDo}}"
+      }
+    },
+    {
+      "id": "s13",
+      "session": "quanly",
+      "action": "assertTable",
+      "params": {
+        "target": { "ref": "el_bangDon" },
+        "where": { "column": "Mã đơn", "value": "{{maDon}}" },
+        "column": "Số ngày",
+        "op": "contains",
+        "value": "{{row.soNgay}}"
+      },
+      "mode": "soft"
+    },
+    {
+      "id": "s14",
+      "session": "quanly",
+      "action": "click",
+      "params": { "target": { "ref": "el_btnDuyet" } }
+    },
+    {
+      "id": "s15",
+      "session": "quanly",
+      "action": "assertToast",
+      "params": { "text": "Đã duyệt đơn {{maDon}}" }
+    },
+    {
+      "id": "s16",
+      "session": "quanly",
+      "action": "assertTable",
+      "params": {
+        "target": { "ref": "el_bangDon" },
+        "where": { "column": "Mã đơn", "value": "{{maDon}}" },
+        "column": "Trạng thái",
+        "value": "Đã duyệt"
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "id": "c1",
+      "session": "nhanvien",
+      "action": "api",
+      "params": { "method": "POST", "url": "/api/reset" }
+    }
+  ]
+}

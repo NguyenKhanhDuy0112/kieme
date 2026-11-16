@@ -66,3 +66,29 @@ export async function startDemoServer(options: { syncDelayMs?: number } = {}): P
       new Promise<void>((resolve, reject) => server.close((e) => (e ? reject(e) : resolve()))),
   };
 }
+
+export interface DemoSite {
+  /** Base URL of the full site (Vite pages + API), e.g. `http://localhost:53500`. */
+  readonly url: string;
+  close(): Promise<void>;
+}
+
+/**
+ * Starts the whole demo site (Vite dev server: client pages + API) on a free
+ * port, for engine e2e tests that need the JS pages (login, form, requests…).
+ */
+export async function startDemoSite(options: { syncDelayMs?: number } = {}): Promise<DemoSite> {
+  process.env.DEMO_SYNC_DELAY_MS = String(options.syncDelayMs ?? 0);
+  const { createServer: createVite } = await import('vite');
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  const server = await createVite({
+    root,
+    configFile: join(root, 'vite.config.ts'),
+    logLevel: 'error',
+    server: { port: 0, strictPort: false, host: '127.0.0.1' },
+  });
+  await server.listen();
+  const address = server.httpServer?.address();
+  const port = typeof address === 'object' && address ? address.port : 0;
+  return { url: `http://127.0.0.1:${port}`, close: () => server.close() };
+}
