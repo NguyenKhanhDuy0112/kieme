@@ -58,13 +58,13 @@ describe('UpdateNotice [N-12]', () => {
     expect(install).toHaveBeenCalledOnce();
   });
 
-  it('portable: download the new file instead', async () => {
+  it('portable / unsigned mac: download the new file instead', async () => {
     useUpdateStore.setState({
       state: { status: 'available', version: '1.1.0', notes: '', url: 'https://x' },
       dialogOpen: true,
     });
     renderNotice();
-    expect(screen.getByText(/Bản portable không tự cập nhật/)).toBeTruthy();
+    expect(screen.getByText(/không tự cài được bản mới/)).toBeTruthy();
     expect(screen.getByText('Bản này sửa lỗi và cải thiện độ ổn định.')).toBeTruthy();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Tải bản mới/ }));

@@ -428,7 +428,8 @@ export const viUi = {
     dataSafe: 'Test, kết quả và cài đặt của bạn được giữ nguyên.',
     restart: 'Khởi động lại để cập nhật',
     later: 'Để sau',
-    portableText: 'Bản portable không tự cập nhật: tải file mới rồi dùng thay file cũ.',
+    manualText:
+      'Bản này không tự cài được bản mới: bấm Tải bản mới rồi cài đè lên bản cũ. Test, kết quả và cài đặt của bạn được giữ nguyên.',
     download: 'Tải bản mới',
     settingsTitle: 'Cập nhật',
     check: 'Kiểm tra cập nhật',

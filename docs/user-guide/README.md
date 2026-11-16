@@ -102,7 +102,7 @@ Tab **Dữ liệu** của test: nhập bảng tay hoặc **Nhập từ Excel/CSV
 
 ## 10. Cập nhật, sao lưu và báo lỗi
 
-- **Tự cập nhật**: mỗi khi mở, Kiemi kiểm tra bản mới và tải ngầm. Khi xong, nút **Có bản mới** hiện trên thanh tiêu đề — bấm để xem **Có gì mới** và **Khởi động lại để cập nhật**. Test, kết quả và cài đặt được giữ nguyên. Bản portable chỉ báo có bản mới; bấm **Tải bản mới** rồi dùng file mới thay file cũ. Kiểm tra bằng tay: **Cài đặt → Cập nhật → Kiểm tra cập nhật**.
+- **Tự cập nhật**: mỗi khi mở, Kiemi kiểm tra bản mới và tải ngầm. Khi xong, nút **Có bản mới** hiện trên thanh tiêu đề — bấm để xem **Có gì mới** và **Khởi động lại để cập nhật**. Test, kết quả và cài đặt được giữ nguyên. Bản portable và bản macOS hiện tại chỉ báo có bản mới: bấm **Tải bản mới**, rồi dùng file portable mới thay file cũ (Windows) hoặc kéo Kiemi mới vào Applications để thay bản cũ (macOS). Kiểm tra bằng tay: **Cài đặt → Cập nhật → Kiểm tra cập nhật**.
 - **Dữ liệu nằm ở đâu**: Windows `%APPDATA%\Kiemi`, macOS `~/Library/Application Support/Kiemi` (file `kiemi.db`, thư mục `runs` chứa kết quả). Trước mỗi lần nâng cấp cấu trúc dữ liệu, Kiemi tự lưu một bản sao vào thư mục `backups`.
 - **Báo lỗi ẩn danh** (mặc định **tắt**): bật ở **Cài đặt → Gửi báo cáo lỗi ẩn danh** để gửi thông tin kỹ thuật khi Kiemi gặp lỗi. Kiemi không gửi test, dữ liệu, địa chỉ trang, mật khẩu hay tên máy. Có hiệu lực từ lần mở tiếp theo.
 

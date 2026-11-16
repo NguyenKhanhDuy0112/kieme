@@ -11,9 +11,15 @@ describe('release source [N-12]', () => {
   });
 
   it('auto-updates installed apps, only notifies the portable exe, off in dev', () => {
-    expect(updateMode(true, {})).toBe('auto');
-    expect(updateMode(true, { PORTABLE_EXECUTABLE_DIR: 'C:\\Tools' })).toBe('notify');
-    expect(updateMode(false, {})).toBe('off');
-    expect(updateMode(true, { KIEMI_DISABLE_UPDATES: '1' })).toBe('off');
+    const win = { platform: 'win32', signed: false } as const;
+    expect(updateMode(true, {}, win)).toBe('auto');
+    expect(updateMode(true, { PORTABLE_EXECUTABLE_DIR: 'C:\\Tools' }, win)).toBe('notify');
+    expect(updateMode(false, {}, win)).toBe('off');
+    expect(updateMode(true, { KIEMI_DISABLE_UPDATES: '1' }, win)).toBe('off');
+  });
+
+  it('unsigned macOS app only notifies; signed one auto-updates [N-12, N-14]', () => {
+    expect(updateMode(true, {}, { platform: 'darwin', signed: false })).toBe('notify');
+    expect(updateMode(true, {}, { platform: 'darwin', signed: true })).toBe('auto');
   });
 });

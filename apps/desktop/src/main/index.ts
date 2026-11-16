@@ -69,7 +69,10 @@ function sampleSiteUrl(services: Services): Promise<string> {
 
 /** Updates from GitHub Releases: background download (installed) or notice (portable) [N-12]. */
 function createUpdates(): UpdateService {
-  const mode = updateMode(app.isPackaged, process.env);
+  const mode = updateMode(app.isPackaged, process.env, {
+    platform: process.platform,
+    signed: import.meta.env.MAIN_VITE_CODE_SIGNED === '1',
+  });
   // The portable exe has no app-update.yml: point it at the releases explicitly.
   if (mode === 'notify') autoUpdater.setFeedURL({ provider: 'github', ...RELEASE_SOURCE });
   return new UpdateService({ updater: autoUpdater, mode, releasePageUrl: RELEASE_PAGE_URL });

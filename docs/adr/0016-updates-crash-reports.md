@@ -18,5 +18,5 @@
 4. Lỗi chưa bắt trong cửa sổ được chuyển về main qua tRPC `app.reportError` (tối đa 20 lần mỗi phiên cửa sổ), main mới quyết định gửi hay không.
 
 ## Hệ quả
-- macOS chỉ tự cập nhật được khi app đã ký (Squirrel.Mac) → phụ thuộc M7-02. Bản chưa ký: trạng thái `error`, người dùng tải tay.
+- macOS chỉ tự cập nhật được khi app đã ký (Squirrel.Mac). v1 phát hành chưa ký (chốt 2026-11-16, N-14): workflow đặt `MAIN_VITE_CODE_SIGNED=1` khi có chứng chỉ; bản mac không có cờ này dùng chế độ `notify` như portable (hộp thoại "Tải bản mới", cài đè). Windows NSIS chưa ký vẫn tự cập nhật (electron-updater chỉ kiểm chữ ký khi cấu hình `publisherName`).
 - Cần tạo project Sentry và secret `SENTRY_DSN` trong repo; chưa có thì app không bao giờ gửi gì (đúng tinh thần offline).

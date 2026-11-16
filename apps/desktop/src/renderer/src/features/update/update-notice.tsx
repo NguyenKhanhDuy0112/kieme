@@ -16,7 +16,7 @@ import { hasUpdate, useUpdateStore } from './update-store';
 
 /**
  * Header button "Có bản mới x.y.z" + "Có gì mới" dialog [N-12].
- * Installed app: "Khởi động lại để cập nhật". Portable: "Tải bản mới".
+ * Installed app: "Khởi động lại để cập nhật". Portable / unsigned mac: "Tải bản mới".
  */
 export function UpdateNotice() {
   const tx = useTx();
@@ -67,7 +67,7 @@ export function UpdateNotice() {
               })}
             </DialogTitle>
             <DialogDescription>
-              {ready ? tx('ui.update.dataSafe') : tx('ui.update.portableText')}
+              {ready ? tx('ui.update.dataSafe') : tx('ui.update.manualText')}
             </DialogDescription>
           </DialogHeader>
           <section className="flex flex-col gap-2">

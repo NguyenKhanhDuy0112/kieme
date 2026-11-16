@@ -429,8 +429,8 @@ export const enUi = {
     dataSafe: 'Your tests, results and settings are kept.',
     restart: 'Restart to update',
     later: 'Later',
-    portableText:
-      'The portable version does not update itself: download the new file and use it instead of the old one.',
+    manualText:
+      'This version cannot install updates itself: click Download new version and install it over the old one. Your tests, results and settings are kept.',
     download: 'Download new version',
     settingsTitle: 'Updates',
     check: 'Check for updates',

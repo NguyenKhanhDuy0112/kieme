@@ -67,6 +67,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Check
         run: pnpm lint && pnpm typecheck && pnpm test
+      - name: Is this build signed?
+        shell: bash
+        env:
+          WIN_CERT: ${{ secrets.WIN_CSC_LINK }}
+          MAC_CERT: ${{ secrets.MAC_CSC_LINK }}
+        run: |
+          # Unsigned macOS apps cannot auto-update: the app then only announces new versions [N-12, N-14].
+          if { [ "$RUNNER_OS" = "Windows" ] && [ -n "$WIN_CERT" ]; } || { [ "$RUNNER_OS" = "macOS" ] && [ -n "$MAC_CERT" ]; }; then
+            echo "MAIN_VITE_CODE_SIGNED=1" >> "$GITHUB_ENV"
+          fi
       - name: Build (demo site + app)
         run: pnpm build
         env:
