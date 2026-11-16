@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { posix } from 'node:path';
 
 /** Browsers Kiemi can drive [G-01]. `chromium` = Playwright's downloaded build. */
 export const BROWSER_KINDS = ['msedge', 'chrome', 'chromium'] as const;
@@ -39,7 +39,7 @@ function candidates(e: DetectEnv): Record<InstalledBrowser['kind'], string[]> {
     };
   }
   if (e.platform === 'darwin') {
-    const apps = ['/Applications', join(e.home, 'Applications')];
+    const apps = ['/Applications', posix.join(e.home, 'Applications')];
     return {
       msedge: apps.map((a) => `${a}/Microsoft Edge.app/Contents/MacOS/Microsoft Edge`),
       chrome: apps.map((a) => `${a}/Google Chrome.app/Contents/MacOS/Google Chrome`),
