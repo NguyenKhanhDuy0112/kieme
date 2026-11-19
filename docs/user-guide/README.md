@@ -1,6 +1,6 @@
 # Hướng dẫn sử dụng Kiemi
 
-> *Kiemi — Bấm một lần, kiểm mãi mãi.*
+> *Kiemi — Let Kiemi do the checking.*
 > Kiemi giúp bạn kiểm thử trang web mà không cần viết code: **ghi lại** thao tác của bạn (hoặc soạn từng bước), bấm **Chạy**, rồi xem kết quả.
 
 Mục lục

@@ -7,7 +7,7 @@ export const en = {
   ui: enUi,
   app: {
     name: 'Kiemi',
-    slogan: 'Click once, test forever.',
+    slogan: 'Let Kiemi do the checking.',
     version: 'Version {{version}}',
   },
   common: {

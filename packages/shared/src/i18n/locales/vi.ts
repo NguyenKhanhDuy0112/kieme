@@ -9,7 +9,8 @@ export const vi = {
   ui: viUi,
   app: {
     name: 'Kiemi',
-    slogan: 'Bấm một lần, kiểm mãi mãi.',
+    /** Brand slogan: English in every language. */
+    slogan: 'Let Kiemi do the checking.',
     version: 'Phiên bản {{version}}',
   },
   common: {

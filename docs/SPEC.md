@@ -236,6 +236,7 @@ Load testing · Pentest · App mobile native · App desktop · Vượt captcha �
 |---|---|---|---|
 | 2026-11-16 | — | Phiên bản SPEC đầu tiên | |
 | 2026-11-16 | N-11, N-12, N-13 | Thêm phát hành tự động, tự cập nhật, không cần cài thêm | Người dùng chỉ tải 1 lần rồi dùng |
+| 2026-11-19 | — (thương hiệu) | Slogan đổi thành **"Let Kiemi do the checking."** (tiếng Anh cho mọi ngôn ngữ), bỏ "Bấm một lần, kiểm mãi mãi." | Người dùng thấy câu cũ không hay |
 | 2026-11-19 | U-18 | Splash hiện tối thiểu ~1,8s (trước 0,5s), mờ dần chậm hơn | Người dùng thấy splash quá nhanh |
 | 2026-11-16 | U-17, U-18 | Thêm chuyển động mượt toàn app (có Giảm chuyển động) và màn hình khởi động có linh vật | Giao diện bắt mắt hơn — người dùng chốt |
 | 2026-11-16 | U-16, U-12, U-06 | Thêm linh vật Cú Kiemi (icon, chào mừng, màn trống, kết quả chạy); bo góc 10/16px, nền trạng thái pastel | Giao diện thân thiện, "cute" hơn — người dùng chốt phương án A |

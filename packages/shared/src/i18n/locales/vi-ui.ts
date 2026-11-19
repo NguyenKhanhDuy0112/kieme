@@ -331,7 +331,7 @@ export const viUi = {
   },
   onboarding: {
     title: 'Chào mừng đến với Kiemi',
-    text: 'Bấm một lần, kiểm mãi mãi. Chọn cách bắt đầu — mất khoảng 2 phút.',
+    text: 'Chọn cách bắt đầu — mất khoảng 2 phút.',
     recordTitle: 'Ghi test trên trang web của bạn',
     recordText: 'Nhập địa chỉ trang, thao tác như bình thường. Kiemi tự viết các bước.',
     url: 'Địa chỉ trang web',

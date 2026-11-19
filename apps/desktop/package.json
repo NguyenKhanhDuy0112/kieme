@@ -3,7 +3,7 @@
   "productName": "Kiemi",
   "version": "0.2.0",
   "private": true,
-  "description": "Kiemi — Bấm một lần, kiểm mãi mãi.",
+  "description": "Kiemi — Let Kiemi do the checking.",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

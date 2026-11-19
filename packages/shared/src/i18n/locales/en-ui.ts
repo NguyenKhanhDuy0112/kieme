@@ -332,7 +332,7 @@ export const enUi = {
   },
   onboarding: {
     title: 'Welcome to Kiemi',
-    text: 'Click once, check forever. Choose how to start — it takes about 2 minutes.',
+    text: 'Choose how to start — it takes about 2 minutes.',
     recordTitle: 'Record a test on your website',
     recordText: 'Enter the page address and use it as usual. Kiemi writes the steps for you.',
     url: 'Website address',

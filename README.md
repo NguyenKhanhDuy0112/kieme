@@ -4,7 +4,7 @@
 
 # Kiemi
 
-**Bấm một lần, kiểm mãi mãi.**
+**Let Kiemi do the checking.**
 
 Kiểm thử giao diện web **không cần viết code** — ghi lại thao tác hoặc soạn từng bước, bấm **Chạy**, xem kết quả.
 Chạy offline, không cần tài khoản, không cần cài thêm gì.

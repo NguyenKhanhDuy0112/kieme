@@ -2,7 +2,7 @@
 
 ## Thương hiệu
 - Tên sản phẩm: **Kiemi** (từ "kiểm"). Package scope: `@kiemi/*`. File test: `.kiemi.json`. App ID: `app.kiemi.desktop`.
-- Slogan: *"Kiemi — Bấm một lần, kiểm mãi mãi."*
+- Slogan (tiếng Anh, dùng cho mọi ngôn ngữ): *"Let Kiemi do the checking."*
 - Màu: chàm đậm `#1F2A5C` (chủ đạo), xanh lá pass `#3DDC84`, đỏ fail `#E5484D`, trắng.
 - Linh vật: **Cú Kiemi** — cú tròn màu chàm, mắt to, bụng/mỏ là **dấu tick xanh lá** (SPEC U-16).
 - Icon: ô vuông bo góc nền chàm có **Cú Kiemi** (dấu tick xanh lá). Phải nhận diện được ở 16px.
