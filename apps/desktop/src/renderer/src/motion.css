@@ -6,7 +6,7 @@
 
 /* Screens and the run view slide in softly. */
 .screen-enter {
-  animation: kiemi-screen-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: kiemi-screen-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
 @keyframes kiemi-screen-in {
   from {
@@ -17,7 +17,7 @@
 
 /* Detail panel slides in from the right. */
 .panel-enter {
-  animation: kiemi-panel-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: kiemi-panel-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
 @keyframes kiemi-panel-in {
   from {
@@ -36,7 +36,7 @@
   }
 }
 .status-pop {
-  animation: kiemi-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: kiemi-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
 @keyframes kiemi-pop {
   from {
@@ -103,7 +103,7 @@
 
 /* First launch: the owl from the splash pops into the welcome dialog [U-18]. */
 .welcome-mascot {
-  animation: kiemi-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 120ms both;
+  animation: kiemi-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 120ms backwards;
 }
 
 /* Buttons sink a little when pressed. */

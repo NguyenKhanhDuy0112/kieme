@@ -12,4 +12,4 @@
 
 ## Hệ quả
 - Splash giữ app tới tối đa ~1,8 s tính từ lúc trang bắt đầu nạp, kể cả khi app đã sẵn sàng sớm hơn — vẫn trong giới hạn ≤ 3 s của N-05; app chậm hơn thì không bị cộng thêm gì.
-- Thêm animation mới → đặt trong `motion.css` (để quy tắc giảm chuyển động phủ tới), chỉ dùng `transform`/`opacity`.
+- Thêm animation mới → đặt trong `motion.css` (để quy tắc giảm chuyển động phủ tới), chỉ dùng `transform`/`opacity`, và **chỉ dùng `animation-fill-mode: backwards`** cho hiệu ứng một lần: `both`/`forwards` để lại `transform` sau khi chạy xong, biến phần tử thành gốc tọa độ của con `position: fixed` (đã làm lệch khung tour hướng dẫn) — có test chặn.
