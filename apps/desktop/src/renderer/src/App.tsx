@@ -9,6 +9,7 @@ import { WelcomeDialog } from '@renderer/features/onboarding/welcome-dialog';
 import { TestsScreen } from '@renderer/features/tests/tests-screen';
 import { UpdateNotice } from '@renderer/features/update/update-notice';
 import { useT } from '@renderer/i18n/use-t';
+import { applyReduceMotion } from '@renderer/lib/motion';
 import { hideSplash } from '@renderer/lib/splash';
 import { useAppStore, watchSystemTheme } from '@renderer/lib/store';
 import { trpc } from '@renderer/lib/trpc';
@@ -63,6 +64,10 @@ export function App() {
   const toggleDetail = useAppStore((s) => s.toggleDetail);
 
   useEffect(() => watchSystemTheme(), []);
+  const reduceMotion = settings.data?.reduceMotion;
+  useEffect(() => {
+    if (reduceMotion !== undefined) applyReduceMotion(reduceMotion);
+  }, [reduceMotion]);
   // Launch splash [U-18]: gone as soon as settings are known; first launch waves hello first.
   const settingsReady = settings.isSuccess || settings.isError;
   const firstRun = settings.data ? !settings.data.onboardingDone : false;
@@ -106,11 +111,11 @@ export function App() {
           </div>
           <Suspense fallback={<ScreenSkeleton />}>
             {projectId && openRunId ? (
-              <main className="flex min-h-0 flex-1 flex-col">
+              <main key={`run-${openRunId}`} className="screen-enter flex min-h-0 flex-1 flex-col">
                 <RunScreen key={openRunId} runId={openRunId} />
               </main>
             ) : projectId ? (
-              <main className="flex min-h-0 flex-1 flex-col">
+              <main key={view} className="screen-enter flex min-h-0 flex-1 flex-col">
                 {view === 'tests' && <TestsScreen />}
                 {view === 'environments' && <EnvironmentsScreen />}
                 {view === 'elements' && <ElementsScreen />}

@@ -447,6 +447,10 @@ export const viUi = {
   splash: {
     hello: 'Xin chào!',
   },
+  motion: {
+    setting: 'Giảm chuyển động',
+    hint: 'Tắt hiệu ứng chuyển động trong Kiemi. Kiemi cũng tự tắt khi máy bật "Giảm chuyển động".',
+  },
   crashReports: {
     setting: 'Gửi báo cáo lỗi ẩn danh',
     hint: 'Khi Kiemi gặp lỗi, gửi thông tin kỹ thuật để đội phát triển sửa. Không gửi test, dữ liệu, địa chỉ trang hay mật khẩu. Mặc định tắt.',

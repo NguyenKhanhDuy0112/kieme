@@ -155,6 +155,20 @@ export function SettingsScreen() {
         </div>
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-col gap-0.5">
+            <Label htmlFor="set-motion">{tx('ui.motion.setting')}</Label>
+            <p id="set-motion-hint" className="text-xs text-muted-foreground">
+              {tx('ui.motion.hint')}
+            </p>
+          </div>
+          <Switch
+            id="set-motion"
+            aria-describedby="set-motion-hint"
+            checked={s.reduceMotion}
+            onCheckedChange={(reduceMotion) => void save({ reduceMotion })}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-0.5">
             <Label htmlFor="set-crash">{tx('ui.crashReports.setting')}</Label>
             <p id="set-crash-hint" className="text-xs text-muted-foreground">
               {tx('ui.crashReports.hint')} {tx('ui.crashReports.restartHint')}

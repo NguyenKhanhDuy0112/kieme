@@ -448,6 +448,10 @@ export const enUi = {
   splash: {
     hello: 'Hello!',
   },
+  motion: {
+    setting: 'Reduce motion',
+    hint: 'Turn off animations in Kiemi. Kiemi also turns them off when your computer asks to reduce motion.',
+  },
   crashReports: {
     setting: 'Send anonymous error reports',
     hint: 'When Kiemi hits an error, send technical details so the team can fix it. Tests, data, page addresses and passwords are never sent. Off by default.',

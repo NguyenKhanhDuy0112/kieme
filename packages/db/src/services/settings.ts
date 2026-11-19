@@ -21,6 +21,8 @@ export const AppSettingsSchema = z.object({
   advancedMode: z.boolean().default(false),
   /** Send anonymous crash reports (opt-in, off by default) [N-09]. */
   crashReports: z.boolean().default(false),
+  /** Turn off animations, on top of the OS "reduce motion" setting [U-17, U-13]. */
+  reduceMotion: z.boolean().default(false),
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
@@ -40,6 +42,7 @@ export const AppSettingsPatchSchema = z.object({
   tourDone: f.tourDone.unwrap().optional(),
   advancedMode: f.advancedMode.unwrap().optional(),
   crashReports: f.crashReports.unwrap().optional(),
+  reduceMotion: f.reduceMotion.unwrap().optional(),
 });
 export type AppSettingsKey = keyof AppSettings;
 

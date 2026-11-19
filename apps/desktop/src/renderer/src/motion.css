@@ -1,0 +1,135 @@
+/* biome-ignore-all lint/complexity/noImportantStyles: reduce-motion must beat every animation rule [U-17]. */
+/*
+ * Motion [U-17]: short (150–300 ms, mascot ≤ 600 ms), only transform / opacity so 200-step
+ * tests stay at 60 fps (N-05). Everything stops with "Giảm chuyển động" (OS or Kiemi setting).
+ */
+
+/* Screens and the run view slide in softly. */
+.screen-enter {
+  animation: kiemi-screen-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes kiemi-screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Detail panel slides in from the right. */
+.panel-enter {
+  animation: kiemi-panel-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes kiemi-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+/* Run: the running step "breathes"; a finished status icon pops in. */
+[data-status="running"] {
+  animation: kiemi-breathe 1.6s ease-in-out infinite;
+}
+@keyframes kiemi-breathe {
+  50% {
+    box-shadow: inset 3px 0 0 var(--primary);
+  }
+}
+.status-pop {
+  animation: kiemi-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes kiemi-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+/* Cú Kiemi [U-16]. */
+.mascot .mascot-blink,
+.mascot-wing-l,
+.mascot-wing-r,
+.mascot-body {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.mascot-idle .mascot-blink {
+  animation: kiemi-blink 4s ease-in-out 1s infinite;
+}
+@keyframes kiemi-blink {
+  0%,
+  94%,
+  100% {
+    transform: scaleY(1);
+  }
+  97% {
+    transform: scaleY(0.1);
+  }
+}
+.mascot-happy .mascot-body {
+  transform-origin: 50% 100%;
+  animation: kiemi-hop 600ms cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+}
+@keyframes kiemi-hop {
+  40% {
+    transform: translateY(-10%) scale(1.03, 0.97);
+  }
+  70% {
+    transform: translateY(0) scale(0.98, 1.02);
+  }
+}
+.mascot-worried .mascot-body {
+  animation: kiemi-shake 500ms ease-in-out 1;
+}
+@keyframes kiemi-shake {
+  20%,
+  60% {
+    transform: rotate(-6deg);
+  }
+  40%,
+  80% {
+    transform: rotate(6deg);
+  }
+}
+.mascot-focused .mascot-body {
+  transform-origin: 50% 100%;
+  animation: kiemi-tilt 2.4s ease-in-out infinite;
+}
+@keyframes kiemi-tilt {
+  50% {
+    transform: rotate(-6deg);
+  }
+}
+
+/* First launch: the owl from the splash pops into the welcome dialog [U-18]. */
+.welcome-mascot {
+  animation: kiemi-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 120ms both;
+}
+
+/* Buttons sink a little when pressed. */
+[data-slot="button"] {
+  transition-property: color, background-color, border-color, transform, box-shadow;
+}
+[data-slot="button"]:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Reduce motion: the OS setting or Kiemi's own switch (html[data-reduce-motion]). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+html[data-reduce-motion] *,
+html[data-reduce-motion] *::before,
+html[data-reduce-motion] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

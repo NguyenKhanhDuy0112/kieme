@@ -13,6 +13,7 @@ describe('settings [S-07]', () => {
       tourDone: true,
       advancedMode: false,
       crashReports: false,
+      reduceMotion: false,
     });
   });
 

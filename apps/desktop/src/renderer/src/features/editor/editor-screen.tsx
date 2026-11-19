@@ -341,7 +341,7 @@ export function EditorScreen({ testId }: { testId: string }) {
             </Tabs>
             {detailOpen && (
               <aside
-                className="w-96 shrink-0 overflow-auto border-l"
+                className="panel-enter w-96 shrink-0 overflow-auto border-l"
                 aria-label={tx('ui.props.title')}
               >
                 <PropsPanel key={selectedId ?? 'none'} focusParam={focusParam} />

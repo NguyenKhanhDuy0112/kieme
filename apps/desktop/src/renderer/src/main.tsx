@@ -1,4 +1,5 @@
 import { createI18n } from '@renderer/i18n';
+import { applyStoredReduceMotion } from '@renderer/lib/motion';
 import { reportUncaughtErrors } from '@renderer/lib/report-errors';
 import { hideSplash } from '@renderer/lib/splash';
 import { queryClient, trpcClient } from '@renderer/lib/trpc';
@@ -13,6 +14,7 @@ const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('Root element #root not found');
 
 reportUncaughtErrors(window, (e) => trpcClient.app.reportError.mutate(e));
+applyStoredReduceMotion();
 const i18n = createI18n();
 // Safety net: the splash never stays if the app fails to load its settings [U-18].
 setTimeout(() => void hideSplash(), 10_000);

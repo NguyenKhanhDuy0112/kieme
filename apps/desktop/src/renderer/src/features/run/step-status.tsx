@@ -12,9 +12,9 @@ export function StatusIcon({ status }: { status: LiveStepStatus | undefined }) {
   if (status === 'running')
     return <Loader2 className={`${cls} animate-spin text-primary`} aria-label={label} />;
   if (status === 'passed')
-    return <CircleCheck className={`${cls} text-pass-text`} aria-label={label} />;
+    return <CircleCheck className={`${cls} status-pop text-pass-text`} aria-label={label} />;
   if (status === 'failed')
-    return <CircleX className={`${cls} text-fail-text`} aria-label={label} />;
+    return <CircleX className={`${cls} status-pop text-fail-text`} aria-label={label} />;
   return <CircleMinus className={`${cls} text-muted-foreground`} aria-label={label} />;
 }
 
