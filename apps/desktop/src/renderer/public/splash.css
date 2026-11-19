@@ -13,8 +13,8 @@
   color: #fff;
   font-family: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
   transition:
-    opacity 320ms ease,
-    transform 320ms ease;
+    opacity 450ms ease,
+    transform 450ms ease;
   user-select: none;
 }
 #splash.splash-hide {

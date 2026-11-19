@@ -3,11 +3,11 @@
  * is ready. Never delays a ready app beyond a short minimum (no flash), N-05.
  */
 
-/** Shortest time the splash stays on screen, so it never flashes. */
-export const SPLASH_MIN_MS = 500;
+/** Shortest time the splash stays on screen: the whole intro (pop, eyes, tick, text) plays. */
+export const SPLASH_MIN_MS = 1800;
 /** First launch: time for the owl to wave hello. */
 export const SPLASH_FIRST_RUN_MS = 1400;
-const FADE_MS = 320;
+const FADE_MS = 450;
 
 /** How much longer to keep the splash, given when the page started. */
 export function splashRemainingMs(elapsedMs: number, firstRun: boolean): number {
