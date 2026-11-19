@@ -1,5 +1,12 @@
 # @kiemi/desktop
 
+## 0.2.0
+
+### Minor Changes
+
+- Chào bạn mới: **Cú Kiemi**! Linh vật cú xuất hiện trên icon app, màn hình chào mừng, các màn hình trống và kết quả chạy — vui khi test Đạt, lo lắng khi Không đạt, chăm chú khi đang chạy.
+- Mở app có màn hình khởi động mới; chuyển màn hình, mở panel và kết quả từng bước giờ mượt hơn. Giao diện bo tròn mềm hơn, nhãn trạng thái có nền màu nhẹ. Thêm công tắc **Cài đặt → Giảm chuyển động** (Kiemi cũng tự tắt hiệu ứng khi máy bật "giảm chuyển động").
+
 ## 0.1.0
 
 Bản thử đầu tiên của Kiemi — kiểm thử giao diện web không cần viết code.

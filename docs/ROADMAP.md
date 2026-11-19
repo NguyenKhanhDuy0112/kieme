@@ -79,11 +79,11 @@ Mỗi task: làm trong 1 phiên, tham chiếu ID trong `SPEC.md`. Tick `[x]` khi
 - [x] **M7-05** Hướng dẫn sử dụng (docs người dùng) + checklist phát hành v1.0
 
 ## M8 — Giao diện thân thiện (linh vật)
-- [ ] **M8-01** Thiết kế linh vật Cú Kiemi (SVG, 4 biểu cảm, sáng/tối) + icon app mới (nhận diện ở 16px) [U-16]
-- [ ] **M8-02** Đưa linh vật vào hộp thoại chào mừng, màn hình trống, màn Chạy/Kết quả (theo trạng thái) [U-16, U-06]
-- [ ] **M8-04** Màn hình khởi động (splash) mỗi lần mở + chuyển cảnh lần đầu nối sang chào mừng [U-18, N-05]
-- [ ] **M8-05** Chuyển động toàn app + linh vật động + công tắc "Giảm chuyển động" (theo cả cài đặt hệ điều hành) [U-17, U-13]
-- [ ] **M8-03** Chỉnh design tokens: bo góc 10/16px, nền trạng thái pastel; kiểm lại tương phản (a11y test) + đo lại khởi động trên app đóng gói + phát hành v0.2.0 [U-12, U-13, N-05]
+- [x] **M8-01** Thiết kế linh vật Cú Kiemi (SVG, 4 biểu cảm, sáng/tối) + icon app mới (nhận diện ở 16px) [U-16]
+- [x] **M8-02** Đưa linh vật vào hộp thoại chào mừng, màn hình trống, màn Chạy/Kết quả (theo trạng thái) [U-16, U-06]
+- [x] **M8-04** Màn hình khởi động (splash) mỗi lần mở + chuyển cảnh lần đầu nối sang chào mừng [U-18, N-05]
+- [x] **M8-05** Chuyển động toàn app + linh vật động + công tắc "Giảm chuyển động" (theo cả cài đặt hệ điều hành) [U-17, U-13]
+- [x] **M8-03** Chỉnh design tokens: bo góc 10/16px, nền trạng thái pastel; kiểm lại tương phản (a11y test) + đo lại khởi động trên app đóng gói + phát hành v0.2.0 [U-12, U-13, N-05]
 
 ## Sau v1 (v1.x)
 N-14 (ký code Windows + notarize macOS, khi có chứng chỉ).
