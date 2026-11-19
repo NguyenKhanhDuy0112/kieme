@@ -43,10 +43,10 @@ import { StatusIcon } from './step-status';
 
 const STATUS_BADGE: Record<LiveCaseStatus, string> = {
   queued: 'border-muted-foreground/40 text-muted-foreground',
-  running: 'border-primary/50 text-primary',
-  passed: 'border-pass/50 text-pass-text',
-  failed: 'border-fail/50 text-fail-text',
-  error: 'border-fail/50 text-fail-text',
+  running: 'border-primary/40 bg-info-soft text-primary',
+  passed: 'border-pass/50 bg-pass-soft text-pass-text',
+  failed: 'border-fail/50 bg-fail-soft text-fail-text',
+  error: 'border-fail/50 bg-fail-soft text-fail-text',
   cancelled: 'border-muted-foreground/40 text-muted-foreground',
   skipped: 'border-muted-foreground/40 text-muted-foreground',
 };

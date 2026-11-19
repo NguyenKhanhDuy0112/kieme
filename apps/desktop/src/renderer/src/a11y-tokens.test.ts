@@ -33,9 +33,10 @@ const TEXT_PAIRS: [string, string[]][] = [
   ['sidebar-accent-foreground', ['sidebar-accent']],
   ['sidebar-primary-foreground', ['sidebar-primary']],
   ['destructive', ['background', 'card']],
-  ['pass-text', ['background', 'card', 'muted']],
-  ['fail-text', ['background', 'card', 'muted']],
-  ['warning-text', ['background', 'card', 'muted']],
+  ['pass-text', ['background', 'card', 'muted', 'pass-soft']],
+  ['fail-text', ['background', 'card', 'muted', 'fail-soft']],
+  ['warning-text', ['background', 'card', 'muted', 'warning-soft']],
+  ['primary', ['info-soft']],
 ];
 
 describe('design tokens are readable (U-13, WCAG AA)', () => {
